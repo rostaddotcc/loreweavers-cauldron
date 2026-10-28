@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>How the AI Dungeon Master Works — D&D 5e Rules Engine | The Lore Weaver's Cauldron</title>
+<meta name="description" content="How the AI Dungeon Master runs real D&D 5e mechanics: initiative, action economy, advantage, saving throws, HP — tracked by the Lorekeeper engine behind every text-based campaign. The LLM harness behind dnd.rostad.cc.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://dnd.rostad.cc/mechanics.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Lore Weaver's Cauldron">
+<meta property="og:title" content="How the AI Dungeon Master Works — D&amp;D 5e Rules Engine | The Lore Weaver's Cauldron">
+<meta property="og:description" content="Inside the Lorekeeper engine: how the AI Dungeon Master rolls real dice and enforces D&amp;D 5e — initiative, action economy, advantage, saving throws and HP — across every persistent campaign.">
+<meta property="og:url" content="https://dnd.rostad.cc/mechanics.html">
+<meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How the AI Dungeon Master Works — D&amp;D 5e Rules Engine | The Lore Weaver's Cauldron">
+<meta name="twitter:description" content="Inside the Lorekeeper engine: how the AI Dungeon Master rolls real dice and enforces D&amp;D 5e — initiative, action economy, advantage, saving throws and HP — across every persistent campaign.">
+<meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta name="theme-color" content="#09070B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════
+   THE LORE WEAVER'S CAULDRON — ENGINE MECHANICS v28 (standalone)
+   Dark fantasy × terminal. Diagrams first, prose second.
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  /* PAGE-LOCAL TOKENS ONLY (2026-10-22). The palette is snes.css :root (Emberwatch);
+     this page declared a copy of it before the <link>, so every palette value here
+     lost the cascade and was dead weight. What remains are the roles snes.css has no
+     token for — snes cannot supply them, so they must keep living in this block. */
+  --term-red:#E4616F;      /* CLI error ink — .term-body .c-red, pre.prompt .pneg */
+  --rubric:#E4616F;        /* red ink for chips/tags/fail states — .chip.b, .tg.r, .die-face.fail */
+  --font-display:'Grenze',serif;
+  --font-body:'Spectral',Georgia,serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+  --font-accent:'Silkscreen',monospace;
+  --font-flavor:'EB Garamond',Georgia,serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-body);color:var(--bone);font-size:16.5px;line-height:1.65;
+  background:var(--ink);
+  overflow-x:hidden;
+font-size:17px;line-height:1.65}
+::selection{background:rgba(var(--gold-rgb),.32);color:#fff}
+a{color:var(--gold-bright);text-decoration:none}
+a:hover{color:var(--gold)}
+code,kbd,.mono{font-family:var(--font-mono);font-size:.9em}
+
+/* ── Ambient: embers + vignette ─────────────────────────────── */
+#embers{position:fixed;inset:0;z-index:1;pointer-events:none}
+#vig{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(var(--ink-rgb),.75)}
+
+/* ── Boot overlay ───────────────────────────────────────────── */
+#boot{position:fixed;inset:0;z-index:10000;background:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+#boot.done{opacity:0;pointer-events:none;transition:opacity .6s}
+.boot-term{width:min(680px,92vw);background:var(--ink);border:1px solid var(--edge);position:relative}
+.boot-term::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 2px,transparent 2px 4px)}
+.boot-bar{display:flex;gap:.45rem;align-items:center;padding:.5rem .8rem;border-bottom:1px solid var(--edge);background:var(--stone)}
+.boot-bar i{width:10px;height:10px;display:inline-block}
+.boot-bar i:nth-child(1){background:var(--blood)}.boot-bar i:nth-child(2){background:rgba(var(--gold-rgb),.6)}.boot-bar i:nth-child(3){background:rgba(var(--poison-rgb),.45)}
+.boot-bar span{margin-left:.5rem;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.22em;color:var(--bone-dim);text-transform:uppercase}
+.boot-lines{padding:1.2rem 1.4rem 1.4rem;font-family:var(--font-mono);font-size:var(--fs-tiny);line-height:1.85;color:var(--term-green);min-height:250px;white-space:pre-wrap;word-break:break-word}
+.boot-lines .b-ok{color:var(--term-green)}
+.boot-lines .b-dim{color:var(--bone-dim)}
+.boot-lines .b-gold{color:var(--gold-bright)}
+.boot-hint{position:absolute;bottom:.6rem;right:.9rem;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;color:var(--bone-dim)}
+
+/* ── Scroll progress ────────────────────────────────────────── */
+#prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:270;background:var(--gold)}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4rem 4rem;display:grid;grid-template-columns:230px minmax(0,1fr);gap:2.6rem}
+.content{min-width:0}
+
+/* ── Hero ───────────────────────────────────────────────────── */
+.hero{position:relative;z-index:2;padding:5rem 1.4rem 2rem;text-align:center;max-width:900px;margin:0 auto}
+/* 2026-10-22 — duplicate-colour bug. This rule declared `color` twice: the small-caps
+   restyle appended after `margin-bottom` ended in color:var(--rubric), so the hero eyebrow
+   rendered rubric-red. The base declaration (--gold) is the intended ink and wins here; the
+   restyle contributes typography only, its colour is dropped. */
+.eyebrow{font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;font-size:.82rem;letter-spacing:.34em;color:var(--gold);margin-bottom:1.1rem}
+.hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(2rem,5.6vw,3.4rem);color:var(--bone-bright);line-height:1.12;
+  text-shadow:2px 2px 0 #000;animation:flicker 7s infinite}
+@keyframes flicker{0%,93%,95%,97%,100%{opacity:1}94%{opacity:.82}96%{opacity:.9}}
+.hero .sub{margin:1.1rem auto 0;max-width:560px;color:var(--bone);font-style:italic;font-size:var(--fs-base);font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+.hero .sub b{color:var(--gold-bright);font-style:normal}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:.55rem;margin-top:1.5rem}
+.chip{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone);
+  border:1px solid var(--edge);background:var(--stone-3);padding:.32rem .7rem;border-color:rgba(var(--gold-rgb),.35)}
+.chip.g{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.4)}
+.chip.p{color:var(--arcane-bright);border-color:rgba(var(--arcane-rgb),.4)}
+.chip.t{color:var(--teal);border-color:rgba(var(--teal-rgb),.4)}
+.chip.e{color:var(--gold);border-color:rgba(var(--ember-rgb),.4)}
+.chip.b{color:var(--rubric);border-color:rgba(var(--blood-rgb),.45)}
+.scroll-hint{margin-top:1.6rem;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.3em;color:var(--bone-dim);text-transform:uppercase;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(6px);opacity:1}}
+
+/* ── Hero sigil (the whole engine in one diagram) ───────────── */
+.sigil{max-width:780px;margin:2.2rem auto 0}
+.sigil svg{width:100%;height:auto;display:block}
+.sg rect{fill:var(--stone-2);stroke:var(--edge);stroke-width:1}
+.sg text{font-family:var(--font-mono);letter-spacing:.05em}
+.sg .t-name{font-size:12px;font-weight:600}
+.sg .t-sub{font-size:8.5px;fill:var(--bone-dim);letter-spacing:.1em}
+.sg.gold rect{stroke:var(--gold)} .sg.gold .t-name{fill:var(--gold-bright)}
+.sg.pur rect{stroke:var(--arcane)} .sg.pur .t-name{fill:var(--arcane-bright)}
+.sg.bone .t-name{fill:var(--bone-bright)}
+.sg.dim rect{stroke:var(--edge);fill:var(--stone)} .sg.dim .t-name{fill:var(--bone)}
+.sg .node{animation:sg-breathe 5s ease-in-out infinite}
+.sg .node.d1{animation-delay:1.2s}.sg .node.d2{animation-delay:2.4s}.sg .node.d3{animation-delay:3.6s}
+@keyframes sg-breathe{0%,100%{filter:drop-shadow(0 0 0 transparent)}50%{filter:drop-shadow(0 0 7px rgba(var(--gold-rgb),.25))}}
+.sg .wire{stroke:var(--edge-hi);stroke-width:1.2;fill:none;stroke-dasharray:5 5;animation:flow-dash 1.1s linear infinite}
+.sg .wire.gold{stroke:rgba(var(--gold-rgb),.7)}
+.sg .wire.pur{stroke:rgba(var(--arcane-rgb),.65)}
+.sg .wire.slow{animation-duration:2.2s}
+.sg .w-label{font-size:8px;fill:var(--bone-dim);letter-spacing:.12em}
+.sg marker path{fill:var(--edge-hi)}
+
+/* ── Index / scroll-spy ─────────────────────────────────────── */
+.index{position:sticky;top:1.4rem;align-self:start;font-family:var(--font-mono);font-size:var(--fs-tiny)}
+/* same duplicate-colour bug: base --bone-dim kept, trailing --rubric dropped */
+.index h2{font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;font-size:.82rem;letter-spacing:.12em;color:var(--bone-dim);margin-bottom:.9rem}
+.index ol{list-style:none;border-left:1px solid var(--edge)}
+.index li{border-left:2px solid transparent;transition:all .25s}
+.index a{display:block;padding:.42rem .9rem;color:var(--bone-dim);letter-spacing:.06em;border-left:1px solid transparent;margin-left:-1px}
+.index a:hover{color:var(--gold-bright)}
+.index li.active{border-left-color:var(--gold)}
+.index li.active a{color:var(--gold-bright)}
+.index .ix-num{color:var(--gold);opacity:.7;margin-right:.55rem;font-size:.68rem}
+.index .ix-tag{display:block;font-size:.58rem;letter-spacing:.14em;color:var(--bone-dim);text-transform:uppercase;margin-top:.05rem}
+
+/* ── Section headers ────────────────────────────────────────── */
+.sec{margin-bottom:5rem;scroll-margin-top:2.2rem}
+.sec-head{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.1rem}
+.sec-num{font-family:var(--font-display);font-weight:900;font-size:clamp(1.6rem,3vw,2.2rem);color:var(--gold);opacity:.9;line-height:1}
+/* same duplicate-colour bug — and the loudest one: section titles rendered rubric-red.
+   The base --bone-bright is intended (the gold is carried by .sec-num / .sec-mark);
+   the appended restyle keeps its small-caps typography, its red is dropped. */
+.sec-title{font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;font-size:clamp(1.15rem,2.6vw,1.55rem);letter-spacing:.12em;color:var(--bone-bright)}
+.sec-rule{flex:1;height:1px;background:var(--gold);opacity:.4;margin-top:.6rem;height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.7) 15%,rgba(var(--gold-rgb),.7) 85%,transparent) center/100% 1px no-repeat}
+.sec-mark{color:var(--gold);font-size:var(--fs-tiny);margin-right:.4rem}
+.sec-lede{color:var(--bone-dim);font-style:italic;margin:-.2rem 0 1.6rem;max-width:70ch;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+
+/* ── Panels / tablets ───────────────────────────────────────── */
+.panel{position:relative;background:var(--stone);
+  border:1px solid var(--edge);padding:1.4rem 1.4rem;margin-bottom:1.4rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+.panel::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3;border-color:rgba(var(--gold-rgb),.45);opacity:.45}
+.panel h3{font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.26em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.7rem}
+.panel h3 .dot{color:var(--gold)}
+.panel p{margin-bottom:.7rem}
+.panel p:last-child{margin-bottom:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem}
+.stat{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--bone-dim)}
+.stat b{color:var(--bone-bright);font-weight:600}
+.stat .v{color:var(--gold-bright)}
+.tag-row{display:flex;flex-wrap:wrap;gap:.45rem;margin:.6rem 0 .9rem}
+.tg{font-family:var(--font-mono);font-size:.68rem;padding:.22rem .5rem;border:1px solid var(--edge);color:var(--bone)}
+.tg.g{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.45)}
+.tg.p{color:var(--arcane-bright);border-color:rgba(var(--arcane-rgb),.45)}
+.tg.t{color:var(--teal);border-color:rgba(var(--teal-rgb),.45)}
+.tg.e{color:var(--gold);border-color:rgba(var(--ember-rgb),.45)}
+.tg.r{color:var(--rubric);border-color:rgba(var(--blood-rgb),.5)}
+.tg.n{color:var(--poison);border-color:rgba(var(--poison-rgb),.5)}
+
+/* ── Terminal windows ───────────────────────────────────────── */
+.term{background:var(--ink);border:1px solid var(--edge);margin:1.2rem 0;position:relative;border:1px solid rgba(var(--gold-rgb),.38);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5)}
+.term::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.2) 0 2px,transparent 2px 4px)}
+.term-bar{display:flex;gap:.45rem;align-items:center;padding:.45rem .8rem;border-bottom:1px solid var(--edge);background:var(--stone)}
+.term-bar i{width:9px;height:9px;display:inline-block}
+.term-bar i:nth-child(1){background:var(--blood)}.term-bar i:nth-child(2){background:rgba(var(--gold-rgb),.6)}.term-bar i:nth-child(3){background:rgba(var(--poison-rgb),.45)}
+.term-bar span{margin-left:.5rem;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.2em;color:var(--bone-dim);text-transform:uppercase}
+.term-body{padding:1rem 1.1rem;font-family:var(--font-mono);font-size:var(--fs-tiny);line-height:1.8;color:var(--term-green);overflow-x:auto}
+.term-body .c-dim{color:var(--bone-dim)}.term-body .c-gold{color:var(--gold-bright)}
+.term-body .c-p{color:var(--arcane-bright)}.term-body .c-red{color:var(--term-red)}
+.term-body .c-amb{color:var(--term-amber)}.term-body .c-teal{color:var(--teal)}
+.term-body .c-ok{color:var(--poison)}
+.term.dm .term-body{color:var(--gold-bright)}
+.term-line{opacity:0;transform:translateY(4px);transition:opacity .3s,transform .3s}
+.term-line.shown{opacity:1;transform:none}
+
+/* ── Flow diagrams (generic SVG frame) ──────────────────────── */
+.flowbox{background:var(--stone);border:1px solid var(--edge);padding:1rem;margin:1.2rem 0;overflow-x:auto}
+.flowbox svg{display:block;width:100%;height:auto;min-width:640px}
+/* grid children must not expand their track via min-width:auto (unshrinkable pre/table content);
+   wide content scrolls internally (.flowbox/.term-body/pre.prompt already have overflow-x:auto) */
+.grid2>*,.grid3>*{min-width:0}
+@keyframes flow-dash{to{stroke-dashoffset:-10}}
+@keyframes blink{50%{opacity:0}}
+.legend{display:flex;flex-wrap:wrap;gap:1rem;margin-top:.7rem;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.1em;color:var(--bone-dim);text-transform:uppercase}
+.legend i{display:inline-block;width:9px;height:9px;margin-right:.35rem;vertical-align:-1px}
+
+/* ── §2 Conveyor (turn pipeline) ────────────────────────────── */
+.cv rect.cv-box{fill:var(--stone-2);stroke:var(--edge);stroke-width:1}
+.cv .cv-node rect{animation:cv-pulse 9s ease-out infinite}
+@keyframes cv-pulse{0%{stroke:var(--edge)}3%{stroke:var(--gold-bright);stroke-width:2}14%{stroke:var(--edge);stroke-width:1}100%{stroke:var(--edge)}}
+.cv .cv-num{font-family:var(--font-mono);font-size:9px;fill:var(--gold);letter-spacing:.1em}
+.cv .cv-title{font-family:var(--font-mono);font-size:10.5px;fill:var(--bone-bright);font-weight:600;letter-spacing:.04em}
+.cv .cv-sub{font-family:var(--font-mono);font-size:8px;fill:var(--bone-dim);letter-spacing:.05em}
+.cv .cv-wire{stroke:var(--edge-hi);stroke-width:1.2;fill:none}
+.cv .cv-wire.back{stroke-dasharray:4 6;animation:flow-dash 1.6s linear infinite;stroke:rgba(var(--gold-rgb),.4)}
+.cv .packet{fill:var(--gold-bright);filter:drop-shadow(0 0 5px rgba(var(--gold-bright-rgb),.8))}
+
+/* ── §3 Strata (prompt layers) ──────────────────────────────── */
+.strata{margin:1.2rem 0}
+.str-row{display:grid;grid-template-columns:34px minmax(150px,220px) 1fr;gap:.8rem;align-items:baseline;
+  border:1px solid var(--edge);border-left:2px solid var(--edge);background:var(--stone);
+  padding:.5rem .9rem;margin-bottom:.35rem;font-family:var(--font-mono);font-size:var(--fs-tiny);
+  opacity:.45;transform:translateX(-6px);transition:all .45s cubic-bezier(.22,1,.36,1);border-color:rgba(var(--gold-rgb),.4)}
+.str-row .sn{color:var(--gold);font-size:.68rem}
+.str-row .st{color:var(--bone-bright);letter-spacing:.04em;font-weight:600}
+.str-row .sd{color:var(--bone-dim);font-size:.7rem}
+.str-row.lit{opacity:1;transform:none;border-left-color:var(--gold);background:var(--stone-2);box-shadow:0 0 14px -6px rgba(var(--gold-rgb),.35)}
+.str-row.lit .sd{color:var(--bone)}
+.str-row.cond{border-left-style:dashed}
+.str-row.cond.lit{border-left-color:var(--arcane);box-shadow:0 0 14px -6px rgba(var(--arcane-rgb),.35)}
+.str-row.final.lit{border-left-color:var(--rubric)}
+@media(max-width:640px){.str-row{grid-template-columns:26px 1fr;border-color:rgba(var(--gold-rgb),.4)}.str-row .sd{grid-column:2}}
+
+/* ── §4 Fact window ─────────────────────────────────────────── */
+.fwin{margin:1.2rem 0;border:1px solid var(--edge);background:var(--ink)}
+.fwin-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.5rem .9rem;border-bottom:1px solid var(--edge);background:var(--stone);flex-wrap:wrap}
+/* same duplicate-colour bug: base --bone-dim kept, trailing --rubric dropped */
+.fwin-head span{font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;font-size:.82rem;letter-spacing:.12em;color:var(--bone-dim)}
+.fact{display:grid;grid-template-columns:44px 1fr 90px 74px;gap:.7rem;align-items:center;
+  padding:.42rem .9rem;border-bottom:1px solid rgba(var(--edge-rgb),.5);font-family:var(--font-mono);font-size:.72rem;
+  transition:all .5s}
+.fact:last-child{border-bottom:none}
+.fact .fs{color:var(--teal)}
+.fact .ft{color:var(--bone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fact .ft em{color:var(--gold-bright);font-style:normal}
+.fact .fb{height:6px;background:var(--stone-3);position:relative;overflow:hidden}
+.fact .fb i{position:absolute;inset:0 auto 0 0;width:0;background:var(--teal);transition:width .9s cubic-bezier(.22,1,.36,1)}
+.fact .fv{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);text-align:right}
+.fact.ship{background:rgba(var(--gold-rgb),.06)}
+.fact.ship .fb i{background:var(--gold)}
+.fact.ship .fv{color:var(--gold-bright)}
+.fact.out{opacity:.34}
+.fact.out .ft{text-decoration:line-through;text-decoration-color:rgba(var(--blood-rgb),.7)}
+.fact.out .fv{color:var(--rubric);opacity:.7}
+.fact.dead{opacity:.2}
+.cut-line{display:flex;align-items:center;gap:.7rem;padding:.3rem .9rem;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;color:var(--gold);text-transform:uppercase}
+.cut-line::before,.cut-line::after{content:'';flex:1;height:1px;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.5) 0 4px,transparent 4px 8px)}
+@media(max-width:640px){.fact{grid-template-columns:38px 1fr 60px;}.fact .fb{display:none}}
+
+/* ── §5 Guardian 44 grid ────────────────────────────────────── */
+.g44{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:.5rem;margin:1.2rem 0}
+.g44-group{border:1px solid var(--edge);background:var(--stone);padding:.6rem .7rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+/* same duplicate-colour bug: base --bone-dim kept, trailing --rubric dropped. The
+   per-category rules below (.c-combat/.c-cond/…) still set their own heading colour. */
+.g44-group h4{font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;font-size:.82rem;letter-spacing:.12em;color:var(--bone-dim);margin-bottom:.45rem}
+.g44-group .gf{display:flex;flex-wrap:wrap;gap:.25rem}
+.gf b{font-family:var(--font-mono);font-size:.62rem;font-weight:500;padding:.14rem .38rem;border:1px solid;letter-spacing:.02em;transition:transform .15s}
+.gf b:hover{transform:translateY(-2px)}
+.g44-group.c-combat h4{color:var(--rubric)} .g44-group.c-combat .gf b{color:var(--rubric);border-color:rgba(var(--blood-rgb),.4)}
+.g44-group.c-cond h4{color:var(--gold)} .g44-group.c-cond .gf b{color:var(--gold);border-color:rgba(var(--ember-rgb),.4)}
+.g44-group.c-prog h4{color:var(--gold-bright)} .g44-group.c-prog .gf b{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.4)}
+.g44-group.c-item h4{color:var(--teal)} .g44-group.c-item .gf b{color:var(--teal);border-color:rgba(var(--teal-rgb),.4)}
+.g44-group.c-quest h4{color:var(--poison)} .g44-group.c-quest .gf b{color:var(--poison);border-color:rgba(var(--poison-rgb),.4)}
+.g44-group.c-npc h4{color:var(--arcane-bright)} .g44-group.c-npc .gf b{color:var(--arcane-bright);border-color:rgba(var(--arcane-rgb),.4)}
+.g44-group.c-world h4{color:var(--bone-bright)} .g44-group.c-world .gf b{color:var(--bone);border-color:var(--edge)}
+.g44-group.c-fix h4{color:var(--term-amber)} .g44-group.c-fix .gf b{color:var(--term-amber);border-color:rgba(var(--gold-rgb),.4)}
+
+/* ── JSON typewriter ────────────────────────────────────────── */
+.json-box{background:var(--ink);border:1px solid var(--edge);border-left:2px solid var(--arcane);padding:1rem 1.1rem;margin:1rem 0;position:relative;border:1px solid rgba(var(--gold-rgb),.38);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5)}
+.json-box .jb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem}
+.json-box .jb-title{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim)}
+.json-box pre{font-family:var(--font-mono);font-size:.72rem;line-height:1.7;color:var(--bone);white-space:pre-wrap;word-break:break-word;min-height:180px}
+.j-key{color:var(--gold-bright)}.j-str{color:var(--bone-bright)}.j-num{color:var(--teal)}
+.j-kw{color:var(--poison)}
+.j-cursor{display:inline-block;width:.55em;height:1em;background:var(--arcane-bright);vertical-align:-.15em;animation:blink 1s steps(1) infinite}
+.jb-btn{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;padding:.4rem .8rem;min-height:var(--tap-min)}
+.jb-btn:disabled{opacity:.35;cursor:default}
+
+/* ── Prompt excerpts ────────────────────────────────────────── */
+pre.prompt{background:var(--ink);border:1px solid var(--edge);border-left:2px solid var(--gold);
+  padding:.9rem 1rem;overflow-x:auto;font-family:var(--font-mono);font-size:.72rem;line-height:1.75;color:var(--bone);margin:.6rem 0 1rem}
+pre.prompt .pt{color:var(--gold-bright);font-weight:700}
+pre.prompt .pk{color:var(--arcane-bright)}
+pre.prompt .pd{color:var(--bone-dim)}
+pre.prompt .pneg{color:var(--term-red)}
+pre.prompt .pok{color:var(--term-green)}
+pre.prompt.truth{border-left-color:var(--blood)}
+
+/* ── Tables ─────────────────────────────────────────────────── */
+table.dc{width:100%;border-collapse:collapse;font-size:.84rem;margin:.6rem 0 .9rem}
+table.dc th{font-family:var(--font-display);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-bright);
+  text-align:left;padding:.4rem .7rem;border-bottom:1px solid var(--gold);font-weight:700}
+table.dc td{padding:.36rem .7rem;border-bottom:1px solid var(--edge);color:var(--bone)}
+table.dc tr:last-child td{border-bottom:none}
+table.dc td.mono{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--gold-bright)}
+
+/* ── Dice roller ────────────────────────────────────────────── */
+.roller{border:1px solid var(--edge);background:var(--stone);padding:1.4rem;margin:1.2rem 0}
+/* same duplicate-colour bug: base --gold-bright kept, trailing --rubric dropped */
+.roller .r-label{font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;font-size:.82rem;letter-spacing:.12em;color:var(--gold-bright);margin-bottom:.9rem}
+.r-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.r-expr{flex:1 1 220px;background:var(--ink);border:1px solid var(--edge);color:var(--term-green);
+  font-family:var(--font-mono);font-size:1rem;padding:.6rem .8rem;min-width:0}
+.r-expr:focus{outline:none;border-color:var(--gold)}
+.r-btn{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;padding:.55rem .85rem;min-height:var(--tap-min)}
+.r-adv{display:flex;align-items:center;gap:.5rem;font-family:var(--font-mono);font-size:.7rem;color:var(--bone-dim);letter-spacing:.08em;cursor:pointer;user-select:none}
+.r-adv input{accent-color:var(--arcane)}
+.dice-stage{display:flex;flex-wrap:wrap;gap:.7rem;min-height:74px;align-items:center;margin:.9rem 0 .4rem}
+.die-face{width:58px;height:58px;display:flex;align-items:center;justify-content:center;position:relative;
+  font-family:var(--font-display);font-weight:900;font-size:var(--fs-h3);color:var(--bone-bright);
+  background:var(--stone-3);border:1px solid var(--edge-hi);
+  animation:die-pop .45s cubic-bezier(.22,1,.36,1) both}
+@keyframes die-pop{from{opacity:0;transform:scale(.3) rotate(-160deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+.die-face.d20{clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.die-face.d4{clip-path:polygon(50% 0,100% 100%,0 100%)}
+.die-face.crit{border-color:var(--gold);color:var(--gold-bright);animation:die-pop .45s cubic-bezier(.22,1,.36,1) both,crit-glow 1.2s ease-in-out infinite}
+.die-face.fail{border-color:var(--rubric);color:var(--rubric)}
+.die-face.adv-best{border-color:var(--poison)}
+@keyframes crit-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
+.r-result{font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--term-green);min-height:1.6em;word-break:break-word}
+.r-crit{font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.24em;text-transform:uppercase;margin-top:.3rem;min-height:1.2em}
+.r-crit.good{color:var(--gold-bright);animation:crit-flash 1s ease-in-out infinite}
+.r-crit.bad{color:var(--rubric)}
+@keyframes crit-flash{0%,100%{opacity:1}50%{opacity:.55}}
+.r-history{margin-top:.9rem;border-top:1px dashed var(--edge);padding-top:.7rem;font-family:var(--font-mono);font-size:.72rem;color:var(--bone-dim);max-height:150px;overflow-y:auto}
+.r-history .h-line{padding:.18rem 0;border-bottom:1px solid rgba(var(--edge-rgb),.4)}
+.r-history .h-line:last-child{border-bottom:none}
+.r-history .h-t{color:var(--gold);opacity:.6;margin-right:.5rem}
+
+/* ── §7 Spell slots ─────────────────────────────────────────── */
+.slotbox{border:1px solid var(--edge);background:var(--stone);padding:1.4rem;margin:1.2rem 0}
+.slot-pool{display:flex;gap:.8rem;flex-wrap:wrap;margin:.6rem 0 1.1rem;min-height:46px;align-items:center}
+.ss-pip{width:26px;height:26px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+  background:linear-gradient(160deg,var(--gold-bright),var(--gold) 55%,rgb(var(--gold-deep-rgb)));
+  filter:drop-shadow(0 0 6px rgba(var(--gold-bright-rgb),.5));transition:all .4s;position:relative}
+.ss-pip.spent{background:var(--stone-3);filter:none;opacity:.42}
+.ss-pip.refill{animation:pip-refill .6s cubic-bezier(.22,1,.36,1) both}
+@keyframes pip-refill{from{transform:scale(.2);filter:none}to{transform:scale(1);filter:drop-shadow(0 0 6px rgba(var(--gold-bright-rgb),.5))}}
+.ss-pip.burn{animation:pip-burn .5s ease-out both}
+@keyframes pip-burn{0%{transform:scale(1)}40%{transform:scale(1.35);filter:drop-shadow(0 0 12px rgba(var(--gold-bright-rgb),.9))}100%{transform:scale(1)}}
+.slot-status{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--bone-dim);min-height:1.5em;margin-bottom:.8rem}
+.slot-status b{color:var(--gold-bright)}
+.slot-status.blocked{color:var(--rubric);animation:crit-flash .8s ease-in-out 2}
+.slot-btns{display:flex;flex-wrap:wrap;gap:.5rem}
+
+/* ── §8 TTS sim ─────────────────────────────────────────────── */
+.tts-cache{display:flex;flex-wrap:wrap;gap:.5rem;min-height:34px;margin:.7rem 0}
+.tts-key{font-family:var(--font-mono);font-size:.66rem;color:var(--bone);border:1px solid var(--edge);background:var(--stone-3);
+  padding:.28rem .55rem;animation:die-pop .4s cubic-bezier(.22,1,.36,1) both;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tts-log{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--term-green);min-height:1.5em;word-break:break-word}
+.tts-log .m{color:var(--term-amber)}.tts-log .h{color:var(--poison)}
+
+/* ── §10 State tree + fan ───────────────────────────────────── */
+.tree{background:var(--ink);border:1px solid var(--edge);padding:1rem 1.1rem;margin:1rem 0;font-family:var(--font-mono);font-size:var(--fs-tiny);line-height:1.8}
+.tree .k{color:var(--bone-bright)}
+.tree .kg{color:var(--gold-bright)}
+.tree .d{color:var(--bone-dim)}
+.tree .p{color:var(--arcane-bright)}
+.tree .t{color:var(--teal)}
+.tree details{margin-left:1.1rem;border-left:1px dashed var(--edge);padding-left:.7rem}
+.tree summary{cursor:pointer;color:var(--bone);list-style:none;display:flex;align-items:center;gap:.5rem}
+.tree summary::-webkit-details-marker{display:none}
+.tree summary::before{content:'▸';color:var(--gold);font-size:.6rem;transition:transform .25s;flex:none}
+.tree details[open] summary::before{transform:rotate(90deg)}
+.tree summary:hover{color:var(--gold-bright)}
+.fan rect{fill:var(--stone-2);stroke:var(--edge)}
+.fan text{font-family:var(--font-mono);font-size:9.5px;fill:var(--bone);letter-spacing:.08em}
+.fan .core rect{stroke:var(--gold);fill:var(--stone)}
+.fan .core text{fill:var(--gold-bright);font-size:11px;font-weight:600}
+.fan .beam{stroke-width:1.2;fill:none;stroke-dasharray:4 5;animation:flow-dash 1.4s linear infinite}
+.fan .beam.read{stroke:rgba(var(--gold-rgb),.55)}
+.fan .beam.write{stroke:rgba(var(--arcane-rgb),.6);animation-direction:reverse}
+.fan .pulse{animation:sg-breathe 4s ease-in-out infinite}
+
+/* ── XP ladder ──────────────────────────────────────────────── */
+.xp-ladder{margin:1rem 0}
+.xp-bar{display:flex;height:26px;border:1px solid var(--edge);background:var(--ink);overflow:hidden}
+.xp-step{flex:1;border-right:1px solid var(--edge);position:relative}
+.xp-step:last-child{border-right:none}
+.xp-step.l1{background:rgba(var(--gold-rgb),.13)}
+.xp-step.mid{background:rgba(var(--gold-rgb),.19)}
+.xp-step.late{background:rgba(var(--gold-rgb),.26)}
+.xp-step .lvl{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);font-family:var(--font-mono);font-size:.56rem;color:var(--gold-bright);opacity:.85}
+.xp-cap{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.62rem;color:var(--bone-dim);margin-top:.35rem;flex-wrap:wrap;gap:.3rem}
+
+/* ── §11 Rewind ─────────────────────────────────────────────── */
+.rw-stage{display:flex;gap:1rem;align-items:stretch;margin:1.2rem 0;flex-wrap:wrap}
+.rw-card{flex:1;min-width:180px;border:1px solid var(--edge);background:var(--stone);padding:1rem;position:relative;transition:all .5s;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+.rw-card h4{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem}
+.rw-card .rw-body{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--bone);line-height:1.7}
+.rw-card.now{border-color:var(--gold);box-shadow:0 0 18px -8px rgba(var(--gold-rgb),.5)}
+.rw-card.gone{opacity:.25;transform:translateX(-10px)}
+.rw-card.restored{border-color:var(--poison);box-shadow:0 0 18px -8px rgba(var(--poison-rgb),.5)}
+.rw-ghost{position:absolute;right:.7rem;top:.7rem;font-family:var(--font-mono);font-size:.6rem;letter-spacing:.1em;
+  color:var(--arcane-bright);border:1px dashed rgba(var(--arcane-rgb),.6);padding:.2rem .5rem;opacity:0;transition:opacity .4s}
+.rw-ghost.show{opacity:1}
+.rw-ghost.drop{text-decoration:line-through;text-decoration-color:var(--rubric);color:var(--rubric);border-color:rgba(var(--blood-rgb),.6);opacity:.6}
+.rw-epoch{font-family:var(--font-mono);font-size:.7rem;color:var(--bone-dim);text-align:center;margin-top:.4rem;min-height:1.4em}
+.rw-epoch b{color:var(--gold-bright)}
+
+/* ── Expanders ──────────────────────────────────────────────── */
+.exp{border:1px solid var(--edge);background:var(--stone);margin-bottom:.8rem}
+.exp-toggle{display:flex;align-items:center;gap:.7rem;width:100%;cursor:pointer;text-align:left;background:none;border:none;
+  padding:.8rem 1rem;color:var(--bone);transition:color .2s;font-family:var(--font-body);font-size:var(--fs-sm);min-height:var(--tap-min)}
+.exp-toggle:hover{color:var(--gold-bright)}
+.exp-toggle .caret{transition:transform .3s;font-size:.6rem;color:var(--gold);flex:none}
+.exp-toggle.open .caret{transform:rotate(90deg)}
+.exp-toggle .et-t{font-family:var(--font-display);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-bright)}
+.exp-toggle .et-d{display:block;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.04em;color:var(--bone-dim);text-transform:none;margin-top:.15rem}
+.exp-body{max-height:0;overflow:hidden;opacity:0;transition:max-height .55s cubic-bezier(.22,1,.36,1),opacity .4s}
+.exp-body.open{max-height:2000px;opacity:1}
+.exp-inner{padding:0 1rem 1.1rem}
+.exp-inner p{color:var(--bone);font-size:var(--fs-sm);margin-bottom:.7rem}
+.exp-inner p:last-child{margin-bottom:0}
+
+/* ── Footer / toast / reveal ────────────────────────────────── */
+footer{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4rem 3.5rem;text-align:center;border-top:1px solid var(--edge)}
+footer .f-title{font-family:var(--font-display);font-size:.68rem;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-bottom:.6rem}
+footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);line-height:1.9}
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);opacity:0;z-index:1200;
+  font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.12em;text-transform:uppercase;
+  background:var(--stone);border:1px solid var(--gold);
+  color:var(--gold-bright);padding:.7rem 1.5rem;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+.toast.show{transform:translate(-50%,0);opacity:1}
+.rv{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+.rv.in{opacity:1;transform:none}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media(max-width:1000px){
+  main{grid-template-columns:1fr}
+  .index{position:static;display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem}
+  .index h2{display:none}  /* hidden here — the dead colour copy went with the dedupe */
+  .index ol{display:contents}
+  .index li{border:none;display:inline-block}
+  .index li.active{border-left:none}
+  .index li.active a{color:var(--gold-bright);border-color:var(--gold)}
+  .index a{border:1px solid var(--edge);background:var(--stone-3);padding:.34rem .6rem;font-size:.66rem;margin:0}
+  .index .ix-num{display:none}
+  .index .ix-tag{display:none}
+}
+@media(max-width:760px){
+  body{font-size:15.5px;font-size:17px;line-height:1.65}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .hero{padding-top:3.4rem}
+  .flowbox svg{min-width:560px}
+  .rw-stage{flex-direction:column}
+
+  a.btn-gold, a.btn-ghost, a.btn-blood, .r-btn, .jb-btn { min-height: var(--tap-min); min-height:var(--tap-min);min-height:var(--tap-min);min-height:var(--tap-min);display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap-min);display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap-min);display:inline-flex;align-items:center;justify-content:center}
+  input, select { font-size: 16px; }
+}
+@media(max-width:480px){
+  .sec-head{flex-wrap:wrap;gap:.4rem}
+  .r-row .r-expr{flex-basis:100%}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  html{scroll-behavior:auto}
+}
+</style>
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<style id="w2f-mobile">
+/* ═══ W2/F 2026-10-27 — mobil läsbarhet ═══════════════════════════════════════
+   Flödesdiagrammen ritades för 760–880 px och klämdes in i 313 px med
+   `min-width:640/560` ⇒ 262 px klippt, steg 03–04 osynliga, text klippt mitt
+   i ord. ≤640 px visas istället samma innehåll som en numrerad steg-lista
+   (inget borttaget); ≥641 px behåller SVG:n sitt naturliga mått. */
+.flow-list{display:none;list-style:none;margin:.3rem 0 0;padding:0}
+.flow-list li{position:relative;padding:.7rem .85rem .7rem 2.7rem;margin-bottom:.5rem;border:1px solid rgba(var(--gold-rgb),.28);border-radius:var(--emb-r);background:linear-gradient(180deg,rgba(var(--bone-rgb),.05),rgba(var(--bone-rgb),.012) 60%),var(--stone-2)}
+.flow-list .fl-n{position:absolute;left:.8rem;top:.68rem;font-family:var(--font-mono);font-size:.78rem;color:var(--gold);letter-spacing:.06em}
+.flow-list .fl-t{display:block;font-family:var(--font-display);font-weight:700;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-bright);margin-bottom:.22rem}
+.flow-list .fl-d{display:block;font-family:var(--font-mono);font-size:.78rem;line-height:1.55;color:var(--bone-dim);letter-spacing:.02em}
+.flow-list li.fl-loop{border-style:dashed;background:none}
+.flow-list li.fl-loop .fl-t,.flow-list li.fl-loop .fl-n{color:var(--gold)}
+.flowbox{scrollbar-width:thin;scrollbar-color:var(--gold) rgba(var(--ink-rgb),.65)}
+.flowbox::-webkit-scrollbar{height:9px}
+.flowbox::-webkit-scrollbar-thumb{background:var(--gold);border-radius:var(--emb-r-pill)}
+@media(max-width:640px){
+  .flowbox{overflow:visible;border-radius:var(--emb-r-sm)}
+  .flowbox>svg{display:none}
+  .flow-list{display:block}
+  /* fakta: ellipsis klippte 118–249 px mitt i ord i 164 px-kolumnen */
+  .fact .ft{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  /* 2026-10-27 (parent): SSE-demo-raden bär en rå JSON-sträng utan mellanslag
+     och klipptes 60 px. Bryt var som helst i den på mobil. */
+  .term-line{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-width:100%}
+  .term-line *{white-space:inherit}
+  /* textgolv: funktionell text ≥12 px. Klasser som redan har en mer specifik
+     regel i sidans egna CSS dubbleras (.sn.sn) för att vinna kaskaden —
+     ingen !important utom på <th>, där originalregeln är ospecificerad. */
+  .index a,.chip,.legend,.term-line,.page-eyebrow,.boot-hint,.boot-bar span,
+  .cut-line,.scroll-hint,.jb-head .jb-title,.r-row .r-label,.rw-card h4,.rw-epoch,
+  .g44-group h4,.footer p,.f-title,.tree div,.prompt pre{font-size:.75rem}
+  .sn.sn,.sd.sd,.fs.fs,.fv.fv,.rw-ghost.rw-ghost,.lvl.lvl,.term-bar span,.xp-cap span{font-size:.75rem}
+  .gf b{font-size:.75rem}
+  th{font-size:.75rem!important}
+  .tree div{overflow-wrap:anywhere}
+  .index a{display:inline-flex;align-items:center;min-height:var(--tap-min);padding:.42rem .6rem}
+  .tree summary{min-height:var(--tap-min);align-items:center}
+}
+</style>
+<noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}.term-line{opacity:1;transform:none}.str-row{opacity:1;transform:none;border-color:rgba(var(--gold-rgb),.4)}</style></noscript>
+<style id="grimoire-leaf">
+/* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
+.hero h1::first-letter{font-family:var(--font-display,'Grenze',serif);font-style:normal;font-weight:700;font-size:1.06em;line-height:1;vertical-align:0;margin-right:0;color:var(--gold);text-shadow:0 0 12px rgba(var(--gold-rgb),.3)}
+.panel::after,.rw-card::after,.g44-group::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/svg%3E") left top/24px 24px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg transform='rotate(180 16 16)'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/g%3E%3C/svg%3E") right bottom/24px 24px no-repeat;opacity:.9}
+@keyframes gr-flicker{0%,100%{text-shadow:0 0 20px rgba(var(--gold-bright-rgb),.28),0 2px 0 #000}43%{text-shadow:0 0 26px rgba(var(--gold-bright-rgb),.42),0 2px 0 #000}47%{text-shadow:0 0 12px rgba(var(--gold-bright-rgb),.16),0 2px 0 #000}76%{text-shadow:0 0 22px rgba(var(--gold-bright-rgb),.3),0 2px 0 #000}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.hero h1{animation:none!important;text-shadow:0 2px 0 #000}}
+</style>
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+
+<div id="prog"></div>
+<canvas id="embers" aria-hidden="true"></canvas>
+<div id="vig" aria-hidden="true"></div>
+
+<!-- ═══════════ BOOT OVERLAY ═══════════ -->
+<div id="boot" onclick="bootSkip()" role="button" aria-label="Skip boot sequence" title="Click to skip">
+  <div class="boot-term">
+    <div class="boot-bar"><i></i><i></i><i></i><span>engine_boot · loreweavers-cauldron · v28</span></div>
+    <div class="boot-lines" id="boot-lines"></div>
+    <div class="boot-hint">CLICK TO SKIP — ENTER TO BEGIN</div>
+  </div>
+</div>
+
+<!-- ═══════════ HERO ═══════════ -->
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">MECHANICS</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="hero">
+<div class="page-eyebrow">THE RULES · HOW THE WORLD MOVES</div>
+  <h1>The Mechanics of the Cauldron</h1>
+  <div class="page-rule">✦</div>
+   <div class="eyebrow">The Lore Weaver's Cauldron — under the table</div>
+  <p class="sub">Two minds, one die cup, one JSON file. Everything else is a projection.</p>
+
+  <!-- The whole engine in one diagram -->
+  <div class="sigil rv" aria-label="Engine overview diagram">
+    <svg viewBox="0 0 760 310" role="img">
+      <defs>
+        <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#3E3247"/>
+        </marker>
+        <marker id="arrg" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#ECC468"/>
+        </marker>
+      </defs>
+      <!-- player -->
+      <g class="sg dim"><rect x="290" y="8" width="180" height="42" rx="0"/>
+        <text class="t-name" x="380" y="26" text-anchor="middle">PLAYER</text>
+        <text class="t-sub" x="380" y="40" text-anchor="middle">ONE MESSAGE = ONE TURN</text></g>
+      <!-- DM -->
+      <g class="sg gold node"><rect x="40" y="112" width="250" height="72"/>
+        <text class="t-name" x="165" y="138" text-anchor="middle">DUNGEON MASTER</text>
+        <text class="t-sub" x="165" y="154" text-anchor="middle">DM_CORE_PROMPT v28 · THE ARTIST</text>
+        <text class="t-sub" x="165" y="168" text-anchor="middle">WRITES THE STORY · MAY SAY NO</text></g>
+      <!-- Guardian -->
+      <g class="sg pur node d1"><rect x="470" y="112" width="250" height="72"/>
+        <text class="t-name" x="595" y="138" text-anchor="middle">GUARDIAN</text>
+        <text class="t-sub" x="595" y="154" text-anchor="middle">44-FIELD CONTRACT · THE ACCOUNTANT</text>
+        <text class="t-sub" x="595" y="168" text-anchor="middle">PROSE → JSON · NEVER A SENTENCE</text></g>
+      <!-- Engine -->
+      <g class="sg bone node d2"><rect x="235" y="242" width="290" height="58"/>
+        <text class="t-name" x="380" y="264" text-anchor="middle">THE ENGINE — CODE, NOT PROSE</text>
+        <text class="t-sub" x="380" y="280" text-anchor="middle">SECRETS DICE · ASYNCIO LOCK · STATE.JSON</text>
+        <text class="t-sub" x="380" y="292" text-anchor="middle">CONDITIONS TICK · XP TABLE · COMBAT ROLLS</text></g>
+      <!-- wires -->
+      <path class="wire slow" d="M330,50 C280,70 200,80 168,108" marker-end="url(#arr)"/>
+      <text class="w-label" x="212" y="72">action</text>
+      <path class="wire gold" d="M290,148 H466" marker-end="url(#arrg)"/>
+      <text class="w-label" x="336" y="140">narration</text>
+      <path class="wire pur slow" d="M595,184 C595,215 560,232 528,244" marker-end="url(#arr)"/>
+      <text class="w-label" x="586" y="216">44 fields</text>
+      <path class="wire gold" d="M235,262 C150,255 120,225 122,188" marker-end="url(#arrg)"/>
+      <text class="w-label" x="118" y="232">TRUTH block</text>
+      <path class="wire pur" d="M470,130 C420,105 400,92 388,54" marker-end="url(#arr)" style="animation-direction:reverse"/>
+      <text class="w-label" x="428" y="86">PRE: roll?</text>
+      <path class="wire slow" d="M420,50 C480,66 520,74 560,108" marker-end="url(#arr)"/>
+    </svg>
+    <ol class="flow-list" aria-label="How the dual mind works, step by step">
+      <li><span class="fl-n">01</span><span class="fl-t">Player</span><span class="fl-d">One message = one turn · the action</span></li>
+      <li><span class="fl-n">02</span><span class="fl-t">Dungeon Master</span><span class="fl-d">DM_CORE_PROMPT v28 · the artist · writes the story · may say no</span></li>
+      <li><span class="fl-n">03</span><span class="fl-t">Guardian</span><span class="fl-d">44-field contract · the accountant · prose → JSON · never a sentence · sends back "PRE: roll?"</span></li>
+      <li><span class="fl-n">04</span><span class="fl-t">The engine — code, not prose</span><span class="fl-d">Secrets dice · asyncio lock · state.json · conditions tick · XP table · combat rolls</span></li>
+      <li class="fl-loop"><span class="fl-n">↺</span><span class="fl-t">Loop</span><span class="fl-d">Engine hands the DM the TRUTH block; the Guardian hands it 44 fields; narration never ends the turn by itself</span></li>
+    </ol>
+  </div>
+
+  <div class="chips">
+    <span class="chip g">DM prompt v28</span>
+    <span class="chip p">Guardian · 44 fields</span>
+    <span class="chip">Server-rolled dice</span>
+    <span class="chip t">TTS cache · 64 × 600s</span>
+    <span class="chip e">SSE character weaving</span>
+    <span class="chip b">Undo · 1 turn · any donation</span>
+  </div>
+  <div class="scroll-hint">▼ scroll to open the hatch ▼</div>
+</div>
+
+<!-- ═══════════ INDEX ═══════════ -->
+<main>
+<nav class="index rv" id="index" aria-label="Section index">
+  <h2>Index</h2>
+  <ol>
+    <li data-ix="s1"><a href="#s1"><span class="ix-num">§1</span>The Dual Mind<span class="ix-tag">DM + Guardian + engine</span></a></li>
+    <li data-ix="s2"><a href="#s2"><span class="ix-num">§2</span>Turn Pipeline<span class="ix-tag">one round, six stages</span></a></li>
+    <li data-ix="s3"><a href="#s3"><span class="ix-num">§3</span>Prompt Injection<span class="ix-tag">twelve layers</span></a></li>
+    <li data-ix="s4"><a href="#s4"><span class="ix-num">§4</span>Fact Memory<span class="ix-tag">the moving window</span></a></li>
+    <li data-ix="s5"><a href="#s5"><span class="ix-num">§5</span>Guardian Contract<span class="ix-tag">prose → JSON</span></a></li>
+    <li data-ix="s6"><a href="#s6"><span class="ix-num">§6</span>Dice Engine<span class="ix-tag">the engine rolls</span></a></li>
+    <li data-ix="s7"><a href="#s7"><span class="ix-num">§7</span>Spell Slots &amp; Rests<span class="ix-tag">the level-as-cost pool</span></a></li>
+    <li data-ix="s8"><a href="#s8"><span class="ix-num">§8</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
+    <li data-ix="s9"><a href="#s9"><span class="ix-num">§9</span>Character Weaving<span class="ix-tag">SSE adventurer creation</span></a></li>
+    <li data-ix="s10"><a href="#s10"><span class="ix-num">§10</span>State Model<span class="ix-tag">the one truth</span></a></li>
+    <li data-ix="s11"><a href="#s11"><span class="ix-num">§11</span>Undoing a Turn<span class="ix-tag">one rewind, one turn · any donation</span></a></li>
+  </ol>
+</nav>
+
+<div class="content">
+
+<!-- ═══════════ §1 DUAL MIND ═══════════ -->
+<section class="sec rv" id="s1" data-sec="s1">
+  <div class="sec-head">
+    <span class="sec-num">§1</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The Dual Mind</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">One artist, one accountant, and a third party neither of them may overrule: the engine.</p>
+
+  <div class="grid3">
+    <div class="panel rv fresh-frame">
+      <h3><span class="dot">✦</span> The Dungeon Master</h3>
+      <p>A free, creative storyteller. Identity and craft laws live in <code>DM_CORE_PROMPT</code>, versioned <b>v28</b> — a version bump forces a provider cache miss, so a stale persona can never be served.</p>
+      <div class="tag-row">
+        <span class="tg g">narrator</span><span class="tg g">NPC actor</span><span class="tg g">rules arbiter</span><span class="tg g">challenger</span>
+      </div>
+      <p class="stat">"The story is NOT pre-written — it is shaped by the player's choices, in the moment." <b>Death is real.</b></p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The Guardian</h3>
+      <p>A second LLM pass that reads the narration and extracts <b>every mechanical effect</b> into a strict 44-field JSON contract. It never writes a sentence — and in combat, never a number.</p>
+      <div class="tag-row">
+        <span class="tg p">PRE — is a roll needed?</span><span class="tg p">POST — prose → state</span>
+      </div>
+      <p class="stat">Fallback: a legacy regex pipeline ([SKADA:] [GULD:]…) for out-of-combat effects. Every combat number is engine-rolled.</p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The Engine</h3>
+      <p>Plain server code. It rolls the dice (Python <code>secrets</code>), decrements pools, ticks conditions, pays XP from one table, and writes <b>state.json</b> under a per-campaign asyncio lock.</p>
+      <div class="tag-row">
+        <span class="tg">dice</span><span class="tg">spell slots</span><span class="tg">conditions</span><span class="tg">travel time</span><span class="tg">level-ups</span>
+      </div>
+      <p class="stat">The tale may lie — <b>the code cannot</b>.</p>
+    </div>
+  </div>
+
+  <div class="panel rv">
+    <h3><span class="dot">✦</span> Four knobs, one clamp</h3>
+    <p>Each campaign carries four model choices in <code>meta</code>: the <b>DM</b> (storyteller), the <b>Guardian</b> (roll judge), the <b>Extraction</b> model (POST parser) and the <b>TTS provider</b> (StepFun or Qwen). Non-admin players are clamped to a whitelist server-side — <code>_clamp_player_model</code> is the real gate, the picker is only UX.</p>
+    <div class="tag-row">
+      <span class="tg g">step-3.7-flash</span><span class="tg p">qwen3.8-flash</span><span class="tg p">deepseek-v4.1-flash</span><span class="tg p">step-5-preview</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §2 TURN PIPELINE ═══════════ -->
+<section class="sec rv" id="s2" data-sec="s2">
+  <div class="sec-head">
+    <span class="sec-num">§2</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The Turn Pipeline</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">One message, six serialized stages. The DM stream is the only thing you watch — the rest happens in the dark.</p>
+
+  <!-- Animated conveyor: one packet loops the six stages forever -->
+  <div class="flowbox rv">
+    <svg class="cv" viewBox="0 0 880 260" role="img" aria-label="Turn pipeline conveyor">
+      <defs>
+        <marker id="cvarr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#3E3247"/>
+        </marker>
+        <path id="cvpath" d="M60,62 H820 M820,62 V124 M820,124 H60 M60,124 V186 M60,186 H440" fill="none"/>
+      </defs>
+      <!-- stage boxes row 1 -->
+      <g class="cv-node" style="animation-delay:0s"><rect class="cv-box" x="30" y="30" width="230" height="64"/>
+        <text class="cv-num" x="46" y="50">01</text><text class="cv-title" x="70" y="50">ACTION IN</text>
+        <text class="cv-sub" x="46" y="68">SSE · per-campaign asyncio</text><text class="cv-sub" x="46" y="80">lock — no two turns race</text></g>
+      <g class="cv-node" style="animation-delay:1.5s"><rect class="cv-box" x="305" y="30" width="230" height="64"/>
+        <text class="cv-num" x="321" y="50">02</text><text class="cv-title" x="345" y="50">GUARDIAN PRE</text>
+        <text class="cv-sub" x="321" y="68">guardian_check_roll —</text><text class="cv-sub" x="321" y="80">uncertain? hand DM a [KAST:]</text></g>
+      <g class="cv-node" style="animation-delay:3s"><rect class="cv-box" x="580" y="30" width="230" height="64"/>
+        <text class="cv-num" x="596" y="50">03</text><text class="cv-title" x="620" y="50">DM WRITES</text>
+        <text class="cv-sub" x="596" y="68">layered prompt (§3) · tokens</text><text class="cv-sub" x="596" y="80">stream: thought → narration</text></g>
+      <!-- stage boxes row 2 -->
+      <g class="cv-node" style="animation-delay:4.5s"><rect class="cv-box" x="580" y="154" width="230" height="64"/>
+        <text class="cv-num" x="596" y="174">04</text><text class="cv-title" x="620" y="174">VALIDATE &amp; STRIP</text>
+        <text class="cv-sub" x="596" y="192">tags stripped from display ·</text><text class="cv-sub" x="596" y="204">[KAST:] → dice button</text></g>
+      <g class="cv-node" style="animation-delay:6s"><rect class="cv-box" x="305" y="154" width="230" height="64"/>
+        <text class="cv-num" x="321" y="174">05</text><text class="cv-title" x="345" y="174">GUARDIAN POST</text>
+        <text class="cv-sub" x="321" y="192">reply + last 6 entries → JSON</text><text class="cv-sub" x="321" y="204">2-attempt repair · never fatal</text></g>
+      <g class="cv-node" style="animation-delay:7.5s"><rect class="cv-box" x="30" y="154" width="230" height="64"/>
+        <text class="cv-num" x="46" y="174">06</text><text class="cv-title" x="70" y="174">APPLY &amp; SAVE</text>
+        <text class="cv-sub" x="46" y="192">apply_mechanics + dedup →</text><text class="cv-sub" x="46" y="204">state.json · last_effects</text></g>
+      <!-- wires -->
+      <path class="cv-wire" d="M260,62 H300" marker-end="url(#cvarr)"/>
+      <path class="cv-wire" d="M535,62 H575" marker-end="url(#cvarr)"/>
+      <path class="cv-wire" d="M695,94 V150" marker-end="url(#cvarr)"/>
+      <path class="cv-wire" d="M580,186 H540" marker-end="url(#cvarr)"/>
+      <path class="cv-wire" d="M305,186 H265" marker-end="url(#cvarr)"/>
+      <path class="cv-wire back" d="M145,154 C145,130 145,120 145,98" marker-end="url(#cvarr)"/>
+      <text class="cv-sub" x="158" y="130">loop feeds turn N+1</text>
+      <!-- the packet -->
+      <circle class="packet" r="4">
+        <animateMotion dur="9s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="linear">
+          <mpath href="#cvpath"/>
+        </animateMotion>
+      </circle>
+    </svg>
+    <ol class="flow-list" aria-label="Turn pipeline, six stages">
+      <li><span class="fl-n">01</span><span class="fl-t">Action in</span><span class="fl-d">SSE · per-campaign asyncio lock — no two turns race</span></li>
+      <li><span class="fl-n">02</span><span class="fl-t">Guardian pre</span><span class="fl-d">guardian_check_roll — uncertain? hand the DM a [KAST:]</span></li>
+      <li><span class="fl-n">03</span><span class="fl-t">DM writes</span><span class="fl-d">Layered prompt (§3) · tokens stream: thought → narration</span></li>
+      <li><span class="fl-n">04</span><span class="fl-t">Validate &amp; strip</span><span class="fl-d">Tags stripped from display · [KAST:] → dice button</span></li>
+      <li><span class="fl-n">05</span><span class="fl-t">Guardian post</span><span class="fl-d">Reply + last 6 entries → JSON · 2-attempt repair · never fatal</span></li>
+      <li><span class="fl-n">06</span><span class="fl-t">Apply &amp; save</span><span class="fl-d">apply_mechanics + dedup → state.json · last_effects</span></li>
+      <li class="fl-loop"><span class="fl-n">↺</span><span class="fl-t">Loop feeds turn N+1</span><span class="fl-d">Saved state is the first thing the next turn reads</span></li>
+    </ol>
+    <div class="legend">
+      <span><i style="background:var(--gold-bright)"></i>the turn packet</span>
+      <span><i style="background:var(--edge-hi)"></i>serialized path</span>
+      <span><i style="background:var(--gold);opacity:.4"></i>state loop-back</span>
+    </div>
+  </div>
+
+  <div class="term dm rv">
+    <div class="term-bar"><i></i><i></i><i></i><span>transcript.snapshot · turn 42</span></div>
+    <div class="term-body" id="pipe-term">
+      <div class="term-line"><span class="c-dim">❯ you:</span> I edge toward the door, dagger ready, and try to slip past the guard. <span class="c-dim">[sneak]</span></div>
+      <div class="term-line"><span class="c-dim"># guardian_pre · qwen3.8-flash · 0.9s</span></div>
+      <div class="term-line"><span class="c-p">🛡 pre:</span> uncertain → recommend <span class="c-gold">[KAST: 1d20+3 | DEXTERITY to sneak (DC 14)]</span></div>
+      <div class="term-line"><span class="c-dim"># dm stream · step-3.7-flash · 6.2s · 412 tokens</span></div>
+      <div class="term-line">DM: You press your back to the damp stone, torchlight crawling across the floor… <span class="c-gold">[KAST: 1d20+3 | DEXTERITY to sneak (DC 14)]</span></div>
+      <div class="term-line"><span class="c-dim"># validate · strip tags · parse_roll_requests</span></div>
+      <div class="term-line"><span class="c-amb">⚙ parsed:</span> 1 roll request → dice button spawned in chat</div>
+      <div class="term-line"><span class="c-dim">❯ you:</span> [Resultat: 1d20+3 → <span class="c-gold">17</span>] <span class="c-dim">(button click, auto-sent)</span></div>
+      <div class="term-line"><span class="c-dim"># guardian_post · extraction model · 2.1s · 3 changes</span></div>
+      <div class="term-line"><span class="c-p">🛡 post:</span> xp:0 · logbook:"Faelyndra smög förbi vakten…" · npcs_near:[Kip] · time_passed:1h</div>
+      <div class="term-line"><span class="c-dim"># apply_mechanics → state.json · lock released</span></div>
+      <div class="term-line"><span class="c-ok">✍ saved:</span> turn 42 · hp 21/26 · gp 15 · 2 quests active</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §3 PROMPT INJECTION ═══════════ -->
+<section class="sec rv" id="s3" data-sec="s3">
+  <div class="sec-head">
+    <span class="sec-num">§3</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Prompt Injection</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">The DM never sees raw JSON. Every turn the engine welds twelve layers into one system prompt — language first, truth forever, memory in tiers. Watch the stack assemble.</p>
+
+  <div class="strata rv" id="strata" aria-label="Prompt layer stack">
+    <div class="str-row"><span class="sn">01</span><span class="st">LANGUAGE</span><span class="sd">[LANGUAGE: ENGLISH] / [SPRÅK: SVENSKA] — first line, overrides all Swedish internal notes</span></div>
+    <div class="str-row"><span class="sn">02</span><span class="st">CORE IDENTITY</span><span class="sd">DM_CORE_PROMPT [v28] — storyteller, world-keeper, rules arbiter · version = cache-buster</span></div>
+    <div class="str-row"><span class="sn">03</span><span class="st">ANTI-HALLUCINATION</span><span class="sd">the DM triad: say yes · say no · or roll dice — player-invented advantages are refused</span></div>
+    <div class="str-row cond"><span class="sn">04</span><span class="st">COMBAT <i>or</i> NARRATIVE</span><span class="sd">living enemies in state.npcs? → DM_COMBAT_PROMPT · else DM_NARRATIVE_PROMPT — weight only what's real</span></div>
+    <div class="str-row final"><span class="sn">05</span><span class="st">TRUTH BLOCK</span><span class="sd">HP · AC · gold · inventory · quests · pinned facts — "authoritative, never contradict this"</span></div>
+    <div class="str-row"><span class="sn">06</span><span class="st">MEMORY TIERS</span><span class="sd">2 scene summaries · 2 chapters · 1 campaign arc — each stamped with its turn number</span></div>
+    <div class="str-row"><span class="sn">07</span><span class="st">ACTIVE THREADS</span><span class="sd">3–5 ongoing storylines, re-woven every 10 turns — the map that's always on the table</span></div>
+    <div class="str-row"><span class="sn">08</span><span class="st">LAST EFFECTS</span><span class="sd">meta.last_effects — "Skada: 12 · Föremål: Torch · Tid: 2h" — react to what you caused</span></div>
+    <div class="str-row"><span class="sn">09</span><span class="st">WORLD &amp; TRAVEL</span><span class="sd">location · time · weather · known places · travel = distance ÷ 10 × terrain (road 0.5 … mountains 1.8)</span></div>
+    <div class="str-row"><span class="sn">10</span><span class="st">LORE · NPCs · QUESTS</span><span class="sd">world lore, NPC dossiers with relations, active quests</span></div>
+    <div class="str-row"><span class="sn">11</span><span class="st">SHEET &amp; MEMORY</span><span class="sd">inventory + character · top 8 facts · top 4 semantic chunks (§4)</span></div>
+    <div class="str-row final"><span class="sn">12</span><span class="st">LANGUAGE REMINDER</span><span class="sd">the directive repeated last — models drift, so it bookends the prompt · Guardian PRE advice rides here too</span></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The [KAST:] absolute rule</h3>
+      <pre class="prompt"><span class="pneg">❌ WRONG:</span> <span class="pd">"You slash at the goblin — the sword hits! 8 damage."</span>
+<span class="pok">✅ RIGHT:</span> <span class="pt">"You slash at the goblin! [KAST: 1d20+5 | ATTACK vs AC 13]"</span></pre>
+      <p class="stat">The player <b>always</b> rolls. The DM narrates <b>only after</b> the result returns as [Resultat:]. Advantage/disadvantage is declared in the tag itself.</p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The DC scale</h3>
+      <table class="dc fresh-table">
+        <tr><th>Difficulty</th><th>DC</th></tr>
+        <tr><td>Easy</td><td class="mono">8–10</td></tr>
+        <tr><td>Medium</td><td class="mono">12–14</td></tr>
+        <tr><td>Hard</td><td class="mono">16–18</td></tr>
+        <tr><td>Very hard</td><td class="mono">20–22</td></tr>
+        <tr><td>Nearly impossible</td><td class="mono">25+</td></tr>
+      </table>
+      <p class="stat">Routine = auto-success. Pressure raises DC, preparation lowers it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §4 FACT MEMORY ═══════════ -->
+<section class="sec rv" id="s4" data-sec="s4">
+  <div class="sec-head">
+    <span class="sec-num">§4</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Fact Memory</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">Facts are extracted after every turn and ranked before every reply — only the top eight ship. Nothing is deleted; everything competes.</p>
+
+  <!-- Live ranking window: press next-turn and watch the set re-shuffle -->
+  <div class="fwin rv">
+    <div class="fwin-head">
+      <span>get_relevant_facts · limit 8 · + top 4 RAG chunks</span>
+      <button class="jb-btn btn-ghost" id="fact-next" onclick="factNext()" title="Advance the demo one turn — facts re-rank, top 8 ship">next turn ▸</button>
+    </div>
+    <div id="fact-list"></div>
+    <div class="cut-line">top 8 ship · the rest stay in the register</div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The ranking</h3>
+      <pre class="prompt"><span class="pd">score = (keyword-overlap + recency + mentions)</span>
+        <span class="pd">×</span> <span class="pk">relevance-weight</span> <span class="pd">×</span> <span class="pk">confidence-weight</span></pre>
+      <p class="stat">Recency <b>+30%</b> · mentions <b>+25%</b> · compacted relevance <b>−50%</b>. Superseded facts never ship again.</p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The background rhythm</h3>
+      <p class="stat">
+        every <b>2</b> turns — fact extraction<br>
+        every <b>5</b> turns — Qdrant re-index<br>
+        every <b>10</b> turns — active threads re-woven<br>
+        every <b>50</b> turns — compaction: an archivist LLM drops stale facts to relevance <b>0.2</b>
+      </p>
+      <p class="stat">Pinned facts (<b>/pin</b>) never fall out — injected uncapped, forever.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §5 GUARDIAN CONTRACT ═══════════ -->
+<section class="sec rv" id="s5" data-sec="s5">
+  <div class="sec-head">
+    <span class="sec-num">§5</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The Guardian Contract</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">After the DM speaks, the Guardian answers with exactly one thing: a JSON object, all 44 fields present, never an explanation.</p>
+
+  <div class="g44 rv">
+    <div class="g44-group c-combat"><h4>⚔ Health &amp; combat — 12</h4><div class="gf">
+      <b>damage</b><b>healing</b><b>death</b><b>combat_start</b><b>combat_round</b><b>combat_end</b><b>player_attacks</b><b>ally_attacks</b><b>ally_damage</b><b>enemy_attacks</b><b>combat_events</b><b>initiative_entries</b></div></div>
+    <div class="g44-group c-cond"><h4>🔥 Conditions &amp; resources — 8</h4><div class="gf">
+      <b>spell_slots_spend</b><b>inspiration_gain</b><b>inspiration_spend</b><b>exhaustion_change</b><b>cover_set</b><b>training_update</b><b>enemy_actions</b><b>status_apply</b></div></div>
+    <div class="g44-group c-prog"><h4>⭐ Progression — 3</h4><div class="gf">
+      <b>xp</b><b>spells_add</b><b>character_updates</b></div></div>
+    <div class="g44-group c-item"><h4>🪙 Possessions — 3</h4><div class="gf">
+      <b>items_add</b><b>items_remove</b><b>currency</b></div></div>
+    <div class="g44-group c-quest"><h4>⚑ Quests — 3</h4><div class="gf">
+      <b>quests_new</b><b>quests_completed</b><b>quests_failed</b></div></div>
+    <div class="g44-group c-npc"><h4>👥 People — 5</h4><div class="gf">
+      <b>npcs_new</b><b>npc_relations</b><b>npcs_near</b><b>npc_notes</b><b>npc_name_reveals</b></div></div>
+    <div class="g44-group c-world"><h4>🗺 World &amp; time — 8</h4><div class="gf">
+      <b>locations_new</b><b>current_location</b><b>world_lore</b><b>time_passed</b><b>rest</b><b>new_day</b><b>day_summary</b><b>logbook</b></div></div>
+    <div class="g44-group c-fix"><h4>✎ Grants &amp; fixes — 2</h4><div class="gf">
+      <b>roll_grants</b><b>corrections</b></div></div>
+  </div>
+
+  <div class="json-box rv fresh-frame">
+    <div class="jb-head">
+      <span class="jb-title">guardian_extract_mechanics → JSON</span>
+      <button class="jb-btn btn-ghost" id="json-replay" onclick="replayJson()">↻ replay extraction</button>
+    </div>
+    <pre id="json-demo"></pre>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> Paranoid reading</h3>
+      <p>It gets the reply, the action, the last <b>6 transcript entries</b> and a compact state snapshot. Implicit damage ("the cold bites") must be caught; a potion drunk is a <b>roll grant</b> (2d4+2), never a fixed number; "you see a book" is not an item — only "you take the book" is.</p>
+      <p class="stat">Invalid JSON → one repair retry. Two failures → the empty contract. <b>The turn always survives.</b></p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> Combat never runs on LLM fiat</h3>
+      <p><b>enemy_attacks</b> names the attacker only. The engine rolls d20 + attack bonus vs your AC — cover, crits, disadvantage from conditions, resistances — then rolls damage from the enemy's <code>damage_dice</code>. Conditions apply real effects and tick each round in code.</p>
+      <p class="stat">XP: only kills, quests, milestones, puzzles — never walking or small talk. Most turns pay <b>zero</b>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §6 DICE ENGINE ═══════════ -->
+<section class="sec rv" id="s6" data-sec="s6">
+  <div class="sec-head">
+    <span class="sec-num">§6</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The Dice Engine</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">The most sacred rule: in your fights, the model never decides the numbers. The DM requests rolls, the Guardian judges them, the engine rolls.</p>
+
+  <div class="roller rv">
+    <div class="r-label">✦ dice console — same notation parser as the backend</div>
+    <div class="r-row">
+      <input class="r-expr" id="dice-expr" value="1d20+3" aria-label="Dice notation" spellcheck="false"
+             onkeydown="if(event.key==='Enter')rollNow()">
+      <button class="r-btn btn-gold" onclick="rollNow()">⚄ Roll</button>
+      <label class="r-adv"><input type="checkbox" id="dice-adv" onchange="toggleAdv()"> ADVANTAGE (2d20)</label>
+      <button class="r-btn btn-ghost" onclick="quickDice('d20')">d20</button>
+      <button class="r-btn btn-ghost" onclick="quickDice('2d6+2')">2d6+2</button>
+      <button class="r-btn btn-ghost" onclick="quickDice('1d12')">d12</button>
+      <button class="r-btn btn-ghost" onclick="quickDice('1d8')">d8</button>
+    </div>
+    <div class="dice-stage" id="dice-stage"></div>
+    <div class="r-result" id="dice-result"></div>
+    <div class="r-crit" id="dice-crit"></div>
+    <div class="r-history" id="dice-history"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> Two-phase flow</h3>
+      <p class="stat"><b>1</b> Guardian PRE spots uncertainty · <b>2</b> DM writes [KAST: 1d20+MOD | LABEL (DC X)] — the only syntax that spawns a die · <b>3</b> your click resolves via <b>POST /api/dice</b> (Python <code>secrets</code>, 1–100 dice, 2–1000 sides) and returns as [Resultat:] · <b>4</b> the DM narrates the outcome — never before.</p>
+      <p class="stat">Honest caveat: if /api/dice is unreachable the client rolls locally — and that fallback is <b>marked in the chat</b>. You always know which numbers came from the server.</p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> Edge rules encoded</h3>
+      <p class="stat"><b>Nat 20</b> critical · <b>nat 1</b> catastrophe. Death saves: 3 vs 3 — nat 1 counts double, nat 20 wakes you at 1 HP. Potions are always rolled (2d4+2). Buffs arrive through <b>roll_grants</b> — Guardian reads the narration and creates the button.</p>
+      <p class="stat">Because the model never sees the outcome before it is committed — <b>the tale can lie, the dice cannot</b>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §7 SPELL SLOTS & RESTS ═══════════ -->
+<section class="sec rv" id="s7" data-sec="s7">
+  <div class="sec-head">
+    <span class="sec-num">§7</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Spell Slots &amp; Rests</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">Magic is a resource, and rest is how you get it back. One pool, level-as-cost — every rest rule applied by the engine, never by prose.</p>
+
+  <div class="slotbox rv">
+    <div class="r-label" style="font-family:var(--font-display);font-size:.7rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.9rem">✦ spell_slots {current · max} — live pool</div>
+    <div class="slot-pool" id="slot-pool" aria-label="Spell slot pool"></div>
+    <div class="slot-status" id="slot-status"><b>4/4</b> — the well is full</div>
+    <div class="slot-btns">
+      <button class="jb-btn btn-ghost" onclick="castSpell(1)">cast level 1</button>
+      <button class="jb-btn btn-ghost" onclick="castSpell(3)">cast level 3</button>
+      <button class="jb-btn btn-ghost" onclick="castSpell(0)">cantrip (free)</button>
+      <button class="jb-btn btn-ghost" onclick="longRest()">long rest (8h)</button>
+      <button class="jb-btn btn-ghost" onclick="shortRest()">short rest (1 hit die)</button>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> Level as cost</h3>
+      <p>Casting spends <b>the spell's level</b> from the pool — a level-3 casting costs 3, cantrips are free. The Guardian extracts <code>spell_slots_spend {name, level}</code>; the code decrements. Pool empty → the cast is <b>blocked, and the chat says so</b>. A dry well is never silent.</p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> Rests</h3>
+      <p><b>Long rest (8h):</b> HP to max, all slots back, half your hit dice (min 1), exhaustion −1. If eight hours pass in narration, the rest lands even if the DM forgets the tag.<br>
+      <b>Short rest:</b> spend one hit die — server dice roll it (1d6–1d12 by class) + CON. Exhaustion follows the 5e ladder; only rest moves it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §8 VOICE & TTS ═══════════ -->
+<section class="sec rv" id="s8" data-sec="s8">
+  <div class="sec-head">
+    <span class="sec-num">§8</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Voice &amp; the TTS Cache</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">Synthesis is billed per character — so the engine never speaks the same line twice. 64 slots, ten-minute memory.</p>
+
+  <div class="panel rv">
+    <h3><span class="dot">✦</span> How a line becomes voice</h3>
+    <p class="stat">Long messages split at sentence boundaries into ≤<b>900-char</b> segments → each synthesized (StepFun or Qwen, ~1.1× speed) → MP3 frames stitched into one file. <b>Key</b> = provider + voice + style + text · <b>TTL</b> 600s · <b>cap</b> 64, oldest evicted. Usage (chars, tokens, true MP3 duration) is booked to your ledger on every request — cache hits included, minus the API call.</p>
+  </div>
+
+  <div class="term rv">
+    <div class="term-bar"><i></i><i></i><i></i><span>tts_cache_sim · _TTS_CACHE · max 64 · ttl 600s</span></div>
+    <div class="term-body">
+      <div style="margin-bottom:.6rem;display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="jb-btn btn-ghost" onclick="simTts('repeat')">🗣 request the same line again</button>
+        <button class="jb-btn btn-ghost" onclick="simTts('new')">🗣 request a new line</button>
+      </div>
+      <div class="tts-cache" id="tts-cache"></div>
+      <div class="tts-log" id="tts-log">$ cache empty — first request will miss</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §9 CHARACTER WEAVING ═══════════ -->
+<section class="sec rv" id="s9" data-sec="s9">
+  <div class="sec-head">
+    <span class="sec-num">§9</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Character Weaving</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">An adventurer is not generated — it is woven, live, on an SSE stream: a free-text dream in, a finished D&amp;D sheet out.</p>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The weave</h3>
+      <p>One line — <i>"Skapa en karaktär: {prompt}"</i> — against <code>CHARACTER_PROMPT</code> at <b>temperature 0.95</b>, the most creative setting in the engine, with <b>high reasoning</b> on full-size models. The stream pushes <b>reasoning</b> frames (the invisible thoughts), then <b>content</b> frames (the growing JSON), then <b>done</b> with tokens, seconds and reasoning length.</p>
+      <p class="stat">_extract_json → _finalize_character_data fills hit dice, modifiers, starting gear. Tokens book to a lifetime ledger that survives deletion.</p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The vault</h3>
+      <p>Saved adventurers live in a <b>vault</b> — one per account, not per campaign — so they outlive any adventure. Summoning copies the sheet into a campaign's state; rerolling spawns a fresh stream. Avatars are generated separately, from your words or an auto-built sheet prompt.</p>
+    </div>
+  </div>
+
+  <div class="term rv">
+    <div class="term-bar"><i></i><i></i><i></i><span>sse_frames · POST /api/vault/generate/stream</span></div>
+    <div class="term-body" id="sse-term">
+      <div class="term-line"><span class="c-dim">{"prompt":"a scarred ranger who hunts the things that hunt villages","lang":"en"}</span></div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"reasoning","text":"The player wants a ranger with a scar, a hunter… I will build…"}</div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"content","text":"{\"name\":\"Faelyndra\",\"race\":\"Half-elf\","}</div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"content","text":"\"class\":\"Ranger\",\"level\":1,\"hp\":{\"max\":12},"}</div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"content","text":"\"abilities\":{\"DEX\":{\"score\":16,\"mod\":3}},"}</div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"content","text":"\"story\":\"She carries the scar of the hollow…\"}"}</div>
+      <div class="term-line"><span class="c-gold">data:</span> {"type":"done","ok":true,"time_s":31.2,"tokens":{…},"character":{…},"inventory":[{…longsword…},{…shortbow…}]}</div>
+      <div class="term-line"><span class="c-dim"># frontend → preview card → [Save to Vault] [Unravel &amp; Reroll]</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §10 STATE MODEL ═══════════ -->
+<section class="sec rv" id="s10" data-sec="s10">
+  <div class="sec-head">
+    <span class="sec-num">§10</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The State Model</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">One JSON file per campaign is the single source of truth. Everything you see is a projection of it.</p>
+
+  <div class="flowbox rv">
+    <svg class="fan" viewBox="0 0 880 210" role="img" aria-label="State fan-out diagram">
+      <defs>
+        <marker id="fanarr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#3E3247"/>
+        </marker>
+      </defs>
+      <!-- core -->
+      <g class="core pulse"><rect x="330" y="78" width="220" height="56"/>
+        <text x="440" y="100" text-anchor="middle">state.json</text>
+        <text x="440" y="118" text-anchor="middle" style="font-size:8px;fill:#AB9E95">ONE FILE · ASYNCIO LOCK · JOURNALED TRANSCRIPTS</text></g>
+      <!-- projections -->
+      <g><rect x="20" y="12" width="150" height="34"/><text x="95" y="33" text-anchor="middle">CHARACTER SHEET</text></g>
+      <g><rect x="20" y="88" width="150" height="34"/><text x="95" y="109" text-anchor="middle">NPC DOSSIERS</text></g>
+      <g><rect x="20" y="164" width="150" height="34"/><text x="95" y="185" text-anchor="middle">THE MAP</text></g>
+      <g><rect x="710" y="12" width="150" height="34"/><text x="785" y="33" text-anchor="middle">LOGBOOK</text></g>
+      <g><rect x="710" y="88" width="150" height="34"/><text x="785" y="109" text-anchor="middle">NEXT DM LINE</text></g>
+      <g><rect x="710" y="164" width="150" height="34"/><text x="785" y="185" text-anchor="middle">COMBAT RAIL</text></g>
+      <!-- read beams (core → views) -->
+      <path class="beam read" d="M330,92 C260,80 220,50 174,32" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M330,106 H174" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M330,120 C260,132 220,160 174,178" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M550,92 C620,80 660,50 706,32" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M550,106 H706" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M550,120 C620,132 660,160 706,178" marker-end="url(#fanarr)"/>
+      <!-- write beams (guardian/dm → core) -->
+      <path class="beam write" d="M440,74 V30" marker-end="url(#fanarr)"/>
+      <text x="452" y="50" style="font-size:8px;fill:#C0AAF8;letter-spacing:.1em">GUARDIAN WRITES</text>
+      <text x="452" y="62" style="font-size:8px;fill:#AB9E95;letter-spacing:.1em">DM READS A DIGEST · NEVER INVENTS</text>
+    </svg>
+    <ol class="flow-list" aria-label="State fan-out, one file many views">
+      <li><span class="fl-n">◆</span><span class="fl-t">state.json — one file</span><span class="fl-d">Asyncio lock · journaled transcripts</span></li>
+      <li><span class="fl-n">→</span><span class="fl-t">Read — projections</span><span class="fl-d">Character sheet · NPC dossiers · the map · logbook · next DM line · combat rail</span></li>
+      <li class="fl-loop"><span class="fl-n">←</span><span class="fl-t">Write — Guardian only</span><span class="fl-d">The Guardian writes; the DM reads a digest and never invents</span></li>
+    </ol>
+    <div class="legend">
+      <span><i style="background:var(--gold)"></i>read — projection</span>
+      <span><i style="background:var(--arcane)"></i>write — Guardian only</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The shape</h3>
+      <div class="tree">
+        <div><span class="kg">meta</span> <span class="d">— models · turn_count · last_effects · epoch</span></div>
+        <details><summary><span class="kg">character</span> <span class="d">— the sheet</span></summary>
+          <div><span class="k">hp</span>{current·max·temp} · <span class="k">xp</span> · <span class="k">spell_slots</span>{current·max}</div>
+          <div><span class="k">abilities</span> STR…CHA · <span class="k">hit_dice</span>{dice·total·remaining}</div>
+          <div><span class="k">inventory[]</span> · <span class="k">spells[]</span> · <span class="k">updates[]</span> <span class="d">(Guardian growth log)</span></div></details>
+        <details><summary><span class="kg">world</span> <span class="d">— the living world</span></summary>
+          <div><span class="k">current_location</span> · <span class="k">time</span> · <span class="k">weather</span> · <span class="k">day</span></div>
+          <div><span class="k">logbook[]</span> · <span class="k">travel_log[]</span> · <span class="k">day_summaries[]</span></div>
+          <details><summary><span class="k">combat</span> <span class="d">— chat-first battle state</span></summary>
+            <div><span class="t">enemies[]</span>{hp·ac·alive·statuses} · <span class="t">allies[]</span></div>
+            <div><span class="t">round</span> · <span class="t">initiative[]</span> · <span class="t">turn_order[]</span> · <span class="t">log[]</span></div>
+            <div><span class="t">player_actions</span>{action·bonus·reaction} — one each per round</div></details></details>
+        <details><summary><span class="kg">npcs[] · quests[] · locations[]</span></summary>
+          <div><span class="p">npcs[]</span> name · relation · notes · alive · near <span class="d">(recomputed every turn)</span></div>
+          <div><span class="g">quests[]</span> id · reward · xp_reward · status · completed_turn</div>
+          <div><span class="t">locations[]</span> name · terrain · x · y — <span class="d">the map is a projection of this</span></div></details>
+        <div><span class="kg">lore[] · pinned_facts[] · avatars{} · images[]</span></div>
+      </div>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> Concurrency &amp; one XP table</h3>
+      <p>Every read-modify-write runs under a per-campaign <b>asyncio lock</b>; transcripts journal as JSONL plus scene/chapter summaries, so the hierarchy rebuilds after a crash.</p>
+      <p>D&D 5e thresholds live in exactly one place — <code>_XP_THRESHOLDS</code> — imported by both the legacy tag pipeline and the Guardian's level-up check.</p>
+      <div class="xp-ladder">
+        <div class="xp-bar">
+          <div class="xp-step l1"><span class="lvl">1</span></div><div class="xp-step l1"><span class="lvl">2</span></div>
+          <div class="xp-step l1"><span class="lvl">3</span></div><div class="xp-step mid"><span class="lvl">4</span></div>
+          <div class="xp-step mid"><span class="lvl">5</span></div><div class="xp-step mid"><span class="lvl">6</span></div>
+          <div class="xp-step mid"><span class="lvl">7</span></div><div class="xp-step mid"><span class="lvl">8</span></div>
+          <div class="xp-step late"><span class="lvl">9</span></div><div class="xp-step late"><span class="lvl">10</span></div>
+          <div class="xp-step late"><span class="lvl">11</span></div><div class="xp-step late"><span class="lvl">12</span></div>
+          <div class="xp-step late"><span class="lvl">13</span></div><div class="xp-step late"><span class="lvl">14</span></div>
+          <div class="xp-step late"><span class="lvl">15</span></div><div class="xp-step late"><span class="lvl">16</span></div>
+          <div class="xp-step late"><span class="lvl">17</span></div><div class="xp-step late"><span class="lvl">18</span></div>
+          <div class="xp-step late"><span class="lvl">19</span></div><div class="xp-step late"><span class="lvl">20</span></div>
+        </div>
+        <div class="xp-cap"><span>lvl 1→2: 300 XP</span><span>lvl 9→10: 64,000 XP</span><span>lvl 19→20: 355,000 XP</span></div>
+      </div>
+      <p class="stat"><b>The invariant:</b> the DM may never invent what state.json holds; the Guardian may never forget to update it. That asymmetry is the whole game.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §11 UNDO ═══════════ -->
+<section class="sec rv" id="s11" data-sec="s11">
+  <div class="sec-head">
+    <span class="sec-num">§11</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Undoing a Turn</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">Every turn is snapshotted before it is written. One rewind, one turn, one level deep — press it and watch the world step back. The rewind itself is part of the supporter unlock: <b>any donation</b> opens it (one euro is enough) and it stays open.</p>
+
+  <div class="rv">
+    <div style="text-align:center;margin-bottom:.8rem">
+      <button class="jb-btn btn-gold" id="undo-btn" onclick="undoDemo()" style="letter-spacing:.2em" title="Demo the rewind — costs nothing here; in play it costs 1 turn">↶ UNDO LAST TURN</button>
+      <span class="stat" style="margin-left:.8rem">costs <b>1 turn</b> · no refund · ledger records action=undo · unlocked by <b>any donation</b></span>
+    </div>
+    <div class="rw-stage">
+      <div class="rw-card" id="rw-prev">
+        <h4>turn 41 · snapshot</h4>
+        <div class="rw-body">hp 26/26 · gp 12<br>quests: 2 active<br>facts: 34 · threads: 4</div>
+      </div>
+      <div class="rw-card now" id="rw-now">
+        <h4>turn 42 · written</h4>
+        <div class="rw-body">hp 21/26 · gp 15<br>logbook +1 · npcs_near:[Kip]<br>time_passed: 1h</div>
+        <span class="rw-ghost" id="rw-ghost">🛡 late guardian job…</span>
+      </div>
+      <div class="rw-card" id="rw-next">
+        <h4>after rewind</h4>
+        <div class="rw-body" id="rw-next-body">—</div>
+      </div>
+    </div>
+    <div class="rw-epoch" id="rw-epoch">epoch <b>7</b> — background writers check it before saving</div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> What the rewind takes back</h3>
+      <p class="stat">Your message, the DM's reply, and <b>everything the Guardian recorded</b> — state mutations, the fact register, transcript lines, scene/chapter summaries. The vector index is purged and re-indexed from the restored transcript.</p>
+      <p class="stat">A locked attempt costs nothing: without the unlock the request is refused <b>before</b> anything is touched — no turn is spent, the world is unchanged, and the snapshot waits for you until you donate.</p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> No zombie data</h3>
+      <p class="stat">Late background jobs from the undone turn are disarmed by a bumped <b>epoch</b>: they check it before saving and drop their writes. Single-level only — each snapshot overwrites the previous one, and a restore consumes it.</p>
+    </div>
+  </div>
+</section>
+
+</div><!-- /content -->
+</main>
+
+<footer>
+  <div class="f-title">✦ the lore weaver's cauldron — engine mechanics ✦</div>
+  <p><a class="btn-ghost" href="help.html">← Back to the Guide</a></p>
+  <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/extraction.py (FactRegister) · backend/combat.py · backend/dice.py · backend/models.py · DM prompt v28 · Guardian 44-field contract<br>
+  dnd.rostad.cc — The Lore Weaver's Cauldron</p>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ENGINE MECHANICS — runtime (vanilla JS, offline-safe)
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+"use strict";
+
+/* ── Boot sequence ─────────────────────────────────────────── */
+var bootLines = [
+  ["THE LORE WEAVER'S CAULDRON — ENGINE DIAGNOSTIC", "b-gold"],
+  ["> mounting DM_CORE_PROMPT .......... ", "b-dim"], ["OK (v28)", "b-ok"],
+  ["> mounting GUARDIAN_POST_SYSTEM .... ", "b-dim"], ["OK (44-field contract)", "b-ok"],
+  ["> truth_block ...................... ", "b-dim"], ["OK (authoritative)", "b-ok"],
+  ["> dice_roll(notation) .............. ", "b-dim"], ["OK (secrets · engine rolls)", "b-ok"],
+  ["> condition engine ................. ", "b-dim"], ["OK (tick per round)", "b-ok"],
+  ["> priming TTS cache ................ ", "b-dim"], ["OK (64 slots / 600s TTL)", "b-ok"],
+  ["> state lock ....................... ", "b-dim"], ["OK (per campaign)", "b-ok"],
+  ["> mounting FACT REGISTER ........... ", "b-dim"], ["OK (top 8 · moving window)", "b-ok"],
+  ["> undo snapshot .................... ", "b-dim"], ["OK (single level · epoch guard)", "b-ok"],
+  ["> embers lit. the table is ready.", "b-gold"]
+];
+var bootEl = document.getElementById("boot");
+var bootLinesEl = document.getElementById("boot-lines");
+var bootIdx = 0, bootTimer = null;
+function bootAppend(text, cls){
+  var span = document.createElement("span");
+  if(cls) span.className = cls;
+  span.textContent = text;
+  bootLinesEl.appendChild(span);
+}
+function bootStep2(){
+  if(bootIdx >= bootLines.length){ bootDone(); return; }
+  var label = bootLines[bootIdx], status = bootLines[bootIdx+1];
+  bootAppend(label[0], label[1]);
+  if(status){ setTimeout(function(){ bootAppend(status[0], status[1]); bootAppend("\n", ""); }, 90); }
+  bootIdx += 2;
+  bootTimer = setTimeout(bootStep2, 160);
+}
+function bootDone(){
+  if(!bootEl || bootEl.classList.contains("done")) return;
+  clearTimeout(bootTimer);
+  try{ sessionStorage.setItem("mech_boot_seen", "1"); }catch(_){}
+  bootEl.classList.add("done");
+  setTimeout(function(){ if(bootEl && bootEl.parentNode) bootEl.parentNode.removeChild(bootEl); }, 700);
+}
+window.bootSkip = function(){ bootLinesEl.innerHTML = ""; bootDone(); };
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" || e.key === "Enter"){ window.bootSkip(); }
+});
+try{
+  if(sessionStorage.getItem("mech_boot_seen")){ window.bootSkip(); }
+  else { bootStep2(); }
+}catch(_){ bootStep2(); }
+
+/* ── Embers canvas ─────────────────────────────────────────── */
+(function(){
+  var cv = document.getElementById("embers");
+  if(!cv || !cv.getContext) return;
+  var ctx = null;
+  try{ ctx = cv.getContext("2d"); }catch(_){}
+  if(!ctx) return; // no canvas support — page works fine without embers
+  var ps = [], W = 0, H = 0;
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function size(){ W = cv.width = window.innerWidth; H = cv.height = window.innerHeight; }
+  size(); window.addEventListener("resize", size);
+  function spawn(p){
+    p.x = Math.random()*W; p.y = H + 8;
+    p.vy = 0.25 + Math.random()*0.55;
+    p.r = 0.8 + Math.random()*1.7;
+    p.wob = Math.random()*Math.PI*2;
+    p.hue = Math.random() < 0.82 ? 22 + Math.random()*18 : 268 + Math.random()*20;
+    p.life = 0; p.max = 400 + Math.random()*500;
+  }
+  for(var i=0;i<40;i++){ ps.push({}); spawn(ps[i]); ps[i].y = Math.random()*H; }
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+    for(var i=0;i<ps.length;i++){
+      var p = ps[i];
+      p.life++; p.y -= p.vy; p.wob += 0.02;
+      var x = p.x + Math.sin(p.wob)*14;
+      var a = Math.max(0, 1 - p.life/p.max) * 0.55;
+      if(p.y < -10 || p.life > p.max){ spawn(p); continue; }
+      ctx.beginPath();
+      ctx.fillStyle = "hsla(" + p.hue + ",80%,60%," + a + ")";
+      ctx.shadowBlur = 6; ctx.shadowColor = "hsla(" + p.hue + ",80%,55%," + (a*0.8) + ")";
+      ctx.fillRect(x, p.y, p.r, p.r);
+    }
+    ctx.shadowBlur = 0;
+    if(!reduced) requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+/* ── Scroll reveal + progress + spy ────────────────────────── */
+var revealEls = document.querySelectorAll(".rv");
+function initReveal(){
+  if(!("IntersectionObserver" in window)){
+    revealEls.forEach(function(el){ el.classList.add("in"); });
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target); }
+    });
+  }, { threshold: .08, rootMargin: "0px 0px -40px 0px" });
+  revealEls.forEach(function(el){ io.observe(el); });
+  setTimeout(function(){ revealEls.forEach(function(el){ el.classList.add("in"); }); }, 2500);
+}
+var progEl = document.getElementById("prog");
+var secEls = Array.prototype.slice.call(document.querySelectorAll("[data-sec]"));
+var ixLinks = Array.prototype.slice.call(document.querySelectorAll("#index li"));
+function onScroll(){
+  var y = window.scrollY || document.documentElement.scrollTop;
+  var h = document.documentElement.scrollHeight - window.innerHeight;
+  if(progEl) progEl.style.width = (h > 0 ? (y/h)*100 : 0) + "%";
+  var current = "s1";
+  secEls.forEach(function(sec){
+    if(y >= sec.offsetTop - 140) current = sec.getAttribute("data-sec");
+  });
+  ixLinks.forEach(function(li){
+    li.classList.toggle("active", li.getAttribute("data-ix") === current);
+  });
+}
+window.addEventListener("scroll", onScroll, { passive: true });
+onScroll();
+
+/* ── Terminal line cascade (fires when scrolled into view) ─── */
+(function(){
+  var terms = document.querySelectorAll("#pipe-term, #sse-term");
+  if(!("IntersectionObserver" in window)){
+    terms.forEach(function(t){ t.querySelectorAll(".term-line").forEach(function(l){ l.classList.add("shown"); }); });
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      io.unobserve(en.target);
+      var lines = en.target.querySelectorAll(".term-line");
+      lines.forEach(function(l, i){ setTimeout(function(){ l.classList.add("shown"); }, 140 * i); });
+    });
+  }, { threshold: .15 });
+  terms.forEach(function(t){ io.observe(t); });
+})();
+
+/* ── Toast ─────────────────────────────────────────────────── */
+var toastTimer = null;
+function toast(msg){
+  var t = document.getElementById("toast");
+  if(!t) return;
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2600);
+}
+
+/* ── §3 Strata: layers light up in assembly order, on loop ─── */
+(function(){
+  var rows = Array.prototype.slice.call(document.querySelectorAll("#strata .str-row"));
+  if(!rows.length) return;
+  var i = 0, timer = null, started = false;
+  function step(){
+    rows.forEach(function(r){ r.classList.remove("lit"); });
+    if(i < rows.length){
+      rows[i].classList.add("lit");
+      i++;
+      timer = setTimeout(step, 620);
+    } else {
+      i = 0;
+      timer = setTimeout(step, 2600); // pause with full stack lit, then rebuild
+    }
+  }
+  function start(){ if(started) return; started = true; step(); }
+  if("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting) start(); });
+    }, { threshold: .2 });
+    io.observe(document.getElementById("strata"));
+  } else { start(); }
+})();
+
+/* ── §4 Fact window: a moving top-8 across turns ───────────── */
+var FACTS = [
+  { cat:"NPC",      text:"Kaelen Voss bears the party no ill will", turn:12, mentions:3 },
+  { cat:"PLATS",    text:"The Hollow Forge hides a second entrance behind the smithy", turn:8, mentions:4 },
+  { cat:"HÄNDELSE", text:"The north gate guard lost his purse to a pickpocket", turn:3, mentions:1 },
+  { cat:"NPC",      text:"Mira the innkeeper owes a debt to the Gray Guild", turn:15, mentions:2 },
+  { cat:"LORE",     text:"The Gray Gate has been sealed since the Sundering", turn:2, mentions:5, pinned:true },
+  { cat:"QUEST",    text:"The blacksmith's daughter vanished near the old mill", turn:18, mentions:3 },
+  { cat:"NPC",      text:"Kip fears the bell tower — he flinches when it rings", turn:40, mentions:2 },
+  { cat:"PLATS",    text:"Ravenhall's chapel floor sounds hollow beneath the altar", turn:41, mentions:1 },
+  { cat:"HÄNDELSE", text:"A red cloak watched the party from the market crowd", turn:22, mentions:1 },
+  { cat:"LORE",     text:"Wolves in these woods do not howl — they whisper", turn:9, mentions:2 },
+  { cat:"NPC",      text:"Sister Amara keeps the key to the undercroft", turn:30, mentions:1 },
+  { cat:"HÄNDELSE", text:"The bridge toll was paid in old silver, not coin", turn:26, mentions:1 }
+];
+var factTurn = 42;
+var factQueries = [
+  { kw:["kaelen","forge"], label:"\"I ask Kaelen about the Hollow Forge…\"" },
+  { kw:["kip","bell","tower"], label:"\"I follow Kip toward the bell tower.\"" },
+  { kw:["ravenhall","chapel","altar"], label:"\"I search Ravenhall's chapel.\"" },
+  { kw:["mira","guild","innkeeper"], label:"\"I visit Mira at the inn.\"" },
+  { kw:["mill","daughter","blacksmith"], label:"\"We ride for the old mill.\"" }
+];
+var factQ = 0;
+function factScore(f, q){
+  var words = f.text.toLowerCase().split(/[^a-zåäö]+/);
+  var overlap = q.kw.filter(function(k){ return words.indexOf(k) !== -1; }).length;
+  var base = overlap ? overlap / q.kw.length : 0.05;
+  var recency = 0.3 * (f.turn / factTurn);
+  var mention = 0.25 * (f.mentions / 5);
+  return Math.min(0.99, base + recency + mention);
+}
+function factRender(){
+  var list = document.getElementById("fact-list");
+  if(!list) return;
+  var q = factQueries[factQ % factQueries.length];
+  var scored = FACTS.map(function(f){ return { f: f, s: factScore(f, q) }; });
+  scored.sort(function(a,b){ return b.s - a.s; });
+  var head = document.createElement("div");
+  head.className = "cut-line";
+  head.style.borderBottom = "1px solid var(--edge)";
+  head.textContent = "player message: " + q.label;
+  list.innerHTML = "";
+  list.appendChild(head);
+  scored.forEach(function(item, idx){
+    var row = document.createElement("div");
+    row.className = "fact" + (idx < 8 ? " ship" : " out");
+    row.innerHTML =
+      '<span class="fs">' + item.s.toFixed(2) + '</span>' +
+      '<span class="ft">[' + item.f.cat + '] ' + item.f.text + ' <em>(turn ' + item.f.turn + ')</em></span>' +
+      '<span class="fb"><i></i></span>' +
+      '<span class="fv">' + (idx < 8 ? "ships" : "stays") + '</span>';
+    list.appendChild(row);
+    setTimeout(function(){ row.querySelector(".fb i").style.width = (item.s * 100) + "%"; }, 80 + idx * 60);
+  });
+}
+window.factNext = function(){
+  factQ++; factTurn += 1 + Math.floor(Math.random()*2);
+  factRender();
+};
+factRender();
+
+/* ── §5 JSON typewriter ────────────────────────────────────── */
+var jsonDemoObj = {
+  "damage": [{"target": "player", "amount": 6, "type": "piercing"}],
+  "healing": [],
+  "xp": 0,
+  "items_add": [{"name": "Rusty Key", "category": "trinket", "usage": "activated", "qty": 1, "weight": 0.2, "lore": "Cut for a lock that no longer exists in the keep's walls.", "equipped": false}],
+  "currency": [{"denom": "sp", "amount": -2}],
+  "npcs_near": ["Kip"],
+  "locations_new": [{"name": "Ravenhall", "description": "A blackened manor above the village", "terrain": "ruin"}],
+  "current_location": "Ravenhall",
+  "world_lore": ["The villagers now whisper that the gate was never meant to open."],
+  "time_passed": {"hours": 1, "description": "Crossed the square in the rain"},
+  "logbook": "Faelyndra slipped past the guard and reached Ravenhall's courtyard.",
+  "status_apply": [],
+  "roll_grants": [],
+  "corrections": []
+};
+function hlJson(str){
+  return str.replace(/(\"(?:[^\"\\]|\\.)*\")(\s*:)?|\b(true|false)\b|\bnull\b|(-?\d+(?:\.\d+)?)/g, function(m, s, colon, kw, num){
+    if(s) return colon ? '<span class="j-key">' + s + '</span>' + colon : '<span class="j-str">' + s + '</span>';
+    if(kw) return '<span class="j-kw">' + kw + '</span>';
+    if(num) return '<span class="j-num">' + num + '</span>';
+    return m;
+  });
+}
+var jsonFull = JSON.stringify(jsonDemoObj, null, 2);
+var jsonTick = null, jsonRunning = false;
+function typeJsonDemo(){
+  var el = document.getElementById("json-demo");
+  if(!el || jsonRunning) return;
+  jsonRunning = true;
+  var btn = document.getElementById("json-replay");
+  if(btn) btn.disabled = true;
+  el.innerHTML = "";
+  var i = 0;
+  (function step(){
+    i += 1 + Math.floor(Math.random()*2);
+    if(i > jsonFull.length) i = jsonFull.length;
+    el.innerHTML = hlJson(jsonFull.slice(0, i)) + (i < jsonFull.length ? '<span class="j-cursor"></span>' : "");
+    if(i < jsonFull.length){ jsonTick = setTimeout(step, 11); }
+    else { jsonRunning = false; if(btn) btn.disabled = false; }
+  })();
+}
+window.replayJson = function(){ clearTimeout(jsonTick); jsonRunning = false; typeJsonDemo(); };
+
+/* ── §6 Dice roller (JS copy of backend/dice.py parser) ────── */
+function parseDice(expr, adv){
+  var s = String(expr).trim().toLowerCase();
+  var m = s.match(/^(\d*)d(\d+)([+-]\d+)?$/);
+  if(!m) return null;
+  var count = m[1] ? parseInt(m[1], 10) : 1;
+  var sides = parseInt(m[2], 10);
+  var mod = m[3] ? parseInt(m[3], 10) : 0;
+  if(count < 1 || count > 12) return null;
+  if(sides < 2 || sides > 100) return null;
+  var rolls = [];
+  if(adv && sides === 20 && count === 1){
+    rolls.push(1 + Math.floor(Math.random()*20));
+    rolls.push(1 + Math.floor(Math.random()*20));
+  } else {
+    for(var i = 0; i < count; i++) rolls.push(1 + Math.floor(Math.random()*sides));
+  }
+  var raw = rolls.reduce(function(a,b){ return a+b; }, 0);
+  var total = (adv && sides === 20 && count === 1) ? Math.max.apply(null, rolls) + mod : raw + mod;
+  return { count: count, sides: sides, mod: mod, rolls: rolls, total: total, adv: adv };
+}
+function exprNow(){
+  var el = document.getElementById("dice-expr");
+  return el ? el.value.trim() : "1d20";
+}
+function addDiceHistory(expr, res){
+  var h = document.getElementById("dice-history");
+  if(!h) return;
+  var line = document.createElement("div");
+  line.className = "h-line";
+  var t = new Date();
+  var stamp = ("0"+t.getHours()).slice(-2) + ":" + ("0"+t.getMinutes()).slice(-2) + ":" + ("0"+t.getSeconds()).slice(-2);
+  var detail = res.adv ? "[" + res.rolls.join(", ") + "] → keep " + Math.max.apply(null, res.rolls) + (res.mod ? " + " + res.mod : "") : res.rolls.join(" + ") + (res.mod !== 0 ? (res.mod > 0 ? " + " + res.mod : " − " + Math.abs(res.mod)) : "");
+  line.innerHTML = '<span class="h-t">' + stamp + '</span>' + expr + " → " + detail + " = <b style=\"color:var(--gold-bright)\">" + res.total + "</b>";
+  h.insertBefore(line, h.firstChild);
+  while(h.children.length > 8) h.removeChild(h.lastChild);
+}
+function renderDice(res){
+  var stage = document.getElementById("dice-stage");
+  var resultEl = document.getElementById("dice-result");
+  var critEl = document.getElementById("dice-crit");
+  if(!stage || !resultEl || !critEl) return;
+  stage.innerHTML = ""; resultEl.textContent = ""; critEl.textContent = ""; critEl.className = "r-crit";
+  var best = res.adv ? Math.max.apply(null, res.rolls) : null;
+  var isD20 = res.sides === 20;
+  res.rolls.forEach(function(r, idx){
+    var face = document.createElement("div");
+    face.className = "die-face d" + res.sides;
+    face.textContent = r;
+    face.style.animationDelay = (idx*0.12) + "s";
+    if(res.adv && r === best) face.classList.add("adv-best");
+    if(isD20 && r === 20 && res.count === 1 && !res.adv) face.classList.add("crit");
+    if(isD20 && r === 1 && res.count === 1 && !res.adv) face.classList.add("fail");
+    stage.appendChild(face);
+  });
+  var modTxt = res.mod !== 0 ? (res.mod > 0 ? " + " + res.mod : " − " + Math.abs(res.mod)) : "";
+  setTimeout(function(){
+    if(res.adv){
+      resultEl.textContent = "→ [" + exprNow() + " adv] [" + res.rolls.join(", ") + "] → keep " + best + modTxt + " = " + res.total;
+    } else {
+      resultEl.textContent = "→ [" + exprNow() + "] " + res.rolls.join(" + ") + modTxt + " = " + res.total;
+    }
+    if(isD20 && res.count === 1 && !res.adv){
+      if(res.rolls[0] === 20){ critEl.textContent = "✦ CRITICAL SUCCESS"; critEl.className = "r-crit good"; }
+      else if(res.rolls[0] === 1){ critEl.textContent = "✦ CATASTROPHIC FAILURE"; critEl.className = "r-crit bad"; }
+    }
+    addDiceHistory(exprNow(), res);
+  }, 560 + res.rolls.length*120);
+}
+window.rollNow = function(){
+  var el = document.getElementById("dice-expr");
+  var advEl = document.getElementById("dice-adv");
+  var res = parseDice(el ? el.value : "1d20", !!(advEl && advEl.checked));
+  if(!res){ toast("Invalid notation — try 2d6+3 or 1d20"); return; }
+  renderDice(res);
+};
+window.quickDice = function(v){
+  var el = document.getElementById("dice-expr");
+  if(el) el.value = v;
+  window.rollNow();
+};
+window.toggleAdv = function(){
+  var el = document.getElementById("dice-adv");
+  if(el && el.checked) toast("Advantage: two d20, keep the best");
+  window.rollNow();
+};
+
+/* ── §7 Spell slot pool ────────────────────────────────────── */
+var SLOTS_MAX = 4, slotsCur = 4, hitDice = { cur: 3, max: 3, die: 8 }, hp = { cur: 14, max: 26 };
+function renderSlots(burnIdx, refill){
+  var pool = document.getElementById("slot-pool");
+  if(!pool) return;
+  pool.innerHTML = "";
+  for(var i = 0; i < SLOTS_MAX; i++){
+    var pip = document.createElement("span");
+    pip.className = "ss-pip" + (i < slotsCur ? "" : " spent");
+    if(refill && i < slotsCur){ pip.classList.add("refill"); pip.style.animationDelay = (i*0.09) + "s"; }
+    if(burnIdx === i){ pip.classList.add("burn"); }
+    pool.appendChild(pip);
+  }
+}
+function slotStatus(msg, blocked){
+  var el = document.getElementById("slot-status");
+  if(!el) return;
+  el.className = "slot-status" + (blocked ? " blocked" : "");
+  el.innerHTML = "<b>" + slotsCur + "/" + SLOTS_MAX + "</b>" + (msg ? " — " + msg : "");
+}
+window.castSpell = function(level){
+  if(level === 0){ slotStatus("cantrip — free, the pool doesn't move"); renderSlots(-1, false); return; }
+  if(slotsCur < level){
+    slotStatus("BLOCKED — level " + level + " needs " + level + ", pool holds " + slotsCur + ". The chat says so.", true);
+    toast("Cast blocked — the well is dry");
+    return;
+  }
+  var burnIdx = slotsCur - level;
+  slotsCur -= level;
+  renderSlots(burnIdx, false);
+  setTimeout(function(){ renderSlots(-1, false); }, 500);
+  slotStatus("spell_slots_spend −" + level + " · code decremented, not prose");
+};
+window.longRest = function(){
+  slotsCur = SLOTS_MAX;
+  hitDice.cur = Math.max(1, Math.floor(hitDice.max / 2));
+  hp.cur = hp.max;
+  renderSlots(-1, true);
+  slotStatus("long rest (8h) — HP max · all slots · half hit dice · exhaustion −1");
+};
+window.shortRest = function(){
+  if(hitDice.cur <= 0){ slotStatus("no hit dice left — you need a long rest", true); return; }
+  hitDice.cur--;
+  var roll = 1 + Math.floor(Math.random() * hitDice.die);
+  var con = 2;
+  hp.cur = Math.min(hp.max, hp.cur + roll + con);
+  slotStatus("short rest — server rolled 1d" + hitDice.die + " → " + roll + " +2 CON · hp " + hp.cur + "/" + hp.max + " · " + hitDice.cur + " hit dice left");
+};
+renderSlots(-1, false);
+slotStatus("the well is full");
+
+/* ── §8 TTS cache sim ──────────────────────────────────────── */
+var ttsSimCache = {}, ttsSimOrder = [], ttsLineIdx = 0, ttsSimLastTick = Date.now() / 1000;
+var ttsLines = [
+  "The wind howls through the broken windows.",
+  "Kip shifts his weight, watching the door.",
+  "You find a rusted key beneath the straw.",
+  "The bell in the tower tolls once — then silence.",
+  "Cold rain taps against the glass."
+];
+function ttsKeyFor(line){ return "qwen::female::" + line.replace(/[^a-z0-9]/gi, "").slice(0, 26).toLowerCase(); }
+function ttsRenderCache(){
+  var box = document.getElementById("tts-cache");
+  if(!box) return;
+  box.innerHTML = "";
+  if(ttsSimOrder.length === 0){
+    box.innerHTML = '<span class="tts-key" style="border-style:dashed;color:var(--bone-dim)">(cache empty — 64 slots · TTL 600s)</span>';
+    return;
+  }
+  ttsSimOrder.forEach(function(k){
+    var chip = document.createElement("span");
+    chip.className = "tts-key";
+    chip.textContent = k.slice(0, 8) + "… " + Math.round(ttsSimCache[k].ttl) + "s";
+    box.appendChild(chip);
+  });
+}
+function ttsLog(text, cls){
+  var log = document.getElementById("tts-log");
+  if(!log) return;
+  log.innerHTML = "$ " + (cls ? '<span class="' + cls + '">' + text + '</span>' : text);
+}
+function ttsAge(){
+  var now = Date.now() / 1000;
+  ttsSimOrder.forEach(function(k){ ttsSimCache[k].ttl = Math.max(0, ttsSimCache[k].ttl - (now - ttsSimLastTick)); });
+  ttsSimLastTick = now;
+}
+window.simTts = function(mode){
+  ttsAge();
+  var line;
+  if(mode === "repeat" && ttsSimOrder.length > 0){
+    line = ttsSimCache[ttsSimOrder[ttsSimOrder.length-1]].text;
+  } else {
+    line = ttsLines[ttsLineIdx % ttsLines.length];
+    ttsLineIdx++;
+  }
+  var key = ttsKeyFor(line);
+  var shown = line.length > 36 ? line.slice(0, 36) + "…" : line;
+  if(ttsSimCache[key] && ttsSimCache[key].ttl > 0){
+    ttsLog('HIT  "' + shown + '" → serving cached MP3 · 0 API calls · usage still booked', "h");
+  } else {
+    if(ttsSimOrder.length >= 64){ var oldest = ttsSimOrder.shift(); delete ttsSimCache[oldest]; }
+    ttsSimCache[key] = { ttl: 600, text: line };
+    ttsSimOrder.push(key);
+    ttsLog('MISS "' + shown + '" → split ≤900 chars → synth → stitch MP3 · 1 API call', "m");
+  }
+  ttsRenderCache();
+};
+
+/* ── §11 Undo demo ─────────────────────────────────────────── */
+var undoPhase = 0;
+window.undoDemo = function(){
+  var prev = document.getElementById("rw-prev");
+  var now = document.getElementById("rw-now");
+  var next = document.getElementById("rw-next");
+  var nextBody = document.getElementById("rw-next-body");
+  var ghost = document.getElementById("rw-ghost");
+  var epoch = document.getElementById("rw-epoch");
+  var btn = document.getElementById("undo-btn");
+  if(!prev || !now || !next) return;
+  btn.disabled = true;
+  if(undoPhase === 0){
+    // phase 1: a late guardian job arrives — dropped by the epoch check
+    ghost.classList.add("show");
+    setTimeout(function(){
+      ghost.classList.add("drop");
+      epoch.innerHTML = 'late guardian write <b style="color:var(--rubric)">dropped</b> — epoch mismatch';
+    }, 900);
+    setTimeout(function(){
+      // phase 2: rewind
+      now.classList.remove("now"); now.classList.add("gone");
+      prev.classList.add("restored");
+      nextBody.innerHTML = "hp 26/26 · gp 12<br>logbook −1 · facts: 34<br>vector index purged → re-indexed";
+      next.classList.add("now");
+      epoch.innerHTML = "epoch <b>7 → 8</b> · snapshot consumed · ledger: action=undo · turn spent";
+      ghost.classList.remove("show", "drop");
+      btn.disabled = false;
+      btn.textContent = "↻ RESET DEMO";
+      undoPhase = 1;
+    }, 2100);
+  } else {
+    now.classList.remove("gone"); now.classList.add("now");
+    prev.classList.remove("restored");
+    next.classList.remove("now");
+    nextBody.innerHTML = "—";
+    epoch.innerHTML = "epoch <b>7</b> — background writers check it before saving";
+    btn.textContent = "↶ UNDO LAST TURN";
+    btn.disabled = false;
+    undoPhase = 0;
+  }
+};
+
+/* ── Init ──────────────────────────────────────────────────── */
+initReveal();
+setTimeout(typeJsonDemo, 1400);
+
+})();
+</script>
+<script src="i18n.js?v=20261028a"></script>
+<script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20261006a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+</body>
+</html>

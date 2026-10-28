@@ -1,0 +1,3605 @@
+/* ═══════════════════════════════════════════════════
+   🦇 THE LORE WEAVER'S CAULDRON — TERMINAL GOTHIC v3
+   → design v4 "Illuminated Terminal" (2026-09-22): se §5b knapp-tiers,
+     --fs-* typskala i :root och docs/design-v4-illuminated-terminal.md.
+   Castlevania × DOS × Linux terminal
+   Länkas EFTER inline-stilar så att detta vinner.
+   ═══════════════════════════════════════════════════ */
+
+/* ═══ @LAYER-BYGGFLAGGA (W3-P1 2026-09-06 → VÅG 4-BESLUT 2026-09-10) ═══
+   BESLUT: WRAPPEN SKJUTS UPP IGEN — inte för att den är svår, utan för att den är
+   BEVISAT SKADLIG utan en fullständig sidmigrering i samma commit:
+
+   !important INVERTERAR i cascade layers: en LAGRAD !important slår en OLAGRAD
+   !important. snes.css har idag 1020 !important. Wrappas filen i @layer snes.base
+   vinner ALLA dessa över sidornas kvarvarande mot-!important (chat ~275, adventure
+   ~156) — dvs precis de FUNKTIONELLA reglerna (composer-positionering, TTS-raden på
+   mobil, codex-spine, overlay-z) som sidorna behöver för att layouten ska hålla.
+   Att lägga sidorna i en egen, senare lager löser det INTE: för normala deklarationer
+   vinner senare lager, men för !important vinner TIDIGARE lager. Man kan alltså inte
+   få "sidan vinner" i båda fallen utan att först plocka bort !important på ena sidan.
+
+   RÄTT ORDNING (den som faktiskt fungerar): migrera EN sida i taget —
+   (a) deklarera @layer snes.base, page; (b) wrappa snes; (c) strippa sidans egna
+   !important mot vad wrappen nu ger; (d) computed-style-diff FÖRE/EFTER per sida;
+   (e) först när sidan är ren, gå vidare. login.html är referensmallen (migrerad 2026-08-12).
+   Tills dess: rör inte wrappen. Z-index-konstitutionen (rad 20) gäller oförändrat. */
+/* GRIMSBOKEN FONTS (2026-10-28: Grenze ersätter Cinzel — för vanligt).
+   Grenze = display/etiketter/knappar (400–900 + riktig kursiv, INGEN
+   svartskrift någonsin) · Spectral = body (400/500/700 + kursiva) ·
+   EB Garamond ENDAST kursiv för marginalia/smaksnuttar, sparsamt. */
+@import url('https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@1,400;1,700&family=Spectral:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap');
+
+/* Z-INDEX LADDER (2026-08-11 audit) — bottom-nav 280 < drawer-backdrop 290 < drawer 300 < sheet 310 < oracle/console 320 < scanlines(body::before) 999 < page overlays 10000+ (backdrop 9990) < lightbox 11000 < feedback 12000. Do not invent new rungs. */
+
+/* ── PALETT — EMBERWATCH (2026-10-22): kall aska + glödbrand accent.
+   ENDA färgkällan. Semantik oförändrad — gold=ritual/UI/fyllnad · blood=HP/fara
+   (FYLLNAD, aldrig text) · blood-bright=HP-text · arcane=spelare/magi ·
+   poison=lyckas/ekiperas · teal=info · bone=lästext · ember=belysning/accent.
+   Kontrastnot (WCAG, mätt mot ink/stone/stone-2/stone-3 — siffran är LÄGSTA
+   kvoten av de fyra, kör om med docs/plans/ember-2026-10-22/contrast.py):
+   bone 15.0:1 · bone-bright 15.9:1 · bone-dim 6.8:1 · gold 10.7:1 ·
+   gold-bright 13.9:1 · blood-bright 5.3:1 · ember 5.9:1 · arcane 6.5:1 ·
+   arcane-bright 8.7:1 · poison 8.9:1 · teal 8.7:1 · term-green 10.6:1 ·
+   term-amber 7.5:1.  ALL lästext ≥5.2:1.
+   OBS: --edge/--edge-hi är HÅRLINJER (1.31/1.67:1) — aldrig enda kanten på en
+   kontroll; använd --edge-ui (3.04:1) där. */
+:root{
+  --ink: #09070B;          /* 15.0:1 text-yta — kall aska, djupaste stryk   */
+  --stone: #100D14;
+  --stone-2: #15111B;
+  --stone-3: #1B1622;      /* ljusaste ytan — kvoter mäts mot denna         */
+  --edge: #2A2233;         /* hårlinje — aldrig enda kontrollkant (1.31:1)  */
+  --edge-hi: #3E3247;      /* starkare linje/hover-kant (1.67:1)            */
+  --bone: #F4EBDE;
+  --bone-bright: #F9F2E7;
+  --bone-dim: #AB9E95;
+  --gold: #ECC468;
+  --gold-bright: #FFE0A0;
+  --blood: #421E25;        /* FYLLNINGAR/vax/staplar — aldrig text (1.38:1) */
+  --blood-bright: #E4616F;
+  --ember: #E8734A;
+  --arcane: #A78BFA;
+  --arcane-bright: #C0AAF8;
+  --arcane-deep: #3C3157;  /* violett fyllning                              */
+  --poison: #5FCB9B;
+  --teal: #58C7BE;
+  --term-green: #8CD8B3;   /* ljusare än poison — behåller gamla hierarkin  */
+  --term-amber: #DE9A4E;
+  /* ── W3-P1 (2026-09-06): STRUKTURELLA TOKENS ──
+     Z-SKALA: token-stege för wave-4-migration. DEN BEFINTLIGA LADDERN (kommentar
+     rad 8: 280<290<300<310<320<999<10000<11000<12000<30000) GÄLLER FORTFARANDE —
+     byt inte befintliga z-index mot dessa tokens förrän sidorna migrerar också
+     (feedback-lagret 12000 ligger överst). */
+  --z-1: 1;
+  --z-nav: 100;
+  --z-drawer: 500;
+  --z-modal: 1000;
+  --z-toast: 2000;
+  --z-max: 3000;
+  /* Radie-skala — dominanta värden ur filen (2px x3, 3px x4, 4px, 6px, 50%).
+     OBS: *{border-radius:0!important} (§0) plattar det mesta; dessa gäller där
+     en regel med högre specificitet + !important återinför radie (t.ex. :1341). */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-full: 50%;
+  /* Touch-golv för interaktiva ytor (2026-09-22, via --tap-min):
+     44px = tryggt tvärplattformsgolv — Apple HIG 44pt · WCAG 2.5.5 (AAA) 44×44.
+     WCAG 2.5.8 (AA) kräver bara 24×24, men 44px är golvet för funnel-knappar. */
+  --tap-min: 44px;
+  /* FORM-ALIGN 2026-09-23: stora primär-CTA (gate-knapp, pricing CTA, start) */
+  --tap-lg: 48px;
+  /* RGB-tripletter för alpha-färger: rgba(var(--gold-rgb), .12).
+     ENDA paletten är snes.css :root (Tema-väljaren borttagen 2026-09) — dessa
+     är alltså inte "frysta": de ÄR palettens värden i annan notation och ska
+     användas i nya regler istället för råa rgba-litteraler. */
+  --gold-rgb: 236,196,104;
+  --gold-bright-rgb: 255,224,160;
+  --blood-rgb: 66,30,37;
+  --blood-bright-rgb: 228,97,111;
+  --teal-rgb: 88,199,190;
+  --ink-rgb: 9,7,11;
+  --bone-rgb: 244,235,222;
+  --arcane-deep-rgb: 60,49,87;
+  --arcane-rgb: 167,139,250;
+  --ember-rgb: 232,115,74;
+  --poison-rgb: 95,203,155;
+  --edge-rgb: 42,34,51;
+  --edge-hi-rgb: 62,50,71;
+  --stone-3-rgb: 27,22,34;
+  --bone-dim-rgb: 171,158,149;
+  --blood-deep-rgb: 43,21,27;   /* orphan — finns bara som tripplett         */
+  --gold-deep-rgb: 111,92,53;   /* orphan — finns bara som tripplett         */
+  /* ── EMBERWATCH ADDITIVE (2026-10-22). Names snes.css did not define; every
+     colliding concept is namespaced (--emb-*, --accent-*, --bad/good/warn).
+     Values mirror admin.css §1 so the game and the dashboard share one language.
+     NB: --radius-* above is NOT reused — snes owns those at 2/3/4/6px and
+     applies them with !important; ember radii live in --emb-r*. ── */
+  --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 24px;  --sp-6: 32px;  --sp-7: 48px;  --sp-8: 64px;
+  --dur-1: 120ms; --dur-2: 180ms; --dur-3: 220ms;
+  --ease: cubic-bezier(.22,.78,.24,1);
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --emb-r: 14px; --emb-r-sm: 9px; --emb-r-xs: 6px; --emb-r-pill: 999px;
+  --emb-max: 1580px;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --fs-display: 30px;
+  --accent: #E8734A;   --accent-hi: #FFA781;
+  --accent-dim: #3B2119; --accent-ink: #1A0A05;
+  --bad: #E4616F;  --bad-dim: rgba(228,97,111,.34);
+  --good: #5FCB9B; --warn: #DE9A4E; --violet: #A78BFA;
+  --focus: #FFB08B;
+  --edge-ui: #7C665C;  /* 3.30:1 mot --stone-3 — varm aska, inte violett; kontrollkant (1.4.11) */
+  --rubric: #E4616F;   /* sajtens "röd rubrik"-roll; var tidigare 3 olika värden på 6 sidor */
+  /* Typsnitt — GRIMSBOKENS TRE HÄNDER (2026-09-22):
+     display = Grenze (rubriker/etiketter/knappar, skarp kilserif) ·
+     body = Spectral (berättelse/chat) · marginal = EB Garamond ENDAST kursiv
+     (marginalia/smaksnuttar, sparsamt) · mono = teknisk krom via system-stack
+     (siffror/systemrader/CLI-läget — ingen pixel-font, inget namngivet
+     Google-pixeltypsnitt kvar). */
+  --font-display: 'Grenze', Georgia, serif;
+  --font-body: 'Spectral', Georgia, serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --font-accent: 'Grenze', Georgia, serif;
+  --font-marginal: 'EB Garamond', Georgia, serif;
+  --cli-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+  /* ── TYPE SCALE (grimoire v5, --fs-*) — root 16px. Använd dessa ÖVERALLT i
+     stället för nakna rem/storlekar. --fs-base = 17px är golvet för läsande
+     text (brödtext 17px/1.65). Knappetiketter = Grenze 700 .8rem (§5b). ── */
+  --fs-micro: .7rem;    /* mikro-etiketter — golvet höjt för läsbarhet        */
+  --fs-tiny: .78rem;    /* meta/captions (kräver ≥4.5:1 kontrast) */
+  --fs-sm: .9rem;       /* sekundär UI */
+  --fs-base: 1.0625rem; /* 17px — standard lästext */
+  --fs-btn: .8rem;      /* knappetikett — §5b-canon (Grenze 700 .8rem) */
+  --fs-chat: 1.125rem;  /* spelarchat + composer */
+  --fs-narr: 1.2rem;    /* DM-narration */
+  --fs-npc: 1.16rem;    /* NPC-tal */
+  --fs-h3: 1.35rem;
+  --fs-h2: 1.7rem;
+  --fs-h1: 2.2rem;      /* Grenze 700, tracking .06em · labels uppercase .14em */
+  --fs-dropcap: clamp(3.2rem, 8vw, 4.6rem); /* illuminerad initial */
+  /* Linjeavstånd — brödtext 1.65 (grimoire-canon) */
+  --lh-body: 1.65;
+}/* ── 0. GLOBAL RESET ── */*, *::before, *::after{
+  border-radius: 0 !important;
+  box-sizing: border-box;
+}/* canvas förblir pixelad (pixelpartiklar/effekter); AI-porträtt ska INTE pixeleras —
+   global img{pixelated} krossade alla 1024px-foton i 52px-thumbnails (playtest 2026-09-13).
+   Pixel-art-img:er markeras med klassen .px-img i stället. */
+canvas{ image-rendering: pixelated; }
+.px-img{ image-rendering: pixelated; }/* ── PIXEL SPRITES (ersätter emojis) ── */.pxs{
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;   /* centrera mot textens x-höjd — ingen uppåt-offset */
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+  flex-shrink: 0;
+}/* ── Flex-bärare: sprite + text centrerade med gap ──
+   (endan element som redan är inline/flex — rör inte block/tabell-layouter) */.top-btn, .send-btn, .rune-btn, .go-btn, .summon-btn, .gate-btn,
+.msg .who, .at-item, .att-item, .fi-name,
+.roll-request .rr-label, .rr-btn, #loc-name, .att-dropzone .att-text, .toast{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+}/* ── Sprite-storlek per kontext (konsekvent skala) ── *//* Knappar + labels: 0.9em */.top-btn .pxs, .send-btn .pxs, .rune-btn .pxs, .go-btn .pxs,
+.summon-btn .pxs, .gate-btn .pxs, .at-item .pxs, .att-item .pxs,
+.fi-name .pxs, .toast .pxs, .rr-btn .pxs, .roll-request .rr-label .pxs,
+.att-dropzone .att-text .pxs{
+  width: 0.9em; height: 0.9em;
+}/* Chattens avsändar-rader: sprite i textstorlek */.msg .who .pxs{ width: 1em; height: 1em; }/* NPC-listan (redan flex): sprite i textstorlek */.npc-row .pxs{ width: 0.95em; height: 0.95em; }/* Sidebar-plats: block-flex så texten radbryts inuti och ikonen centreras mot hela blocket */#loc-name{ display: flex; align-items: center; gap: 0.4em; }#loc-name .pxs{ width: 0.95em; height: 0.95em; }/* Brand/loggor: 1em */.brand .pxs{ width: 1em; height: 1em; }/* Porträtt/avatarer: större, i sin ruta */.pv-portrait .pxs, .pc-avatar .pxs, .cp-icon .pxs, .vc-icon .pxs,
+.rune .pxs{ width: 1.2em; height: 1.2em; }.die .pxs{ width: 1.1em; height: 1.1em; }/* Stora symboler: login-sigill, arketyper */.arch .icon .pxs, .path .icon .pxs{ width: 32px; height: 32px; }/* Rubriker: sprite i rubrikstorlek */.gate-title .pxs, .destiny-title h1 .pxs, .masthead h1 .pxs,
+.head h1 .pxs, .hall-title .pxs, .char-name .pxs{ width: 1em; height: 1em; }/* ── 1. TYPOGRAFI — fast 4-rolls-hierarki (font-switchern borttagen 2026-08)
+   display = rubriker/sektionsetiketter/knappar · body = berättelse/chat
+   mono = siffror/systemrader/teknisk krom · accent = chips/tabs/mikro-etiketter ── */
+body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, label{
+  font-family: var(--font-body) !important;
+  letter-spacing: 0.02em !important;
+}/* Brödtext-basen (grimoire-canon): 17px / 1.65 */body{
+  font-family: var(--font-body) !important;
+  font-size: var(--fs-base) !important;
+  line-height: var(--lh-body) !important;
+}h1, .gate-title, .destiny-title h1, .masthead h1, .head h1,
+.forge-head .brand, .topbar .brand, .char-name, .pv-name, .d-name,
+.cp-name, .hall-title{
+  font-family: var(--font-display) !important;
+  line-height: 1.6 !important;
+  text-shadow: 2px 2px 0 #000 !important;
+  animation: none !important;
+}/* Brödtext i chatten — läsbar body-font, MINST 1rem (hårt krav) */.msg .text, .pv-story, .pv-gear{
+  font-family: var(--font-body) !important;
+  font-style: normal !important;
+  font-size: var(--fs-base) !important;
+  line-height: 1.8 !important;
+}
+.msg.dm .text{ font-size: var(--fs-narr) !important; }
+.msg.npc .text{ font-size: var(--fs-npc) !important; }
+.msg.player .text{ font-size: var(--fs-chat) !important; }/* Input — inte kursiv */input, textarea, select{
+  font-style: normal !important;
+}input::placeholder, textarea::placeholder{
+  font-style: normal !important;
+  color: var(--bone-dim) !important;
+  opacity: .7;
+}/* ── 2. BAKGRUND — platt, ingen gradient-glans ── */body{
+  background: var(--ink) !important;
+}/* Ta bort alla radial-gradient bakgrunder */body[style], .app, .gate, .layout{
+  background-image: none !important;
+}/* GRIMSBOKEN PAPERSKORN (2026-09-22) — CRT-scanlines/borttagna. Papperstextur,
+   inte katskärm: brusnarv + ljummen vaxlåga-inramning, 0-opacity-glöd borta. */body::before{
+  content: ''; position: fixed; inset: 0; z-index: 999; pointer-events: none;
+  background:
+    radial-gradient(85% 60% at 50% 30%, rgba(var(--gold-rgb),.05) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}/* ── 4. PANELER — terminal-fönster ── */.panel, .panel-box, .scroll-box, .hoard, .modal-box,
+.continue-panel, .path, .arch, .roll-request{
+  background: var(--stone) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  position: relative;
+}/* Dubbelram via ::before — terminal-style */.panel::before, .panel-box::before, .scroll-box::before,
+.modal-box::before, .continue-panel::before{
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid var(--edge);
+  pointer-events: none;
+  z-index: var(--z-1);
+  opacity: .5;
+}/* Hörn-markörer (DOS box-drawing feel) */.corner{ display: none !important; }/* ── 5. KNAPPAR — DOS-style, platta ── */button, .go-btn, .summon-btn, .pv-go, .gate-btn, .rr-btn,
+.modal-btn, .rune-btn, .send-btn, .top-btn, .back, .blank-btn,
+.pv-reroll, .danger-btn, .mini-btn, .coin-btn, .fchip{
+  background: var(--stone-3) !important;
+  border: 1px solid var(--edge) !important;
+  color: var(--bone) !important;
+  box-shadow: none !important;
+  transition: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  position: relative;
+}button::after, .go-btn::after, .summon-btn::after, .pv-go::after,
+.gate-btn::after{ display: none !important; }@media (any-hover:hover),(hover:hover){
+  button:hover,
+.go-btn:hover,
+.summon-btn:hover,
+.pv-go:hover,
+.gate-btn:hover,
+.rr-btn:hover,
+.top-btn:hover,
+.send-btn:hover,
+.rune-btn:hover,
+.danger-btn:hover,
+.back:hover,
+.pv-reroll:hover{
+  background: var(--edge) !important;
+  border-color: var(--gold) !important;
+  color: var(--gold-bright) !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+}button:active, .go-btn:active, .gate-btn:active, .send-btn:active{
+  background: var(--gold) !important;
+  color: var(--ink) !important;
+}/* Primär-knappar (guld) */.go-btn, .summon-btn, .pv-go, .gate-btn, .send-btn{
+  background: var(--gold) !important;
+  border-color: var(--gold-bright) !important;
+  color: var(--ink) !important;
+  font-weight: 700 !important;
+}@media (any-hover:hover),(hover:hover){
+  .go-btn:hover,
+.summon-btn:hover,
+.pv-go:hover,
+.gate-btn:hover,
+.send-btn:hover{
+  background: var(--gold-bright) !important;
+  color: var(--ink) !important;
+}
+}/* Farliga knappar */.danger-btn, .top-btn.danger{
+  border-color: var(--blood) !important;
+  color: var(--blood-bright) !important;
+}@media (any-hover:hover),(hover:hover){
+  .danger-btn:hover,
+.top-btn.danger:hover{
+  background: var(--blood) !important;
+  color: #fff !important;
+}
+}
+/* ── 5b. BUTTON TIERS (design v4 "Illuminated Terminal") — TRE nivåer, definierade
+   HÄR och ingen annanstans (sid-lokal knapp-CSS = bugg). Klasserna vinner över
+   §5s flatregel (!important + senare position + klass-specificitet) och fungerar
+   lika bra på <button> som på <a> (föredra <a> när en clean slate hjälper).
+   Geometri: flat (radie 0 — .soft 6px opt-in), min-height 38px desktop / 44px
+   mobil (se touch-golvet längre ner), min-width 44px (ikonknappar).
+   Etikett: Grenze 700, .8rem, uppercase, tracking .1em. ── */
+.btn-gold, .btn-ghost, .btn-blood{
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45em;
+  min-height: 38px !important;
+  min-width: 44px !important;
+  padding: .5rem 1.1rem !important;
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  font-size: .8rem !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  text-shadow: none !important;
+  text-decoration: none;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transition: none !important;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+/* ── 5b. VERSES OF CHOICE (grimoire v5) — .btn-gold/.btn-ghost/.btn-blood är
+   inte DOS-knappar utan strofer i boken: guldregel överst, Grenze-versal
+   etikett och ett GILT ROMERSKT VERSENUMMER (I · II · III · …) före etiketten.
+   Geometri oförändrad (radie 0 — .soft opt-in), etikett Grenze 700 --fs-btn. ── */
+.btn-gold::before, .btn-ghost::before, .btn-blood::before{
+  content: counter(grimoire-verse, upper-roman) !important;
+  counter-increment: grimoire-verse;
+  display: inline-block !important;
+  position: static !important;
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  line-height: 1;
+  min-width: 1.7em;
+  text-align: left;
+  color: var(--gold-bright) !important;
+}
+/* Primär — guld-versen: stenblad under guldregeln, glänsande versnummer */
+.btn-gold{
+  background: color-mix(in srgb, var(--gold) 7%, var(--stone-3)) !important;
+  border: 1px solid var(--edge) !important;
+  border-top: 2px solid var(--gold) !important;
+  color: var(--gold-bright) !important;
+}
+@media (any-hover:hover),(hover:hover){
+  .btn-gold:hover{
+  background: color-mix(in srgb, var(--gold) 14%, var(--stone-3)) !important;
+  border-color: var(--gold) !important;
+  border-top-color: var(--gold-bright) !important;
+  color: var(--gold-bright) !important;
+  box-shadow: none !important;
+}
+}
+/* Sheen-swept bort (grimoire v5): versen blöcker i ljuset — den sveper inte. */
+.btn-gold::after{ content: none !important; }
+@media (any-hover:hover),(hover:hover){
+  .btn-gold:hover::after{ animation: none; }
+}
+/* Sekundär — den tysta versen */
+.btn-ghost{
+  background: transparent !important;
+  border: 1px solid var(--edge-ui) !important;
+  border-top-color: var(--bone-dim) !important;
+  color: var(--bone-dim) !important;
+}
+.btn-ghost::before{ color: var(--gold) !important; }
+@media (any-hover:hover),(hover:hover){
+  .btn-ghost:hover{
+  background: rgba(var(--bone-rgb), .06) !important;
+  border-color: var(--bone-dim) !important;
+  border-top-color: var(--bone-bright) !important;
+  color: var(--bone-bright) !important;
+}
+}
+/* Fara/ödeläggelse (delete, leave, reset) — blodversen; TEXT = --blood-bright
+   (--blood = vax/fyllning, klarar inte 4.5:1 som text). */
+.btn-blood{
+  background: color-mix(in srgb, var(--blood) 24%, transparent) !important;
+  border: 1px solid var(--blood) !important;
+  border-top-color: var(--blood-bright) !important;
+  color: var(--blood-bright) !important;
+}
+.btn-blood::before{ color: var(--blood-bright) !important; }
+@media (any-hover:hover),(hover:hover){
+  .btn-blood:hover{
+  background: color-mix(in srgb, var(--blood) 55%, transparent) !important;
+  border-color: var(--blood-bright) !important;
+  color: var(--bone-bright) !important;
+}
+}
+/* Aktiv = 1px press-tryck (egna färger per nivå så §5s gold-active inte läcker) */
+.btn-gold:active{
+  transform: translateY(1px) !important;
+  background: color-mix(in srgb, var(--gold) 22%, var(--stone-3)) !important;
+}
+.btn-ghost:active{
+  transform: translateY(1px) !important;
+  background: rgba(var(--bone-rgb), .1) !important;
+  color: var(--bone-bright) !important;
+}
+.btn-blood:active{
+  transform: translateY(1px) !important;
+  background: var(--blood) !important;
+  color: var(--bone-bright) !important;
+}
+/* Disabled = opacity .45 + inga pointer-events */
+.btn-gold:disabled, .btn-ghost:disabled, .btn-blood:disabled,
+.btn-gold[aria-disabled="true"], .btn-ghost[aria-disabled="true"], .btn-blood[aria-disabled="true"]{
+  opacity: .45 !important;
+  pointer-events: none !important;
+}
+/* ── 5c. FOCUS-VISIBLE — 2px guld-outline + 2px offset på ALLT interaktivt ── */
+a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+input:focus-visible, textarea:focus-visible, select:focus-visible,
+summary:focus-visible, [tabindex]:focus-visible{
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 2px !important;
+}
+/* ── 6. CHATT — terminal-log ── */.msg{ border: none !important; box-shadow: none !important; padding: .4rem 0 !important; }.msg.dm{
+  border-left: 2px solid var(--gold) !important;
+  padding-left: .8rem !important;
+  background: transparent !important;
+}.msg.npc{
+  border-left: 2px solid var(--arcane) !important;
+  padding-left: .8rem !important;
+  background: transparent !important;
+}
+.msg.player{
+  text-align: right !important;
+}
+.msg.player .text{
+  display: inline-block;
+  text-align: left;
+  /* 2026-08-06: ingen inre box — bubblans egen ram räcker (dubbel box kändes redundant) */
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+.msg.system .box{
+  background: transparent !important;
+  border: 1px dashed var(--edge) !important;
+  box-shadow: none !important;
+  color: var(--bone-dim) !important;
+}.msg.dm .who, .msg.player .who{
+  font-size: .73rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: .15em !important;
+  color: var(--bone-dim) !important;
+}.msg.dm .who{ color: var(--gold) !important; }.msg.dm .text em, .msg.npc .text em{
+  font-style: normal !important;
+  color: var(--bone-dim) !important;
+}/* ── 7. INPUTFÄLT — terminal prompt ── */.input-row textarea, #prompt, .world-prompt,
+.add-form input, .add-form select, .field input{
+  background: var(--ink) !important;
+  /* 2026-10-22: fältets enda kant — --edge är 1.31:1, --edge-ui mäter 3.04:1 (WCAG 1.4.11) */
+  border: 1px solid var(--edge-ui) !important;
+  box-shadow: none !important;
+  color: var(--bone-bright) !important;
+  caret-color: var(--gold);
+}.input-row textarea:focus, #prompt:focus, .world-prompt:focus, .field input:focus{
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 1px rgba(var(--gold-rgb),.25) !important;
+}/* Prompt-prefix — grimoire-manikel (☞) i tarnished gold, ingen blinkande
+   terminalmarkör. .flicker-cykel under reduced-motion död av §motion-guard. */.input-row{ position: relative; }.input-row::before{
+  content: '☞';
+  position: absolute;
+  left: .6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gold);
+  font-size: .85rem;
+  z-index: 2;
+  pointer-events: none;
+  animation: candleflicker 5.5s ease-in-out infinite;
+}
+.input-row textarea{ padding-left: 1.8rem !important; }/* Composer (chat): textarea ligger transparent i panelen — ramen sitter på .composer */.composer .input-row textarea{
+  background: transparent !important;
+  border-color: transparent !important;
+}/* ── 8. SIDEBAR — terminal panel ── */.sidebar{
+  background: var(--stone) !important;
+  border-right: 1px solid var(--edge) !important;
+}.side-label{
+  color: var(--gold) !important;
+  font-size: .55rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: .2em !important;
+}.side-label::before{ content: '❦ '; color: var(--edge); }.side-label::after{ content: ' ❦'; color: var(--edge); }.pc-card{
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}@media (any-hover:hover),(hover:hover){
+  .pc-card:hover{ border-color: var(--gold) !important; transform: none !important; }
+}
+/* 2026-09-09: profilporträttet bakom kortet (.pc-avatar-bg + .pc-wrap.has-bg)
+   försvann när sidebar-skinen gav .pc-card en opak bakgrund med !important.
+   Låt has-bg vinna och ge porträttet mer närvaro (var "pyttelitet"). */
+.pc-wrap.has-bg .pc-card{ background: transparent !important; }
+/* FORM-ALIGN 2026-09-23: 8px legacy → --radius-lg (.soft-canon, "ett värde, ett ställe") */
+.pc-wrap.has-bg .pc-avatar-bg{ border-radius: var(--radius-lg) !important; }
+.pc-wrap .pc-avatar{ width: 54px !important; height: 54px !important; border-radius: var(--radius-lg) !important; }.pc-name{
+  font-family: var(--font-accent) !important;
+  font-size: .6rem !important;
+  color: var(--bone-bright) !important;
+}.pc-sub{ font-style: normal !important; color: var(--bone-dim) !important; font-size: .73rem !important; }.pc-hp{
+  height: 6px !important;
+  background: var(--ink) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}.pc-hp i{
+  background: var(--blood-bright) !important;
+  background-image: none !important;
+}/* NPC-rader */.npc-row{ transition: none !important; }@media (any-hover:hover),(hover:hover){
+  .npc-row:hover{ background: var(--stone-3) !important; }
+}.npc-row.dead{ opacity: .4; text-decoration: line-through; }.npc-dot{ border-radius: 0 !important; box-shadow: none !important; width: 6px !important; height: 6px !important; }.npc-name{ font-size: .81rem !important; white-space: nowrap !important; }.npc-role{ font-size: .68rem !important; font-style: normal !important; color: var(--bone-dim) !important; }/* Plats */#loc-name{ font-size: .81rem !important; color: var(--term-amber) !important; }#loc-sub{ font-size: .71rem !important; font-style: normal !important; color: var(--bone-dim) !important; }/* ── 9. TOPBAR — terminal header ── */.topbar{
+  background: var(--stone) !important;
+  border-bottom: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}.topbar .brand{
+  font-size: .65rem !important;
+  color: var(--gold) !important;
+  text-shadow: none !important;
+}.topbar .campaign{ color: var(--bone-dim) !important; font-style: normal !important; }.die{
+  clip-path: none !important;
+  border: 1px solid var(--gold) !important;
+  box-shadow: none !important;
+  font-family: var(--font-accent) !important;
+  font-size: .83rem !important;
+  animation-timing-function: steps(2) !important;
+}/* ── 11. BARER — segmenterade ── */.bar, .trough, .trust-bar, .ex-bar{
+  border: 1px solid var(--edge) !important;
+  background: var(--ink) !important;
+  box-shadow: none !important;
+}.fill, .trust-fill, .ex-fill{
+  box-shadow: none !important;
+  background-image: none !important;
+}.fill.hp{ background-color: var(--blood-bright) !important; }.fill.xp{ background-color: var(--gold) !important; }/* ── 12. FLIKAR / TABS ── */.tab{
+  border: 1px solid var(--edge) !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  transition: none !important;
+  background: var(--stone) !important;
+}.tab.active{
+  border-color: var(--gold) !important;
+  background: var(--stone-2) !important;
+  box-shadow: none !important;
+}.tab.active::before{ content: '❧ '; color: var(--gold); }/* ── 13. TOAST — GLOBAL bas. cli-chat-override: body.cli-chat .toast (rad ~2360, §35-regionen).
+   EJ dubbletter: §13 gäller alla sidor (box-shadow:none härifrån gäller ÄVEN i cli-läge);
+   cli-blocket höjer specificiteten (0,2,0) och vinner border/background/color där. ── */.toast{
+  background: var(--stone) !important;
+  border: 1px solid var(--gold) !important;
+  box-shadow: none !important;
+  color: var(--gold-bright) !important;
+}/* ── 14. SCROLLBARS ── */::-webkit-scrollbar{ width: 8px; height: 8px; }::-webkit-scrollbar-track{ background: var(--ink); }::-webkit-scrollbar-thumb{ background: var(--edge); border: 1px solid var(--ink); }@media (any-hover:hover),(hover:hover){
+  ::-webkit-scrollbar-thumb:hover{ background: var(--edge-hi); }
+}::selection{ background: rgba(var(--gold-rgb),.3); color: #fff; }/* ── 15. LOGIN ── */.gate-title{ font-size: .9rem !important; color: var(--bone-bright) !important; }.gate-sub, .gate-footer{ font-style: normal !important; color: var(--bone-dim) !important; }.sigil{ border: 1px solid var(--gold) !important; background: var(--stone-2) !important; box-shadow: none !important; }/* ── 16. VÄGSKÄLET / ARKETYPER ── */.path, .arch{
+  background: var(--stone) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  transition: none !important;
+}@media (any-hover:hover),(hover:hover){
+  .path:hover,
+.arch:hover{
+  border-color: var(--gold) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+}.path .glow, .arch .glow{ display: none !important; }.path::before, .arch::before{ display: none !important; }.arch.selected{ border-color: var(--gold) !important; background: var(--stone-2) !important; }.path h2, .arch h3{ color: var(--bone-bright) !important; }.path p, .arch .lore{ font-style: normal !important; color: var(--bone-dim) !important; }.path .tag, .arch .tag{ border-color: var(--edge) !important; color: var(--bone-dim) !important; }/* ── 17. FÖRHANDSVISNING ── */.pv-portrait, .pc-avatar, .cp-icon, .vc-icon{
+  border-radius: 0 !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  background: var(--stone-2) !important;
+}.pv-stat, .ability{
+  clip-path: none !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  background: var(--stone-2) !important;
+}.pv-stat .s, .ability .score{ font-family: var(--font-accent) !important; font-size: 1.03rem !important; }.pv-trait{ border: 1px solid var(--edge) !important; box-shadow: none !important; background: var(--stone-2) !important; }.pv-story{ border-left: 2px solid var(--gold) !important; font-style: normal !important; }/* ── 19. ASCII-ART ── */.ascii-art{
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  background: var(--ink) !important;
+}.ascii-art pre{
+  font-family: 'Courier New', monospace !important;
+  color: rgba(var(--gold-bright-rgb),.92) !important;
+  text-shadow: 0 0 6px rgba(var(--gold-bright-rgb),.35), 0 0 15px rgba(var(--gold-rgb),.12) !important;
+  line-height: 1.2 !important;
+  font-size: .7rem !important;
+}/* Event-specifika ASCII-art-färger (överskriver den gröna defaulten) *//* ── 20. ROLL REQUEST ── */.roll-request{
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  background: var(--stone) !important;
+}.rr-btn{ border-color: var(--gold) !important; color: var(--gold) !important; }#thought-text{
+  font-style: normal !important;
+  color: var(--gold-bright) !important;
+}#dm-status.show #thought-text{
+  animation: blink-cursor 1.2s steps(1) infinite;
+}
+@keyframes blink-cursor { 0%,49% { opacity: 1; } 50%,100% { opacity: .3; } }/* ── 22. FOG / VIGNETTE / EMBERS ── */.fog{ display: none !important; }.vignette{ box-shadow: inset 0 0 120px 40px rgba(0,0,0,.25) !important; }#embers{ opacity: .4; }/* ── 23. DROPZONE / FILER ── */.dropzone{
+  border: 1px dashed var(--edge) !important;
+  box-shadow: none !important;
+  transition: none !important;
+}.dropzone.dragover{ border-color: var(--term-green) !important; }
+@media (any-hover:hover),(hover:hover){
+  .dropzone:hover{ border-color: var(--term-green) !important; }
+}.file-item{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; }/* ── 24. QUEST / NOTES ── */.quest{ border: 1px solid var(--edge) !important; box-shadow: none !important; }@media (any-hover:hover),(hover:hover){
+  .quest:hover{ border-color: var(--ember) !important; }
+}.notes-list li::before{ content: '❧ ' !important; color: var(--gold); }/* ── 25. VALVET ── */.vault-chip{
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}@media (any-hover:hover),(hover:hover){
+  .vault-chip:hover{ border-color: var(--gold) !important; transform: none !important; }
+}/* ── 26. RUBRIK-SKALA ── */.gate-title{ font-size: .85rem !important; }.destiny-title h1{ font-size: 1.1rem !important; }.masthead h1, .head h1{ font-size: .9rem !important; }.topbar .brand, .forge-head .brand{ font-size: .6rem !important; }.char-name, .pv-name, .d-name{ font-size: .9rem !important; }.hall-title{ font-size: .7rem !important; }.cp-name{ font-size: .9rem !important; }/* ── 28. GLOBAL MOBILE POLISH ── */html{ -webkit-tap-highlight-color: transparent; }body{ overscroll-behavior-y: none; }button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .sheet-close{
+  touch-action: manipulation;
+}::selection{ background: rgba(var(--gold-rgb),.35); color: var(--bone-bright); }/* Scrollbars — thin, dark */*{ scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }*::-webkit-scrollbar{ width: 5px; height: 5px; }*::-webkit-scrollbar-track{ background: transparent; }*::-webkit-scrollbar-thumb{ background: var(--edge); }/* ── 29. MOBILE ELEMENTS (hidden on desktop) ── */.mobile-hp-line,
+.mobile-menu-btn,
+.drawer-close-btn,
+.drawer-backdrop,
+.drawer-extras,
+.mobile-nav,
+.sheet,
+.sheet-backdrop{
+  display: none;
+}/* ══════════════════════════════════════════
+   30. MOBILE ≤ 900px (tablet & phone)
+   ══════════════════════════════════════════ */
+@media (max-width: 900px){/* ── 30a. MOBILE TOPBAR ── */.topbar{
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    padding: .35rem .5rem !important;
+    min-height: 40px;
+    overflow: hidden;
+  }.topbar > .top-btn,
+  .topbar .dropdown,
+  .topbar .top-divider,
+  .topbar > .danger{
+    display: none !important;
+  }.topbar .brand{
+    font-size: .55rem !important;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 2;
+  }.topbar .campaign{
+    display: inline-block !important;
+    font-size: .55rem !important;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: .6;
+    flex-shrink: 2;
+  }.topbar .spacer{ flex: 1; }/* Settings gear dropdown — escape topbar overflow:hidden */.settings-menu{
+    position: fixed !important;
+    top: 48px !important;
+    right: 8px !important;
+    left: 8px !important;
+    min-width: 0 !important;
+    max-height: calc(100vh - 60px);
+    max-height: calc(100dvh - 60px);
+    overflow-y: auto;
+    z-index: 500;
+    transform-origin: top right;
+  }/* Mobile menu button (☰) — visible on mobile */.mobile-menu-btn{
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid var(--edge);
+    color: var(--bone);
+    font-size: .98rem;
+    width: 36px;
+    height: 32px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-right: .35rem;
+  }/* ── 30b. MOBILE HP LINE ── */.mobile-hp-line{
+    display: block !important;
+    height: 2px;
+    width: 100%;
+    background: var(--edge);
+    position: relative;
+    overflow: hidden;
+  }.mobile-hp-line i{
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--gold-bright), var(--gold));
+    transition: width .6s ease;
+  }/* ── 30c. SIDEBAR → DRAWER ── */.sidebar{
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: min(85vw, 340px) !important;
+    max-width: 340px !important;
+    background: var(--stone) !important;
+    border-right: 2px solid var(--gold) !important;
+    transform: translateX(-100%) !important;
+    transition: transform .3s cubic-bezier(.22,1,.36,1) !important;
+    z-index: 300 !important;
+    overflow-y: auto !important;
+    padding: .75rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: .6rem !important;
+  }.sidebar.mobile-open{
+    transform: translateX(0) !important;
+  }.drawer-close-btn{
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: .5rem;
+    right: .5rem;
+    width: 32px;
+    height: 32px;
+    background: var(--stone-3);
+    border: 1px solid var(--edge);
+    color: var(--bone-bright);
+    font-size: .93rem;
+    cursor: pointer;
+    z-index: 5;
+  }/* Drawer extras (model picker, logout) */.drawer-extras{
+    border-top: 1px solid var(--edge);
+    padding-top: .6rem;
+    margin-top: .4rem;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+  }.drawer-extras .drawer-btn,.drawer-extras .drawer-logout{
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: .4em;
+    background: var(--stone-3);
+    font-family: var(--font-body);
+    font-size: .73rem;
+    padding: .45rem;
+    cursor: pointer;
+    width: 100%;
+  }.drawer-extras .drawer-btn{
+    border: 1px solid var(--edge);
+    color: var(--bone);
+  }.drawer-extras .drawer-logout{
+    border: 1px solid var(--blood);
+    color: var(--blood-bright);
+  }.drawer-extras .drawer-sep{
+    display: block;
+    height: 1px;
+    background: var(--edge);
+    margin: .1rem 0;
+  }/* Drawer backdrop */.drawer-backdrop{
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(4,3,8,.7);
+    z-index: 290;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+  }.drawer-backdrop.open{
+    opacity: 1;
+    pointer-events: auto;
+  }/* ── 30d. BOTTOM NAV — flödesbaserad (2026-08-09): position:fixed
+     döljer navet i Firefox Android (fixed trackar layout-viewporten och
+     hamnar bakom URL-fältet). Navet är body:s sista flex-barn → alltid
+     synligt oavsett browser; .main:s padding-bottom-kompensation togs bort
+     eftersom navet nu tar riktig plats. ── */.mobile-nav{
+    display: flex !important;
+    /* Firefox-resiliens (2026-08-06): env() inuti calc() har varit buggigt
+       i FF — height-fallback så navet aldrig kan kollapsa till 0. */
+    height: 56px;
+    height: calc(56px + env(safe-area-inset-bottom, 0px));
+    min-height: 56px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--stone-2);
+    border-top: 1px solid var(--edge);
+    box-shadow: 0 -1px 0 0 var(--gold);
+    z-index: 280;
+    align-items: flex-start;
+    justify-content: space-around;
+  }.mobile-nav .nav-tab{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 56px;
+    padding: .25rem .15rem 0;
+    background: none;
+    border: none;
+    color: var(--bone-dim);
+    font-family: var(--font-body);
+    font-size: .68rem;
+    cursor: pointer;
+    gap: .15rem;
+    position: relative;
+    flex: 1;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }.mobile-nav .nav-tab .nav-icon{
+    font-size: 1rem;
+    line-height: 1;
+  }.mobile-nav .nav-tab .nav-label{
+    font-size: .63rem;
+    line-height: 1;
+    letter-spacing: .02em;
+  }/* Center Chat tab — emphasized */.mobile-nav .nav-tab.nav-center{
+    color: var(--gold-bright);
+    min-width: 52px;
+    transform: translateY(-2px);
+  }.mobile-nav .nav-tab.nav-center .nav-icon{
+    font-size: 1.25rem;
+  }.mobile-nav .nav-tab.nav-center .nav-label{
+    font-size: .68rem;
+    font-weight: 700;
+    color: var(--gold);
+  }/* Active indicator */.mobile-nav .nav-tab.nav-active{
+    color: var(--gold);
+  }.mobile-nav .nav-tab.nav-active::after{
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: var(--gold);
+  }/* ── 30e. BOTTOM SHEETS ── */.sheet-backdrop{
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(4,3,8,.65);
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+  }/* Stridslogg-knappen: diskret i TTS-bar-radens högra ände (mobil) */.battle-drawer-toggle{
+    bottom: auto;
+    right: auto;
+    padding: .3rem .5rem;
+  }.battle-drawer-toggle .bdt-label{ display: none; }.battle-drawer-toggle .bdt-icon{ font-size: .9rem; }/* Maskinrums-tab: inline i TTS-raden även på mobil */.console-tab{
+    bottom: auto;
+    right: auto;
+    width: 32px; height: 30px;
+  }.sheet-backdrop.open{
+    opacity: 1;
+    pointer-events: auto;
+  }.sheet{
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 75vh;
+    background: var(--stone);
+    border-top: 2px solid var(--gold);
+    z-index: 310;
+    transform: translateY(100%);
+    transition: transform .3s cubic-bezier(.22,1,.36,1);
+    overflow: hidden;
+  }.sheet.open{
+    transform: translateY(0);
+  }.sheet-head{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .65rem .85rem;
+    border-bottom: 1px solid var(--edge);
+    flex-shrink: 0;
+  }.sheet-head .sheet-title{
+    font-family: var(--font-body);
+    font-size: .7rem;
+    color: var(--gold-bright);
+    letter-spacing: .04em;
+  }.sheet-close{
+    background: var(--stone-3);
+    border: 1px solid var(--edge);
+    color: var(--bone);
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .88rem;
+    cursor: pointer;
+  }.sheet-body{
+    overflow-y: auto;
+    padding: .5rem .85rem .85rem;
+    -webkit-overflow-scrolling: touch;
+  }/* Sheet item rows */.sheet-row{
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .65rem .5rem;
+    border-bottom: 1px solid rgba(42,42,58,.5);
+    color: var(--bone);
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-size: .78rem;
+    cursor: pointer;
+    min-height: 48px;
+    touch-action: manipulation;
+  }.sheet-row:last-child{ border-bottom: none; }.sheet-row:active{ background: rgba(var(--gold-rgb),.08); }.sheet-row .sr-icon{ font-size: 1rem; flex-shrink: 0; }.sheet-row .sr-body{ display: flex; flex-direction: column; gap: .1rem; min-width: 0; }.sheet-row .sr-name{ color: var(--bone-bright); font-size: .81rem; }.sheet-row .sr-hint{ color: var(--bone-dim); font-size: .68rem; }button.sheet-row{
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+  }/* ── 30f. INPUT AREA ── */html, body{
+    /* Firefox-resiliens (2026-08-06): vh-fallback före dvh — äldre FF
+       saknar dvh och en ogiltig height på html/body river hela mobil-layouten
+       (inkl. att fixed-bottom-nav kan hamna utanför vyporten). */
+    height: 100vh;
+    height: 100dvh;
+  }.main{
+    padding-bottom: 0 !important; /* navet är flödesbaserat nu (2026-08-09) */
+  }.input-area{
+    padding: .4rem !important;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }.input-area textarea{
+    font-size: var(--fs-chat) !important; /* 1.125rem ≈ 20px ≥16px — prevents iOS auto-zoom */
+    min-height: 48px !important;
+    max-height: 120px;
+    line-height: 1.4;
+    padding: .5rem .6rem .5rem 1.8rem !important; /* 1.8rem = plats för '>'-prompten */
+  }.composer{ padding: .3rem !important; }.send-btn{
+    min-height: 48px !important;
+    font-size: .78rem !important;
+    padding: .5rem .8rem !important;
+  }.input-hint{ display: none !important; }/* Maskinrummet: flat debug-panel blir en bottom-sheet på mobil (max 60vh) */.console{
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 60vh !important;
+    z-index: 10000 !important;
+    box-shadow: 0 -6px 24px rgba(0,0,0,.7) !important;
+  }.console-log{ max-height: calc(60vh - 2.1rem) !important; }/* ── 30h. CHAT MESSAGES ── */.msg{
+    max-width: 100% !important;
+    padding: .5rem .6rem !important;
+  }.msg .text{
+    font-size: var(--fs-base) !important;
+    line-height: 1.5 !important;
+  }.msg.dm .text{ font-size: var(--fs-narr) !important; }.msg.effect{ font-size: .85rem !important; }.event-batch{ max-width: 100% !important; }/* Scene cards */.scene-card{ width: 100% !important; max-width: none !important; }.scene-card .ascii-art pre{ font-size: .58rem !important; }/* Roll requests */.roll-request{
+    flex-direction: column !important;
+    width: 100% !important;
+  }.rr-btn{
+    min-height: 48px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }/* Reasoning / thinking bubbles */.msg.reasoning, .msg.thinking{ max-width: 100% !important; }/* Gate / destiny screens */.gate-title{ font-size: .7rem !important; }.destiny-title h1{ font-size: .85rem !important; }.head h1{ font-size: .7rem !important; }/* ASCII art compact */.ascii-art pre{ font-size: .5rem !important; line-height: 1.1 !important; }/* Roll badges */
+}/* ══════════════════════════════════════════
+   31. MOBILE ≤ 640px (phone)
+   ══════════════════════════════════════════ */
+@media (max-width: 640px){.topbar .brand{
+    max-width: 100px;
+    font-size: .5rem !important;
+  }.topbar .campaign{ display: none !important; }.msg .text{ font-size: var(--fs-base) !important; }.msg.dm .text{ font-size: var(--fs-narr) !important; }.msg.effect{ font-size: .81rem !important; }.msg{ padding: .4rem .5rem !important; }
+}/* ══════════════════════════════════════════
+   32. MOBILE ≤ 400px (small phone)
+   ══════════════════════════════════════════ */
+@media (max-width: 400px){.topbar{ padding: .25rem .35rem !important; }.topbar .brand{ max-width: 70px; font-size: .45rem !important; }.mobile-nav .nav-tab .nav-label{ font-size: .58rem; }.mobile-nav .nav-tab .nav-icon{ font-size: .85rem; }.mobile-nav .nav-tab.nav-center .nav-icon{ font-size: 1.1rem; }.msg .text{ font-size: var(--fs-base) !important; }.msg.dm .text{ font-size: var(--fs-narr) !important; }
+  /* textarea förblir 16px — 15px triggar iOS auto-zoom */
+}/* ══════════════════════════════════════════
+   33. COMBAT TRACKER — Krigsrådet + stridslogg (Spår C)
+   Alla nya klasser prefixas cr- / cl- / ir- / rc- för att inte krocka med temat.
+   ══════════════════════════════════════════ *//* ── Krigsrådet v2: borttagen 2026-08 (chat-first combat) ── */.guardian-box.combat-log{
+  background: var(--ink) !important;
+  border: 1px solid var(--edge) !important;
+  font-family: var(--font-mono) !important;
+}.cl-head{
+  font-family: var(--font-accent);
+  font-size: .5rem;
+  color: var(--gold);
+  letter-spacing: .2em;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid var(--edge);
+  margin-bottom: .3rem;
+}.cl-round{
+  font-family: var(--font-display);
+  font-size: .6rem;
+  letter-spacing: .25em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  text-align: center;
+  padding: .3rem 0;
+  margin: .15rem 0 .3rem;
+  border-top: 1px dashed var(--edge);
+  border-bottom: 1px dashed var(--edge);
+}.cl-row{
+  font-size: .87rem;
+  line-height: 1.55;
+  color: var(--bone-dim);
+  padding: .12rem 0 .12rem .45rem;
+  border-left: 2px solid var(--blood);
+  margin: .15rem 0;
+}.cl-row.cl-enemy{ color: var(--bone); }.cl-row.cl-player{ color: var(--arcane); }.cl-row.cl-player b{ color: var(--bone-bright); }.cl-row.cl-start{ color: var(--gold-bright); border-left-color: var(--gold); font-weight: 700; }.cl-row.cl-start b{ color: var(--gold-bright); }.cl-row.cl-end{ color: var(--term-green); border-left-color: var(--term-green); }.cl-row.cl-dmg{ color: var(--blood-bright); }.cl-row.cl-dmg b{ color: var(--blood-bright); }.cl-row.cl-death{
+  color: var(--blood-bright);
+  border-left-color: var(--blood-bright);
+  animation: cr-death-fade 2.5s ease forwards;
+}.cl-row.cl-round{
+  border-left: none;
+  text-align: center;
+  color: var(--gold);
+  font-family: var(--font-accent);
+  font-size: .55rem;
+  letter-spacing: .15em;
+  padding: .35rem 0;
+  border-top: 1px dashed var(--edge);
+  border-bottom: 1px dashed var(--edge);
+  margin: .3rem 0;
+}
+@keyframes cr-death-fade { to { opacity: .6; } }/* ── Initiativceremoni ── */.initiative-reveal{
+  max-width: 460px;
+  margin: .4rem 0 .9rem;
+  border: 1px solid var(--gold);
+  background: var(--stone) !important;
+  box-shadow: none !important;
+  padding: .55rem .7rem;
+  animation: batch-in .4s cubic-bezier(.22,1,.36,1);
+}.ir-title{
+  font-family: var(--font-display);
+  font-size: .58rem;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  margin-bottom: .3rem;
+}.ir-line{
+  font-family: var(--font-accent);
+  font-size: .71rem;
+  color: var(--bone);
+  line-height: 1.8;
+}.ir-line b{ font-weight: 400; }.ir-line .ir-player{ color: var(--arcane); }.ir-line .ir-enemy{ color: var(--blood-bright); }.ir-sep{ color: var(--edge-hi); }.ir-first{
+  margin-top: .3rem;
+  font-size: .79rem;
+  color: var(--gold-bright);
+  font-weight: 700;
+  animation: cr-flicker 2.2s infinite;
+}/* ── Resume-recap "Senast i Cauldron…" ── */.resume-card{
+  max-width: 560px;
+  margin: 0 auto .9rem;
+  border: 1px solid var(--edge);
+  border-left: 3px solid var(--gold);
+  background: var(--stone) !important;
+  box-shadow: none !important;
+}.rc-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .6rem .7rem;
+  cursor: pointer;
+  min-height: 44px;
+  user-select: none;
+  touch-action: manipulation;
+}.rc-head:active{ background: var(--stone-2); }.rc-title{
+  font-family: var(--font-display);
+  font-size: .62rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+}.rc-caret{ color: var(--bone-dim); font-size: .7rem; transition: transform .25s; }.resume-card.collapsed .rc-caret{ transform: rotate(-90deg); }.resume-card.collapsed .rc-body{ display: none; }.rc-body{
+  border-top: 1px solid var(--edge);
+  padding: .5rem .7rem .65rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}.rc-row{
+  display: flex;
+  gap: .6rem;
+  font-size: .81rem;
+  line-height: 1.5;
+}.rc-k{
+  flex-shrink: 0;
+  min-width: 5.2rem;
+  color: var(--bone-dim);
+  font-size: .73rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}.rc-v{ color: var(--bone-bright); }.rc-quests .rc-v{ color: var(--gold); }.rc-dms{
+  margin-top: .3rem;
+  border-top: 1px dashed var(--edge);
+  padding-top: .4rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}.rc-dm{
+  font-size: .79rem;
+  color: var(--bone-dim);
+  font-style: italic;
+  border-left: 2px solid var(--edge);
+  padding-left: .5rem;
+  line-height: 1.5;
+}/* ══════════════════════════════════════════
+   34. MOBIL ≤ 900px — återupptagningskort + initiativ-avslöjande
+   (Stridsrådet/battle-rail togs bort med chat-first-striden v26; kvar är att
+   de två korten aldrig får bredda förbi viewporten.) */
+@media (max-width: 900px){.resume-card, .initiative-reveal{ max-width: 100% !important; }
+}/* ══════════════════════════════════════════
+   35. SPÅR D1 — MASKINRUMMET (flat panel) + CHAR/NPC DRAWER + CODEX
+   Klasser: console* (flat api.js-stil) · cd-* (drawer) · cx-* (codex)
+   ══════════════════════════════════════════ *//* ── 35a. MASKINRUMMET — platt, minimal, som api.js #debug-panel ── */.console, .console-head, .console-log{
+  background-image: none !important;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.6) !important;
+}.console{
+  border: 1px solid #333 !important;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.6) !important;
+}.console-head{ background: #111 !important; border-bottom: 1px solid #222 !important; }.console-title{
+  font-family: var(--font-mono) !important;
+  font-size: .85rem !important; letter-spacing: .04em !important;
+  color: var(--poison) !important; text-shadow: none !important;
+  text-transform: none !important;
+}.console-count{
+  font-family: var(--font-mono) !important;
+  color: #666 !important;
+}.console-log{
+  font-family: var(--font-mono) !important;
+  font-size: .98rem !important; line-height: 1.35 !important;
+}.console-empty{ color: var(--bone-dim) !important; }.cchip, .console-btn{
+  background: #222 !important;
+  border: 1px solid #444 !important;
+  color: #aaa !important;
+  font-family: var(--font-mono) !important;
+  font-size: .85rem !important; letter-spacing: .02em !important;
+  text-transform: none !important;
+  padding: .14rem .5rem !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  min-height: 0 !important;
+}@media (any-hover:hover),(hover:hover){
+  .cchip:hover,
+.console-btn:hover{
+  background: #333 !important;
+  border-color: #555 !important;
+  color: #fff !important;
+}
+}.cchip:active, .console-btn:active{
+  background: #444 !important;
+  color: #fff !important;
+}.cchip.on{
+  background: var(--term-green) !important;
+  border-color: var(--term-green) !important;
+  color: #0a0a12 !important;
+}@media (any-hover:hover),(hover:hover){
+  .console-btn.danger:hover{
+  background: var(--blood) !important;
+  border-color: var(--blood-bright) !important;
+  color: #fff !important;
+}
+}.clog, .clog span, .clog b{
+  font-family: var(--font-mono) !important;
+}.clog{ border-bottom: 1px solid #1a1a2a; }.clog .ct{ color: #555 !important; opacity: 1 !important; }.clog .cn{ color: var(--teal) !important; opacity: .8 !important; }.clog .cm{ color: var(--bone) !important; }.clog.DEBUG .cl, .clog.DEBUG .cm{ color: var(--bone-dim) !important; }.clog.INFO .cl{ color: var(--term-green) !important; }.clog.WARNING .cl, .clog.WARNING .cm{ color: var(--term-amber) !important; }.clog.ERROR .cl, .clog.ERROR .cm{ color: #ff5566 !important; }.clog.CRITICAL .cl, .clog.CRITICAL .cm{ color: #ff5566 !important; text-shadow: none !important; }/* ── 35b. DRAWER — rubriker & knappar (temat vinner över globala button-regler) ── */.cd-title, .cd-name, .cd-section-title, .cd-stat-k, .cd-abbr, .cd-score,
+.cd-mention, .cd-nav-btn{
+  font-family: var(--font-display) !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}.cd-drawer{ background: var(--stone) !important; }.cd-head{ border-bottom: 1px solid var(--edge) !important; }.cd-title{ color: var(--gold-bright) !important; letter-spacing: .22em !important; }.cd-name{ color: var(--bone-bright) !important; font-size: .8rem !important; }.cd-class{ color: var(--arcane) !important; font-style: normal !important; }.cd-section-title{ color: var(--gold) !important; letter-spacing: .26em !important; font-size: .6rem !important; }.cd-section-title::after{ background: var(--edge) !important; }.cd-hp-label{ color: var(--bone-dim) !important; }.cd-hp-label b{ color: var(--blood-bright) !important; }.cd-trough, .cd-xp{ background: var(--ink) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }.cd-xp{ border-color: rgba(var(--gold-rgb),.35) !important; }.cd-xp-label b{ color: var(--gold-bright) !important; }.cd-stat, .cd-ability, .cd-res-row{
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}.cd-stat-k{ color: var(--bone-dim) !important; letter-spacing: .2em !important; }.cd-stat-v{ font-family: var(--font-accent) !important; color: var(--bone-bright) !important; }.cd-abbr{ color: var(--gold) !important; letter-spacing: .24em !important; }.cd-score{ color: var(--bone-bright) !important; }.cd-mod{ color: var(--arcane) !important; }.cd-slot{ border: 1px solid var(--edge) !important; background: var(--ink) !important; box-shadow: none !important; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%) !important; }.cd-slot.lit{ border-color: transparent !important; background: linear-gradient(160deg, var(--gold-bright), var(--gold) 55%, #7a5d15) !important; color: rgba(11,8,18,0.9) !important; box-shadow: none !important; }.cd-slots-hint, .cd-inv-empty, .cd-empty{ color: var(--bone-dim) !important; }.cd-res-label{ color: var(--bone-bright) !important; }.cd-res-note{ color: var(--bone-dim) !important; }.cd-npc-avatar{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }.cd-role{ color: var(--bone-dim) !important; font-style: normal !important; }.cd-rel-badge{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; color: var(--bone-dim) !important; }.cd-alive{ color: var(--poison) !important; }.cd-alive.dead{ color: var(--blood-bright) !important; }.cd-notes p{ color: var(--bone) !important; }.cd-mention{
+  background: var(--stone-3) !important;
+  border: 1px solid var(--arcane) !important;
+  color: var(--arcane-bright) !important;
+  font-size: .73rem !important; letter-spacing: .14em !important;
+}@media (any-hover:hover),(hover:hover){
+  .cd-mention:hover{ background: var(--edge) !important; }
+}.cd-mention:active{ background: var(--arcane) !important; color: var(--ink) !important; }.cd-nav-btn{
+  background: var(--stone-3) !important;
+  border: 1px solid var(--gold) !important;
+  color: var(--gold-bright) !important;
+  font-size: .73rem !important; letter-spacing: .18em !important;
+}@media (any-hover:hover),(hover:hover){
+  .cd-nav-btn:hover{ background: var(--edge) !important; }
+}.cd-nav-btn:active{ background: var(--gold) !important; color: var(--ink) !important; }.cd-close, .cx-close{
+  background: transparent !important;
+  border: 1px solid var(--edge) !important;
+  color: var(--bone-dim) !important;
+  box-shadow: none !important;
+}@media (any-hover:hover),(hover:hover){
+  .cd-close:hover,
+.cx-close:hover{
+  background: transparent !important;
+  border-color: var(--blood-bright) !important;
+  color: var(--blood-bright) !important;
+}
+}.cd-close:active, .cx-close:active{ background: transparent !important; color: var(--blood-bright) !important; }.cd-backdrop{ background: rgba(4,3,8,.72) !important; }/* ── 35c. CODEX — rubriker, tabs ── */.cx-head{ border-bottom: 1px solid var(--edge) !important; }.cx-title{
+  font-family: var(--font-display) !important;
+  font-size: .68rem !important; letter-spacing: .3em !important;
+  color: var(--gold-bright) !important; text-transform: uppercase !important;
+}.cx-tabs{ border-bottom: 1px solid var(--edge) !important; display: flex !important; overflow-x: auto !important; scrollbar-width: thin !important; -webkit-overflow-scrolling: touch; }.cx-tabs::-webkit-scrollbar{ height: 4px; }.cx-tabs::-webkit-scrollbar-thumb{ background: var(--edge-hi); }.cx-tab{
+  font-family: var(--font-display) !important;
+  font-size: .65rem !important; letter-spacing: .08em !important;
+  white-space: nowrap !important; flex: 0 0 auto !important;
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  border-bottom: none !important;
+  color: var(--bone-dim) !important;
+  box-shadow: none !important;
+  text-transform: uppercase !important;
+}@media (any-hover:hover),(hover:hover){
+  .cx-tab:hover{ background: var(--stone-3) !important; color: var(--bone-bright) !important; }
+}.cx-tab:active{ background: var(--gold) !important; color: var(--ink) !important; }.cx-tab.active{
+  background: var(--ink) !important;
+  border-color: var(--gold) !important;
+  color: var(--gold-bright) !important;
+}.cx-tab.active::before{ content: '> '; color: var(--gold); }.cx-frame iframe{ background: var(--ink) !important; border: 0 !important; }.cx-placeholder{ color: var(--bone-dim) !important; }/* ── 35d. MOBILE ≤ 900px: drawer → bottom-sheet, codex → fullscreen ── */
+@media (max-width: 900px){.cd-drawer{
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 80vh !important;
+    border-left: none !important;
+    border-top: 2px solid var(--gold) !important;
+    transform: translateY(100%) !important;
+    transition: transform .3s cubic-bezier(.22,1,.36,1) !important;
+  }.cd-drawer.open{ transform: translateY(0) !important; }.cd-body{ padding: .8rem .75rem !important; }/* 44px+ touch-mål + :active-state */.cd-close, .cx-close{ width: 44px !important; height: 44px !important; font-size: 1rem !important; }.cd-mention, .cd-nav-btn{ min-height: 44px !important; }.cd-close:active, .cx-close:active{ background: rgba(212,58,77,.12) !important; }.cx-tabs{ padding: .45rem .6rem 0 !important; gap: .3rem !important; }.cx-tab{ min-height: 44px !important; padding: .45rem .7rem !important; }.cx-head{ padding: .45rem .6rem !important; }.cx-title{ font-size: .7rem !important; }
+}/* ── 35e. MOBILE ≤ 640px: tightare paneler ── */
+@media (max-width: 640px){.console{ max-height: 60vh !important; }.console-log{ max-height: calc(60vh - 2.1rem) !important; }.console-head{ flex-wrap: wrap; row-gap: .25rem; }.console-count{ margin-left: auto; }.cd-drawer{ max-height: 80vh !important; }.cd-stats, .cd-abilities{ gap: .3rem !important; }
+}
+
+/* ═══════════════════════════════════════════════════
+   ⚔ COMBAT SPLIT-VIEW v27 — Stridens två ansikten
+   Aktiv strid: .main.combat-split delar chatten i två paneler.
+   Vänster #chat = DM:ns berättelse · Höger #battle-log = stridsdata
+   (fiendekort, HP, tärningar, rundor, statusbar som panelheader).
+   Mobile ≤768px: stridsloggen som kollapsbar låda under berättelsen.
+   ═══════════════════════════════════════════════════ */
+.main.combat-split,
+.main.battle-log-open{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 40%);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  column-gap: .75rem;
+}
+.main.combat-split .chat-scroll,
+.main.battle-log-open .chat-scroll{
+  grid-column: 1; grid-row: 1;
+  min-height: 0;
+  padding-right: .8rem;
+}
+/* ── Stridspanelen (höger) ── */
+.battle-log-pane{
+  display: none;
+  grid-column: 2; grid-row: 1 / span 3;
+  flex-direction: column;
+  min-height: 0;
+  background: rgba(139,26,42,.05);
+  border: 1px solid rgba(139,26,42,.35);
+  border-left: 3px solid var(--blood);
+  box-shadow: inset 0 0 24px rgba(139,26,42,.06), 0 0 18px rgba(139,26,42,.08);
+  animation: bl-in .45s cubic-bezier(.22,1,.36,1);
+}
+.main.combat-split .battle-log-pane,
+.main.battle-log-open .battle-log-pane{ display: flex; }
+.bl-close{
+  margin-left: .4rem;
+  background: transparent;
+  border: 1px solid rgba(139,26,42,.4);
+  color: var(--bone-bright);
+  font-size: .62rem; line-height: 1;
+  padding: .22rem .4rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+@media (any-hover:hover),(hover:hover){
+  .bl-close:hover{ background: rgba(139,26,42,.3); color: var(--bone-bright); }
+}
+.bl-close:active{ background: var(--blood); color: var(--ink); }
+@keyframes bl-in{
+  from{ opacity: 0; transform: translateX(14px); }
+  to{ opacity: 1; transform: translateX(0); }
+}
+.bl-head{
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .45rem .7rem;
+  border-bottom: 1px solid rgba(139,26,42,.35);
+  background: linear-gradient(180deg, rgba(139,26,42,.16), rgba(139,26,42,.04));
+}
+.bl-title{
+  font-family: var(--font-display);
+  font-size: .58rem; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--blood-bright);
+  text-shadow: 0 0 8px rgba(var(--blood-bright-rgb),.35);
+}
+.bl-round{
+  font-family: var(--font-display);
+  font-size: .55rem; letter-spacing: .1em;
+  color: var(--gold-bright);
+  border: 1px solid rgba(var(--gold-rgb),.4);
+  background: rgba(var(--gold-rgb),.08);
+  padding: 2px 7px;
+  animation: bl-in .3s ease;
+}
+/* Vems tur (v27.2): spelare = guld, fiende = blodröd */
+.bl-turn{
+  font-family: var(--font-mono);
+  font-size: .52rem; letter-spacing: .05em;
+  padding: 2px 7px; border: 1px solid; border-radius: var(--radius-sm);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 150px;
+}
+.bl-turn.turn-player{
+  color: var(--gold-bright);
+  border-color: rgba(var(--gold-rgb),.45);
+  background: rgba(var(--gold-rgb),.08);
+  text-shadow: 0 0 6px rgba(var(--gold-bright-rgb),.3);
+}
+.bl-turn.turn-enemy{
+  color: var(--blood-bright);
+  border-color: rgba(var(--blood-bright-rgb),.5);
+  background: rgba(var(--blood-rgb),.14);
+  text-shadow: 0 0 6px rgba(var(--blood-bright-rgb),.3);
+}
+.bl-head .bl-title{ margin-right: auto; }
+/* Dag-dropdowns (v27.2): rubrik med beskrivning, ellipsis vid lång titel */
+.day-head .dh-title{
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}
+.day-head .dh-caret{ flex-shrink: 0; }
+/* ═══════════════════════════════════════════
+   SCRIBE-LOADER (v27.4) — flytande statusrad mot chatbakgrunden
+   DM/Lorekeeper-status: senaste loggentryn från kampanjen (live-feed),
+   CLI/ascii-stil med fjäderpenna + flygande bläckpixlar. INGEN box —
+   ligger direkt mot bakgrunden.
+   ═══════════════════════════════════════════ */
+.scribe-loader{
+  position: relative;
+  display: flex; flex-direction: column; gap: .3rem;
+  padding: .35rem .2rem .5rem;
+  font-family: var(--font-mono);
+  color: #e8dcbc;
+  max-width: 520px;
+  text-shadow: 0 1px 3px rgba(0,0,0,.9);
+}
+.scribe-row{ display: flex; align-items: center; gap: .5rem; line-height: 1; min-height: 1.25em; }
+.scribe-quill{
+  font-size: 1.05rem; flex-shrink: 0; line-height: 1;
+  transform-origin: 50% 90%;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.8));
+  animation: quill-bob 1.7s ease-in-out infinite;
+}
+@keyframes quill-bob{
+  0%,100%{ transform: rotate(-7deg) translateY(0); }
+  50%{ transform: rotate(6deg) translateY(-2px); }
+}
+.scribe-prompt{ color: var(--gold); font-weight: 700; }
+.scribe-loader .thought{
+  font-style: normal !important;
+  color: #e8dcbc !important;
+  font-size: .8rem !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,.9) !important;
+  letter-spacing: .02em;
+  animation: none !important; /* stänger av gamla blink på hela texten */
+}
+.scribe-cursor{
+  color: #e8dcbc; font-size: .8rem; flex-shrink: 0;
+  animation: blink-cursor 1.1s steps(1) infinite;
+}
+.scribe-inkline{
+  height: 2px; border-radius: var(--radius-xs); overflow: hidden;
+  background: rgba(var(--gold-rgb),.18);
+}
+.scribe-inkline i{
+  display: block; height: 100%; width: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright), var(--arcane));
+  transform-origin: left center;
+  animation: ink-draw 2.6s ease-in-out infinite;
+}
+@keyframes ink-draw{
+  0%{ transform: scaleX(0); }
+  40%{ transform: scaleX(.9); }
+  65%{ transform: scaleX(.65); }
+  100%{ transform: scaleX(1); }
+}
+.scribe-mini{ max-width: 380px; padding: .3rem .2rem .4rem; }
+.scribe-mini .scribe-quill{ font-size: .85rem; }
+.scribe-mini .scribe-cursor{ font-size: .72rem; }
+.scribe-mini .scribe-inkline{ height: 2px; }
+/* Idle-andning (2026-08-11): ingen ny loggrad på ett tag → texten
+   andas mjukt så loadern aldrig ser frusen ut under långa LLM-calls. */
+.scribe-loader.idle .thought{
+  animation: thought-breathe 2.6s ease-in-out infinite !important;
+}
+@keyframes thought-breathe{
+  0%,100%{ opacity: .8; }
+  50%{ opacity: 1; }
+}
+/* ═══════════════════════════════════════════
+   CLI-TERMINAL LOADER (2026-08-06) — cli-chat får EGEN laddning:
+   ingen fjäderpenna, inget bläck — en riktig terminalstatus:
+   `$ ❯ tanke▊` + grön progressbar (block-stil). Överskuggar
+   fantasy-versionen ovan när body.cli-chat är aktivt.
+   ═══════════════════════════════════════════ */
+body.cli-chat .scribe-loader,
+body.cli-chat .scribe-loader *{
+  /* !important: snes §1 sätter font-family var(--font-body) !important på
+     body/div/span — annars vinner Spectral över terminal-monon. */
+  font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
+}
+body.cli-chat .scribe-quill{ display: none !important; }
+body.cli-chat .scribe-row::before{
+  content: '$ ';
+  color: var(--term-green);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--term-green) 55%, transparent);
+}
+body.cli-chat .scribe-prompt{
+  color: var(--term-green);
+  font-weight: 700;
+  opacity: .85;
+}
+body.cli-chat .scribe-loader .thought{
+  color: var(--term-green) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--term-green) 35%, transparent) !important;
+  letter-spacing: .03em;
+}
+/* #thought-text har color: var(--gold-bright) !important (ID slår klasser) —
+   slå tillbaka med ID-specificitet så CLI-temat faktiskt får grön text. */
+body.cli-chat #thought-text,
+body.cli-chat #guardian-thought-text{
+  color: var(--term-green) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--term-green) 35%, transparent) !important;
+}
+body.cli-chat .scribe-cursor{
+  color: var(--term-green);
+  font-size: .95rem;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--term-green) 60%, transparent);
+  animation: blink-cursor .85s steps(1) infinite;
+}
+/* Terminal-progressbar: ram + grönt block som fylls med hugg */
+body.cli-chat .scribe-inkline{
+  height: 10px;
+  border-radius: 0;
+  background: rgba(0,0,0,.45);
+  border: 1px solid color-mix(in srgb, var(--term-green) 45%, transparent);
+}
+body.cli-chat .scribe-inkline i{
+  background: linear-gradient(90deg, color-mix(in srgb, var(--term-green) 60%, transparent), var(--term-green));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--term-green) 50%, transparent);
+  animation: cli-progress 2.2s ease-in-out infinite;
+}
+@keyframes cli-progress{
+  0%{ transform: scaleX(0); }
+  45%{ transform: scaleX(.9); }
+  70%{ transform: scaleX(.55); }
+  100%{ transform: scaleX(1); }
+}
+/* CRT-scanlines/borttagna (grimoire v5 2026-09-22) — statusraden bär pappers-
+   narv från body::before, aldrig katskärmstextur. */
+body.cli-chat .scribe-mini .scribe-inkline{ height: 8px; }
+/* Statusbaren = panelens andra header-rad (flyttad hit från ovanför input).
+   WRAP-PLIKT (hero1-feedback 2026-10-06 "enemies veer off right"): JS sätter
+   display:flex inline men flex-wrap stannar på nowrap-default ⇒ lång fiendelista
+   bucklar panelen (sw 736 > cw 279 mätt 2026-10-07). Originalregeln
+   .combat-status-bar i chat.html är död CSS (elementet har klass .bl-status). */
+.battle-log-pane .bl-status{
+  border-top: none;
+  border-bottom: 1px solid rgba(139,26,42,.25);
+  background: rgba(11,8,18,.55);
+  flex-wrap: wrap;
+  row-gap: .15rem;
+  min-width: 0;
+}
+.bl-body{
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: .8rem .7rem 1.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139,26,42,.5) var(--ink);
+}
+.bl-body::-webkit-scrollbar{ width: 10px; }
+.bl-body::-webkit-scrollbar-thumb{ background: rgba(139,26,42,.45); border: 2px solid var(--ink); }
+.bl-body::-webkit-scrollbar-track{ background: var(--ink); }
+/* Poster i stridspanelen: kompaktare, vänsterjusterade, tightare mellanrum */
+.bl-body .msg{ margin-bottom: .55rem; max-width: none; }
+.bl-body .msg.system{ text-align: left; max-width: none; margin-left: 0; margin-right: 0; }
+.bl-body .combat-inline{ font-size: .72rem; }
+.bl-body .combat-enemy-card{ transition: border-color .2s, background .2s, transform .2s; }
+@media (any-hover:hover),(hover:hover){
+  .bl-body .combat-enemy-card:hover{
+  border-color: rgba(var(--blood-bright-rgb),.65);
+  background: rgba(139,26,42,.10);
+  transform: translateX(-2px);
+}
+}
+.bl-body .combat-round{ width: fit-content; margin: .3rem auto; padding: .3rem 1rem; }
+.bl-body .initiative-reveal{ margin: .4rem 0; }
+/* ── Stridslogg-toggle — diskret, i TTS-barens högra ände (2026-08-06).
+      !important krävs: snes §5s `button`-flatregel har !important. ── */
+.battle-drawer-toggle{
+  display: inline-flex;
+  align-items: center; justify-content: center; gap: .35rem;
+  margin-left: auto;            /* trycker knappen till högra kanten av TTS-raden */
+  padding: .3rem .5rem !important;
+  font-family: var(--font-display);
+  font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--bone-dim) !important;
+  background: transparent !important;
+  border: 1px solid color-mix(in srgb, var(--blood) 45%, transparent) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.battle-drawer-toggle .bdt-icon{ font-size: .8rem; line-height: 1; }
+.battle-drawer-toggle .bdt-caret{ transition: transform .3s cubic-bezier(.22,1,.36,1); font-size: .55rem; }
+@media (any-hover:hover),(hover:hover){
+  .battle-drawer-toggle:hover{ color: var(--bone-bright) !important; border-color: var(--blood-bright) !important; transform: none !important; }
+}
+.battle-drawer-toggle:active{ color: var(--blood-bright) !important; background: transparent !important; }
+body.battle-drawer-open .battle-drawer-toggle{ color: var(--blood-bright) !important; border-color: var(--blood-bright) !important; }
+body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180deg); }
+
+/* ── Tärnings-badges: spelare = guld, fiende = blodröd ── */
+.dice-badge{
+  display: inline-block;
+  margin-left: .35rem; padding: 1px 7px;
+  font-family: var(--font-mono);
+  font-size: .66rem; line-height: 1.5; white-space: nowrap;
+  border: 1px solid;
+  vertical-align: middle;
+  transition: transform .15s, box-shadow .15s;
+}
+@media (any-hover:hover),(hover:hover){
+  .dice-badge:hover{ transform: translateY(-1px); }
+}
+.enemy-dice-badge{
+  color: var(--blood-bright);
+  border-color: rgba(var(--blood-bright-rgb),.55);
+  background: rgba(var(--blood-rgb),.14);
+  text-shadow: 0 0 6px rgba(var(--blood-bright-rgb),.4);
+}
+@media (any-hover:hover),(hover:hover){
+  .enemy-dice-badge:hover{ box-shadow: 0 0 10px rgba(var(--blood-bright-rgb),.35); }
+}
+.player-dice-badge{
+  color: var(--gold-bright);
+  border-color: rgba(var(--gold-bright-rgb),.5);
+  background: rgba(var(--gold-rgb),.12);
+  text-shadow: 0 0 6px rgba(var(--gold-bright-rgb),.4);
+}
+@media (any-hover:hover),(hover:hover){
+  .player-dice-badge:hover{ box-shadow: 0 0 10px rgba(var(--gold-bright-rgb),.3); }
+}
+.crs-line .dice-badge{ margin-left: .4rem; }
+
+/* ── Tärnings-badges ENHANCED (v28): pixelrök + gnistor + pop-in ── */
+.px-smoke{
+  position: fixed; z-index: 209; pointer-events: none;
+  image-rendering: pixelated; border-radius: 0; opacity: .85;
+}
+.dice-badge{
+  animation: dice-badge-pop .3s cubic-bezier(.34,1.56,.64,1) both;
+  border-radius: var(--radius-xs);
+}
+@keyframes dice-badge-pop{
+  0%{ transform: scale(.4) translateY(5px); opacity: 0; }
+  70%{ transform: scale(1.15) translateY(-1px); opacity: 1; }
+  100%{ transform: scale(1) translateY(0); }
+}
+/* Kritisk — guldglöd som pulserar efter pop-in */
+.enemy-dice-badge.crit{
+  border-color: rgba(255,215,0,.9); color: var(--gold-bright);
+  background: rgba(var(--gold-rgb),.22); text-shadow: 0 0 8px rgba(255,215,0,.6);
+  animation: dice-badge-pop .3s cubic-bezier(.34,1.56,.64,1) both, badge-crit-glow 1.1s ease-in-out .3s infinite;
+}
+.player-dice-badge.crit,
+.ally-dice-badge.crit{
+  animation: dice-badge-pop .3s cubic-bezier(.34,1.56,.64,1) both, badge-crit-glow 1.1s ease-in-out .3s infinite;
+}
+@keyframes badge-crit-glow{
+  0%,100%{ box-shadow: 0 0 6px rgba(255,215,0,.35); }
+  50%{ box-shadow: 0 0 16px rgba(255,215,0,.85); }
+}
+/* Nat 1 — blodröd + skak */
+.dice-badge.fumble{
+  border-color: rgba(212,58,77,.95); background: rgba(90,15,24,.32);
+  color: var(--blood-bright);
+}
+.badge-shake{ animation: id-shake .4s ease both; }
+/* Miss — tonas ner, rökmoln istället för gnistor */
+.dice-badge.miss{ opacity: .72; }
+
+/* ── ROLL OR TYPE-kortet (v28): stora klickbara ikoner ── */
+.roll-request{
+  flex-direction: column; align-items: flex-start; gap: .55rem;
+  max-width: 420px;
+}
+.rr-title{
+  font-family: var(--font-display); font-weight: 700; font-size: .8rem;
+  letter-spacing: .22em; text-transform: uppercase;
+  color: var(--gold-bright); text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),.45);
+  animation: rr-title-in .35s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes rr-title-in{ 0%{ transform: translateY(-6px); opacity: 0; } 100%{ transform: translateY(0); opacity: 1; } }
+.rr-prompt{ font-size: .92rem; color: var(--bone-bright); }
+.rr-prompt b{ color: var(--gold-bright); font-family: var(--font-display); }
+.rr-note{ color: var(--bone-dim); font-size: .85rem; }
+.rr-actions{ display: flex; gap: .5rem; align-items: stretch; flex-wrap: wrap; width: 100%; }
+/* Kompakt ikon-knapp (2026-08-06): tärningen (guld) resp. pennan (spök) —
+   radikalt mindre, i mediaspelarens anda (22px-kontroller). Fortfarande
+   tydliga mål: padding liten, glyph .9rem, min-height 28px. */
+.rr-ico{
+  display: inline-flex; align-items: center; gap: .38rem;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: .66rem; letter-spacing: .07em; text-transform: uppercase;
+  cursor: pointer; padding: .25rem .55rem; border-radius: var(--radius-sm);
+  transition: all .18s; min-height: 28px;
+}
+.rr-ico-glyph{ font-size: .9rem; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+.rr-ico-label{ white-space: nowrap; }
+.rr-ico-dice{
+  flex: 0 0 auto; justify-content: center;
+  color: #1a1206;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #8a6d14);
+  border: 1px solid #6e5510;
+  box-shadow: 0 3px 8px -3px rgba(var(--gold-bright-rgb),.5);
+  animation: rr-pulse 2s ease-in-out infinite;
+}
+.rr-ico-dice .rr-ico-glyph{ animation: rr-dice-bob 1.6s ease-in-out infinite; }
+@keyframes rr-dice-bob{ 0%,100%{ transform: translateY(0) rotate(-6deg); } 50%{ transform: translateY(-2px) rotate(8deg); } }
+@media (any-hover:hover),(hover:hover){
+  .rr-ico-dice:hover{ filter: brightness(1.12); transform: translateY(-1px); }
+}
+.rr-ico-pen{
+  flex: 0 0 auto; justify-content: center;
+  background: transparent; color: var(--bone-dim);
+  border: 1px solid var(--edge);
+}
+@media (any-hover:hover),(hover:hover){
+  .rr-ico-pen:hover{ color: var(--bone-bright); border-color: var(--bone-dim); filter: none; transform: none; }
+}
+.rr-ico-pen .rr-ico-glyph{ animation: rr-pen-tilt 2.2s ease-in-out infinite; }
+@keyframes rr-pen-tilt{ 0%,100%{ transform: rotate(-12deg); } 50%{ transform: rotate(6deg); } }
+.rr-ico:disabled{ opacity: .4; cursor: default; animation: none; }
+/* Mobil: något större touch-yta — men fortfarande långt ifrån 44px-blocken */
+@media (max-width: 768px){
+  .rr-ico{ min-height: 36px; padding: .3rem .65rem; }
+  .rr-ico-glyph{ font-size: 1.05rem; }
+}
+
+/* ── MOBILE ≤768px: stridsloggen som kollapsbar låda ── */
+@media (max-width: 768px){
+  .main.combat-split,
+  .main.battle-log-open{
+    display: flex;
+    flex-direction: column;
+  }
+  .main.combat-split .chat-scroll,
+  .main.battle-log-open .chat-scroll{ padding-right: 1.6rem; }
+  .battle-log-pane{
+    grid-column: auto; grid-row: auto;
+    order: 5;
+    max-height: 0;
+    overflow: hidden;
+    border-left-width: 1px;
+    border-top: 2px solid var(--blood);
+    transition: max-height .35s cubic-bezier(.22,1,.36,1);
+  }
+  body.battle-drawer-open .battle-log-pane{
+    max-height: 46vh;
+    box-shadow: 0 -8px 24px rgba(0,0,0,.5), inset 0 0 24px rgba(139,26,42,.08);
+  }
+  body.battle-drawer-open .bl-body{ animation: bl-in .3s ease; }
+}
+/* ═══════════════════════════════════════════
+   ALLIERADE (v28) — friendly NPC combat cards
+   Arcane (purple) tint to contrast enemy blood-red / player gold.
+   ═══════════════════════════════════════════ */
+.bl-body .combat-ally-card{
+  border-color: rgba(var(--teal-rgb),.45);
+  background: rgba(var(--teal-rgb),.06);
+  transition: border-color .2s, background .2s, transform .2s, opacity .3s;
+}
+@media (any-hover:hover),(hover:hover){
+  .bl-body .combat-ally-card:hover{
+  border-color: rgba(var(--teal-rgb),.7);
+  background: rgba(var(--teal-rgb),.12);
+  transform: translateX(-2px);
+}
+}
+.combat-ally-card .cie-hpbar i{ background: var(--arcane); }
+.combat-ally-card .cie-hpbar.low i{ background: #d43a4d; animation: hp-flash 1s infinite; }
+/* Fallen allierad: gråskala + nedtonad */
+.combat-ally-card.fallen{
+  opacity: .45;
+  filter: grayscale(.85);
+  border-color: rgba(107,107,128,.4);
+  background: rgba(107,107,128,.05);
+  transform: none;
+  pointer-events: none;
+}
+.combat-ally-card.fallen .cie-name{ text-decoration: line-through; }
+.combat-ally-card.fallen .cie-sub{ color: var(--bone-dim); }
+/* HP-uppdatering för allierad */
+.combat-hp-update.ally b{ color: var(--arcane); }
+/* Round summary: allierad-rader */
+.crs-line.ally{ color: var(--arcane); }
+.crs-line.ally b{ color: var(--bone-bright); }
+/* Tärnings-badges: allierad = arcane */
+.ally-dice-badge{
+  color: var(--arcane);
+  border-color: rgba(var(--teal-rgb),.5);
+  background: rgba(var(--teal-rgb),.12);
+  text-shadow: 0 0 6px rgba(var(--teal-rgb),.4);
+}
+@media (any-hover:hover),(hover:hover){
+  .ally-dice-badge:hover{ box-shadow: 0 0 10px rgba(var(--teal-rgb),.3); }
+}
+/* Vems-tur-chip: allierad = arcane/guld */
+.bl-turn.turn-ally{
+  color: var(--gold-bright);
+  border-color: rgba(var(--teal-rgb),.5);
+  background: rgba(var(--teal-rgb),.12);
+  text-shadow: 0 0 6px rgba(var(--teal-rgb),.35);
+}
+/* Statusrad: allierade */
+.csb-ally{ color: var(--arcane); }
+.csb-ally.dead{ text-decoration: line-through; opacity: .4; }
+/* Initiativceremoni: allierad-entry */
+.ir-line .ir-ally{ color: var(--arcane); }
+
+/* ── @-NPC-chatt: "💬 Talking to {name}"-chip ovanför input ── */
+.at-chat-chip{
+  display: inline-flex;
+  align-items: center;
+  gap: .4em;
+  font-size: .62rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(var(--gold-rgb),.08);
+  border: 1px solid rgba(var(--gold-rgb),.35);
+  border-radius: var(--radius-xs);
+  padding: .22rem .55rem;
+  margin: 0 0 .35rem .1rem;
+  width: fit-content;
+  animation: at-chip-in .18s ease-out;
+}
+.at-chat-chip[hidden]{ display: none !important; }
+@keyframes at-chip-in{
+  from{ opacity: 0; transform: translateY(-3px); }
+  to{ opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════
+   36. CLI CHAT UI (v33) — REAL TERMINAL MODE
+   body.cli-chat = every chat line renders like a terminal
+   (oh-my-zsh style): no boxes anywhere, composer merges
+   flush with the stream. Disabled → classic bubbles.
+   ══════════════════════════════════════════ */
+
+/* Mono stack for the whole CLI chat stream */
+body.cli-chat{
+  --cli-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+}
+/* Force mono on every element inside the chat stream — beats the global
+   section-1 font-family !important on p/span/div/button etc. */
+body.cli-chat #chat,
+body.cli-chat #chat *{
+  font-family: var(--cli-mono) !important;
+}
+
+/* ── Line rhythm: tight terminal rows ── */
+body.cli-chat .msg{
+  margin-bottom: .15rem;
+}
+body.cli-chat .msg-avatar{
+  display: none !important;
+}
+
+/* ── Bubble frames off — everything is flat lines ── */
+body.cli-chat .bubble{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .1rem 0 .15rem !important;
+  max-width: none !important;
+}
+/* ── Full-width terminal wrap (2026-08-07): message containers must NOT cap
+   the column width. chat.html inline <style> sets .msg{max-width:760px} and
+   .amb{max-width:760px} (760px ~ 60% of a 1280px viewport = the reported
+   wrap point). .bubble is already max-width:none above; these lift the
+   PARENT containers so DM/player/NPC narration flows edge-to-edge like a
+   real terminal. Also cascades past the 520px caps on .msg.system/
+   .msg.cmd/.msg.guardian (higher specificity + !important). !important is
+   required: snes.css §1 typography rules use !important and would beat
+   non-!important overrides. Deliberate short elements (dice boxes, scene
+   cards, resume cards) are unaffected: content-sized or already flattened
+   full-width by Track B. Chat-scroll padding-right:4.5rem (rail clearance,
+   §36 polish pass) is untouched so text never runs under the rail. */
+body.cli-chat .msg{
+  max-width: none !important;
+}
+body.cli-chat .amb{
+  max-width: none !important;
+}
+body.cli-chat .bubble::before,
+body.cli-chat .bubble::after{
+  display: none !important;
+}
+/* Kill the global section-6 left accent bars on DM/NPC rows */
+body.cli-chat .msg.dm,
+body.cli-chat .msg.npc{
+  border-left: none !important;
+  padding-left: 0 !important;
+}
+
+/* ── Sender labels = prompt segments: ❯ DM / ❯ You / ❯ NPC ── */
+body.cli-chat .bubble .who{
+  font-family: var(--cli-mono) !important;
+  font-size: .68rem !important;
+  letter-spacing: .06em !important;
+  text-transform: lowercase !important;
+  text-shadow: none !important;
+  margin-bottom: .1rem;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  justify-content: flex-start !important;
+}
+body.cli-chat .msg.dm .bubble .who::before,
+body.cli-chat .msg.npc .bubble .who::before,
+body.cli-chat .msg.player .bubble .who::before{
+  content: '❯ ';
+  font-weight: 700;
+}
+body.cli-chat .msg.dm .bubble .who::before{ color: var(--gold); }
+body.cli-chat .msg.npc .bubble .who::before{ color: var(--npc-color, #a8b2c0); }
+body.cli-chat .msg.player .bubble .who::before{ color: var(--arcane); }
+body.cli-chat .bubble .who .dot{ display: none !important; }
+
+/* ── DM gutter: gone — [♪ play] chip sits on the right edge, [dm]-taggen till vänster ── */
+body.cli-chat .msg.dm .bubble .who{
+  padding-left: 0;
+}
+
+/* ── Text: mono, slightly smaller, terminal line-height ── */
+body.cli-chat .msg.dm .bubble .text,
+body.cli-chat .msg.npc .bubble .text,
+body.cli-chat .msg.player .bubble .text{
+  font-family: var(--cli-mono) !important;
+  font-size: .95rem;
+  line-height: 1.5;
+}
+body.cli-chat .msg.dm .bubble .text{
+  font-style: italic;
+  color: var(--bone);
+}
+body.cli-chat .msg.npc .bubble .text{
+  color: var(--bone);
+}
+body.cli-chat .msg.player .bubble .text{
+  color: var(--bone-bright);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  display: block;
+  text-align: left;
+}
+body.cli-chat .msg.player{
+  margin-left: 0;
+  justify-content: flex-start;
+}
+
+/* ── NPC quotes inside DM replies: flat indented rows ── */
+body.cli-chat .msg.dm .npc-quote{
+  margin: .1rem 0 .1rem 1.2rem;
+  padding: 0;
+  border-left: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+body.cli-chat .msg.dm .npc-quote .nq-who{
+  font-family: var(--cli-mono) !important;
+  font-size: .68rem !important;
+  letter-spacing: .06em !important;
+  text-transform: lowercase !important;
+  color: var(--npc-color, #a8b2c0);
+  text-shadow: none !important;
+  margin-bottom: .05rem;
+  gap: 0 !important;
+}
+body.cli-chat .msg.dm .npc-quote .nq-who::before{
+  content: '[';
+  color: var(--npc-color, #a8b2c0);
+  font-weight: 700;
+}
+body.cli-chat .msg.dm .npc-quote .nq-who::after{
+  content: ']';
+  color: var(--npc-color, #a8b2c0);
+  font-weight: 700;
+}
+body.cli-chat .msg.dm .npc-quote .nq-who .dot{ display: none !important; }
+body.cli-chat .msg.dm .npc-quote .nq-text{
+  font-family: var(--cli-mono) !important;
+  font-size: .92rem;
+  line-height: 1.5;
+}
+
+/* ── System / slash-cmd lines: comment style with '# ' prefix ── */
+body.cli-chat .msg.system,
+body.cli-chat .msg.cmd{
+  text-align: left;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+body.cli-chat .msg.system .box,
+body.cli-chat .msg.cmd .box{
+  display: block;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .15rem 0;
+  font-family: var(--cli-mono) !important;
+  font-size: .85rem;
+  line-height: 1.5;
+  color: var(--bone-dim);
+  text-align: left;
+}
+body.cli-chat .msg.system .box:not(:has(.inline-dice))::before,
+body.cli-chat .msg.cmd .box::before{
+  content: '# ';
+  color: var(--bone-dim);
+  opacity: .65;
+}
+body.cli-chat .msg.system .box b,
+body.cli-chat .msg.cmd .box b{
+  font-family: var(--cli-mono) !important;
+}
+
+/* ── Roll-request: flat terminal lines, no card chrome ── */
+body.cli-chat .roll-request{
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .2rem;
+  max-width: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .15rem 0 .3rem;
+}
+body.cli-chat .roll-request .rr-title{
+  font-family: var(--cli-mono) !important;
+  font-size: .66rem !important;
+  letter-spacing: .1em !important;
+  text-transform: lowercase !important;
+  color: var(--bone-dim);
+  text-shadow: none !important;
+  animation: none !important;
+}
+body.cli-chat .roll-request .rr-prompt{
+  font-family: var(--cli-mono) !important;
+  font-size: .88rem;
+  color: var(--bone-bright);
+}
+body.cli-chat .roll-request .rr-prompt b{
+  font-family: var(--cli-mono) !important;
+  color: var(--gold-bright);
+}
+body.cli-chat .roll-request .rr-note{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  color: var(--bone-dim);
+}
+body.cli-chat .roll-request .rr-actions{
+  gap: .4rem;
+  width: auto;
+}
+body.cli-chat .roll-request .rr-ico{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem !important;
+  letter-spacing: .04em !important;
+  text-transform: none !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .15rem .4rem .15rem 0 !important;
+  min-height: 0 !important;
+  animation: none !important;
+  color: var(--gold) !important;
+}
+body.cli-chat .roll-request .rr-ico .rr-ico-glyph{
+  font-size: .85rem !important;
+  filter: none !important;
+  animation: none !important;
+}
+body.cli-chat .roll-request .rr-ico-pen{
+  color: var(--bone-dim) !important;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .roll-request .rr-ico:hover{
+  filter: none !important;
+  transform: none !important;
+  color: var(--gold-bright) !important;
+}
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .roll-request .rr-ico-pen:hover{
+  color: var(--bone-bright) !important;
+}
+}
+body.cli-chat .roll-result-inline b{
+  font-family: var(--cli-mono) !important;
+}
+
+/* ── Event log: flat rows, turn label as header line ── */
+body.cli-chat .event-batch{
+  max-width: none;
+  margin: .3rem 0;
+  padding: .1rem 0 .2rem;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+body.cli-chat .event-batch .batch-turn{
+  position: static;
+  font-family: var(--cli-mono) !important;
+  font-size: .62rem !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: var(--gold-bright);
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0;
+  margin-bottom: .1rem;
+}
+body.cli-chat .event-card{
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  margin: .08rem 0;
+  padding: .05rem 0 .05rem 1.5rem;
+  border-left: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  font-style: normal;
+  line-height: 1.5;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .event-card:hover{
+  background: transparent !important;
+}
+}
+body.cli-chat .event-card .ev-icon{
+  font-size: .8rem;
+}
+
+/* ── Guardian / Lorekeeper report: flat ── */
+body.cli-chat .msg.guardian .guardian-title{
+  font-family: var(--cli-mono) !important;
+  font-size: .6rem !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+  color: var(--gold-bright);
+  padding: .25rem 0 .05rem;
+  border-bottom: none !important;
+}
+body.cli-chat .msg.guardian .guardian-box{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  line-height: 1.5;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: .15rem 0 .3rem;
+}
+body.cli-chat .msg.guardian .guardian-box strong{
+  font-family: var(--cli-mono) !important;
+}
+
+/* ── Scene card: flat, header as a row ── */
+body.cli-chat .scene-card{
+  width: 100%;
+  max-width: none;
+  margin: .4rem 0;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+body.cli-chat .scene-card .scene-header{
+  font-family: var(--cli-mono) !important;
+  font-size: .62rem !important;
+  letter-spacing: .1em !important;
+  text-transform: lowercase !important;
+  color: var(--bone-dim);
+  padding: .15rem 0;
+  border-bottom: none !important;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .scene-card .scene-header:hover{
+  background: transparent;
+  color: var(--bone-bright);
+}
+}
+body.cli-chat .scene-card .ascii-art{
+  margin: .2rem 0;
+  border-radius: 0;
+}
+
+/* ── Resume recap: flat rows ── */
+body.cli-chat .resume-card{
+  max-width: none;
+  margin: .4rem 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+body.cli-chat .resume-card .rc-head{
+  padding: .15rem 0;
+}
+body.cli-chat .resume-card .rc-title{
+  font-family: var(--cli-mono) !important;
+  font-size: .62rem !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: var(--gold-bright);
+}
+body.cli-chat .resume-card .rc-caret{
+  font-size: .62rem;
+}
+body.cli-chat .resume-card .rc-body{
+  border-top: none !important;
+  padding: .2rem 0 .3rem;
+  gap: .15rem;
+}
+body.cli-chat .resume-card .rc-row{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+body.cli-chat .resume-card .rc-k{
+  font-size: .68rem;
+  min-width: 4.5rem;
+}
+body.cli-chat .resume-card .rc-dm{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  color: var(--bone-dim);
+}
+
+/* ── Reasoning (DM inner monologue): flat indented rows ── */
+body.cli-chat .reasoning{
+  max-width: none;
+  margin: .25rem 0 .25rem 1.5rem;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+body.cli-chat .reasoning-head{
+  font-family: var(--cli-mono) !important;
+  font-size: .58rem !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+  color: var(--arcane);
+  padding: .1rem 0;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .reasoning-head:hover{
+  background: transparent;
+}
+}
+body.cli-chat .reasoning-head .orb{
+  display: none !important;
+}
+body.cli-chat .reasoning-body .inner{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  line-height: 1.5;
+  border-top: none !important;
+  margin: 0;
+  padding-top: .35rem;
+}
+
+/* ── Day headers: thin full-width divider, label inline (samma hairline-mönster
+   som .event-batch .batch-turn) ── */
+body.cli-chat .day-head{
+  display: flex;
+  align-items: center;
+  gap: .6ch;
+  font-family: var(--cli-mono) !important;
+  font-size: .62rem !important;
+  letter-spacing: .12em !important;
+  text-transform: lowercase !important;
+  color: var(--bone-dim) !important;
+  text-shadow: none !important;
+  background: transparent !important;
+  border: none !important;
+  border-left: none !important;
+  border-radius: 0 !important;
+  margin: .5rem 0 .3rem;
+  padding: 0;
+}
+body.cli-chat .day-head::before,
+body.cli-chat .day-head::after{
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--edge) 70%, transparent);
+}
+body.cli-chat .day-head .dh-caret{
+  display: none !important;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .day-head:hover{
+  background: transparent;
+  border: none;
+  border-left: none;
+}
+}
+
+/* ── Composer: merges flush with the stream — no box ── */
+body.cli-chat .input-area{
+  background: transparent !important;
+  border-top: 1px dashed color-mix(in srgb, var(--edge) 45%, transparent);
+  padding: .3rem 1.6rem .45rem;
+}
+body.cli-chat .composer{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .15rem 0 !important;
+}
+body.cli-chat .composer:focus-within{
+  border: none !important;
+  box-shadow: none !important;
+}
+body.cli-chat .input-row::before{
+  content: none;
+}
+body.cli-chat .input-row textarea{
+  font-family: var(--cli-mono) !important;
+  font-size: .95rem;
+  line-height: 1.5;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: .35rem .5rem .35rem .6rem !important;
+  color: var(--bone-bright);
+  caret-color: var(--gold);
+  min-height: 34px;
+}
+body.cli-chat .input-row textarea:focus{
+  border: none !important;
+  box-shadow: none !important;
+}
+body.cli-chat .input-row textarea::placeholder{
+  color: rgba(184,184,200,.4);
+  font-style: normal;
+}
+body.cli-chat .send-btn{
+  font-family: var(--cli-mono) !important;
+  font-size: .8rem !important;
+  letter-spacing: .05em !important;
+  text-transform: none !important;
+  font-weight: 400 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--gold) !important;
+  padding: .35rem .3rem !important;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .send-btn:hover{
+  background: transparent !important;
+  color: var(--gold-bright) !important;
+}
+}
+body.cli-chat .send-btn:disabled{
+  opacity: .4 !important;
+}
+body.cli-chat .mic-btn{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--gold) !important;
+  width: auto !important;
+  height: auto !important;
+  font-size: .8rem !important;
+  line-height: 1 !important;
+  padding: .35rem .3rem !important;
+  border-radius: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .mic-btn:hover{
+  background: transparent !important;
+  color: var(--gold-bright) !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+}
+body.cli-chat .mic-btn.recording{
+  color: #d4453a !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: 0 0 14px -2px rgba(212,69,58,.7) !important;
+  animation: mic-pulse 1.1s ease-in-out infinite;
+}
+body.cli-chat .input-hint{
+  font-family: var(--cli-mono) !important;
+  font-size: .66rem;
+  font-style: normal;
+  color: var(--bone-dim);
+}
+body.cli-chat .input-hint kbd{
+  font-family: var(--cli-mono) !important;
+  font-size: .66rem;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0;
+  color: var(--bone-dim);
+}
+
+/* ── TTS controls: one compact terminal line ── */
+body.cli-chat .tts-voice-picker{
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  justify-content: flex-start;
+  margin-bottom: .15rem;
+  padding: 0;
+}
+body.cli-chat .tts-voice-label{
+  font-size: .78rem;
+  opacity: .85;
+}
+body.cli-chat .tts-select{
+  font-family: var(--cli-mono) !important;
+  font-size: .7rem !important;
+  letter-spacing: .04em !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: var(--bone-dim) !important;
+  padding: .05rem .1rem !important;
+  max-width: 110px;
+  cursor: pointer;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .tts-select:hover{
+  color: var(--bone) !important;
+}
+}
+body.cli-chat .tts-select:focus{
+  outline: none;
+  border: none !important;
+}
+body.cli-chat .tts-select.provider{
+  color: var(--arcane) !important;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .tts-select.provider:hover{
+  color: var(--arcane-bright) !important;
+}
+}
+body.cli-chat .tts-auto-btn{
+  font-family: var(--cli-mono) !important;
+  font-size: .7rem !important;
+  letter-spacing: .04em !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: var(--bone-dim) !important;
+  padding: .05rem .15rem !important;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  line-height: 1;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .tts-auto-btn:hover{
+  color: var(--bone-bright) !important;
+}
+}
+body.cli-chat .tts-auto-btn.active{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--gold-bright) !important;
+  animation: cli-tts-pulse 2.4s infinite;
+}
+
+/* ── TTS button on DM lines: '[♪ play]' chip, right-aligned ── */
+body.cli-chat .tts-btn{
+  position: absolute;
+  right: 0;
+  top: .05rem;
+  left: auto;
+  display: inline-block;
+  font-family: var(--cli-mono) !important;
+  font-size: 0 !important;   /* hides the 🔊 emoji — glyph comes from ::before */
+  line-height: 1.4;
+  color: var(--bone-dim) !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .55rem .7rem;     /* >=32px touch hit area */
+  margin: 0;
+  opacity: .85;
+  vertical-align: baseline;
+  cursor: pointer;
+}
+body.cli-chat .tts-btn::before{
+  content: '[♪ play]';
+  font-size: .68rem;
+  letter-spacing: .02em;
+  color: inherit;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .tts-btn:hover{
+  opacity: 1;
+  color: var(--gold-bright) !important;
+}
+}
+body.cli-chat .tts-btn.playing{
+  opacity: 1;
+  animation: cli-tts-pulse 1.2s infinite;
+}
+@keyframes cli-tts-pulse{
+  0%, 100%{ color: var(--gold); text-shadow: none; }
+  50%{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),.75); }
+}
+
+/* ═══════════════════════════════════════
+   v34 — oh-my-zsh / powerlevel10k prompt (2026-08-06)
+   All rules body.cli-chat-scoped — bubble mode untouched.
+   ═══════════════════════════════════════ */
+
+/* ── Composer: real zsh prompt left of the textarea ── */
+body.cli-chat .input-row{
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+}
+body.cli-chat .input-row .cli-prompt{
+  display: inline-flex;
+  align-items: baseline;
+  gap: .1ch;
+  /* (2026-09-13) BUGFIX: prompten får krympa — annars pressar nowrap-texten
+     textarean till en 16px-smula på breda vyportar (min-width:auto i flex). */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--cli-mono) !important;
+  font-size: .95rem;
+  white-space: nowrap;
+  user-select: none;
+  margin-top: .35rem;
+}
+body.cli-chat .cp-user{ color: var(--arcane); }
+body.cli-chat .cp-pct{ color: var(--term-green); font-weight: 700; }
+
+/* ── Blinking waiting cursor: visible only when input is empty ── */
+body.cli-chat .cli-cursor{
+  display: inline;
+  font-family: var(--cli-mono) !important;
+  font-size: .95rem;
+  color: var(--gold);
+  margin-top: .35rem;
+  animation: cli-blink 1.06s steps(1) infinite;
+}
+@keyframes cli-blink{
+  0%, 49%{ opacity: 1; }
+  50%, 100%{ opacity: 0; }
+}
+body.cli-chat .input-row.empty textarea{
+  caret-color: transparent;
+}
+
+/* ── Player messages = command echo (prompt string as the who) ── */
+body.cli-chat .msg.player .bubble .who::before{
+  content: none;
+}
+
+/* ── DM = [dm]-tagg i guld; själva "Dungeon Master"-texten osynlig (font-size:0) ── */
+body.cli-chat .msg.dm .bubble .who{
+  font-size: 0 !important;
+}
+body.cli-chat .msg.dm .bubble .who::before{
+  content: '[dm] ';
+  font-size: .68rem;
+  color: var(--gold);
+  letter-spacing: .06em;
+  font-family: var(--cli-mono);
+  font-weight: 700;
+}
+
+/* ── Lorekeeper = background-job notification: [guardian] one-liner ── */
+body.cli-chat .msg.guardian{
+  opacity: .8;
+  padding-top: 0;
+}
+body.cli-chat .msg.guardian .guardian-title{
+  display: inline;
+  font-size: 0 !important;
+  padding: 0;
+  margin: 0;
+}
+body.cli-chat .msg.guardian .guardian-title::before{
+  content: '[guardian] ';
+  font-family: var(--cli-mono);
+  font-size: .68rem;
+  letter-spacing: .08em;
+  color: var(--term-green);
+  text-transform: lowercase;
+}
+body.cli-chat .msg.guardian .guardian-box{
+  display: inline;
+  padding: 0;
+}
+
+/* ── Toasts = terminal status line ──
+   cli-chat-OVERRIDE av §13 .toast (rad ~273) — högre specificitet, vinner border/
+   background/color; §13s box-shadow:none!important gäller fortfarande här. ── */
+body.cli-chat .toast{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  letter-spacing: .04em !important;
+  border: 1px solid color-mix(in srgb, var(--term-green) 45%, transparent) !important;
+  background: color-mix(in srgb, var(--ink) 92%, transparent) !important;
+  color: var(--bone-bright) !important;
+}
+body.cli-chat .toast::before{
+  content: '[✦] ';
+  color: var(--term-green);
+}
+
+/* ── Combat batch header = full-width log separator ── */
+body.cli-chat .event-batch .batch-turn{
+  display: flex;
+  align-items: center;
+  gap: .6ch;
+  text-transform: lowercase !important;
+  letter-spacing: .12em !important;
+  color: var(--bone-dim) !important;
+}
+body.cli-chat .event-batch .batch-turn::before,
+body.cli-chat .event-batch .batch-turn::after{
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--edge) 70%, transparent);
+}
+
+/* ── Readability pass (lättläst): taller lines, compact system rows ── */
+body.cli-chat .msg .text,
+body.cli-chat .msg .nq-text,
+body.cli-chat .msg.player .bubble .text{
+  line-height: 1.55;
+}
+body.cli-chat .msg.system .box,
+body.cli-chat .msg.cmd .box{
+  font-size: .82rem;
+}
+body.cli-chat #chat{
+  padding-bottom: 1rem;
+}
+
+/* ── Standalone NPC-röster = brackettaggar: [namn] ── */
+body.cli-chat .msg.npc .bubble .who{
+  gap: 0 !important;
+}
+body.cli-chat .msg.npc .bubble .who::before{
+  content: '[';
+  color: var(--npc-color, #a8b2c0);
+  font-weight: 700;
+}
+body.cli-chat .msg.npc .bubble .who::after{
+  content: ']';
+  color: var(--npc-color, #a8b2c0);
+  font-weight: 700;
+}
+
+/* ── DM-narrationen rensar alltid den högerställda [♪ play]-chippen ── */
+/* 2026-08-07: padding-right: 5.5rem var ONÖDIG — [♪ play]-chippen är
+   absolut positionerad (right:0, top:.05rem) i höjd med .who-raden, som är
+   kort. Den reserverade 88px som gjorde DM-texten smalare än spelarens.
+   Nollställ så DM-narrationen går hela vägen som spelarens. */
+body.cli-chat .msg.dm .bubble{
+  padding-right: 0 !important;
+}
+
+/* ══════════════════════════════════════════
+   34. MOBILE FIX PASS 2026-08-06 — typing, navigation, readability
+   (thorough chat-page mobile review: iOS zoom guard ≥16px, tap targets,
+   composer ergonomics, CLI-prompt truncation, TTS picker rows,
+   quick-scroll placement above composer, topbar slim-down)
+   ══════════════════════════════════════════ */
+
+/* ── A. TYPING: iOS zoom guard + tap targets (≤640px) ── */
+@media (max-width: 640px){
+  /* selects: ≥16px font (iOS auto-zoom rule) */
+  .tts-select{
+    font-size: 16px !important;
+    min-height: 44px !important;
+  }
+  body.cli-chat .tts-select{
+    font-size: 16px !important;
+    padding: .3rem .45rem !important;
+    max-width: 132px !important;
+  }
+  /* voice picker: clean wrapping rows, every control ≥44px tap */
+  .tts-voice-picker{
+    flex-wrap: wrap !important;
+    row-gap: .35rem !important;
+  }
+  .tts-auto-btn,
+  .tts-speed-btn,
+  .battle-drawer-toggle{
+    min-height: 44px !important;
+    font-size: .78rem !important;
+  }
+  /* CLI mode: same tap sizes, readable labels */
+  body.cli-chat .tts-auto-btn{
+    font-size: .85rem !important;
+    padding: .45rem .6rem !important;
+  }
+  body.cli-chat .battle-drawer-toggle{
+    font-size: .72rem !important;
+  }
+  /* composer: textarea ≥2 visible lines, Act button thumb-sized */
+  .input-area textarea{
+    min-height: 56px !important;
+  }
+  .send-btn{
+    min-width: 62px !important;
+  }
+  /* slim always-visible TTS bar (idle line ≤28px tall) */
+  .tts-player{
+    padding: .1rem .5rem !important;
+    margin-bottom: .3rem !important;
+    max-width: 100% !important;
+  }
+  .ttp-toggle{
+    width: 22px !important;
+    height: 22px !important;
+    font-size: .66rem !important;
+  }
+  .ttp-idle,
+  .ttp-time,
+  .ttp-synth{
+    font-size: .68rem !important;
+  }
+}
+
+/* ── B. CLI PROMPT: shrink/truncate — never push the textarea off-screen ── */
+@media (max-width: 900px){
+  body.cli-chat .input-row .cli-prompt{
+    min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 42vw;
+    font-size: .85rem;
+  }
+  body.cli-chat .input-row .cli-cursor{
+    flex-shrink: 0;
+  }
+  /* reclaim the 1.8rem left padding — in CLI mode the prompt is a flex sibling */
+  body.cli-chat .input-row textarea{
+    padding-left: .5rem !important;
+  }
+}
+@media (max-width: 400px){
+  body.cli-chat .input-row .cli-prompt{
+    font-size: .8rem;
+    max-width: 34vw;
+  }
+}
+
+/* ── C. NAVIGATION: tap targets + feedback + drawer content (≤900px) ── */
+@media (max-width: 900px){
+  .mobile-menu-btn{
+    width: 44px !important;
+    height: 40px !important;
+    font-size: 1.05rem !important;
+  }
+  .drawer-close-btn{
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 1rem !important;
+  }
+  .sheet-close{
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 1rem !important;
+  }
+  /* tap feedback on bottom-nav tabs */
+  .mobile-nav .nav-tab:active{
+    background: rgba(var(--gold-bright-rgb),.16) !important;
+  }
+  .mobile-nav .nav-tab:active .nav-icon{
+    transform: scale(.9);
+  }
+  /* drawer content: readable rows ≥44px tap */
+  .sidebar .npc-row{
+    padding: .6rem .55rem !important;
+  }
+  .sidebar .quest-item{
+    padding: .6rem .55rem !important;
+  }
+  .side-toggle{
+    padding: .55rem .4rem !important;
+  }
+}
+
+/* ── D. Quick-scroll: thumb-reachable, above the composer (≤900px) ── */
+@media (max-width: 900px){
+  .quick-scroll{
+    position: fixed !important;
+    top: auto !important;
+    right: 10px !important;
+    bottom: calc(56px + 212px + env(safe-area-inset-bottom, 0px)) !important;
+    transform: none !important;
+    z-index: 60 !important;
+    gap: .4rem !important;
+  }
+  .qs-btn{
+    width: 44px !important;
+    height: 44px !important;
+    font-size: .95rem !important;
+  }
+}
+
+/* ── E. Topbar ≤400px: slim user-tag, keep tappable ── */
+@media (max-width: 400px){
+  .user-tag{
+    padding: .2rem .5rem .2rem .25rem !important;
+    gap: .3rem !important;
+  }
+  #user-tag-name{
+    display: none !important;
+  }
+  #user-tag-avatar{
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+/* ── F. Bottom sheet rows: taller tap targets (≤640px) ── */
+@media (max-width: 640px){
+  .sheet-row{
+    min-height: 52px !important;
+  }
+}
+
+/* ══════════════════════════════════════════
+   CLI POLISH PASS 2026-08-06b (post-vision fixes)
+   ══════════════════════════════════════════ */
+/* 1. Text never runs under the quick-scroll rail (rail = right:24px + 40px btn) */
+body.cli-chat .chat-scroll{
+  padding-right: 4.5rem;
+}
+@media (max-width: 900px){
+  body.cli-chat .chat-scroll{ padding-right: 3.6rem; }
+}
+/* 2. Quick-scroll buttons: terminal chrome, not bubble rounds */
+body.cli-chat .qs-btn{
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 1px solid var(--edge) !important;
+  color: var(--bone-dim) !important;
+  box-shadow: none !important;
+  font-family: var(--cli-mono) !important;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .qs-btn:hover{
+  color: var(--gold-bright) !important;
+  border-color: var(--gold) !important;
+}
+}
+/* 3. Composer divider: dashed -> subtle solid (scrollback continues) */
+body.cli-chat .input-area{
+  border-top: 1px solid color-mix(in srgb, var(--edge) 40%, transparent) !important;
+}
+/* 4. TTS bar: strip the box — it is a scrollback line, not a widget */
+body.cli-chat .tts-player{
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  max-width: none !important;
+  padding: .22rem 0;
+}
+body.cli-chat .tts-player .ttp-toggle{
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 1px solid var(--edge);
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .tts-player .ttp-toggle:hover{
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+}
+
+/* ═══════════ §36 v36 — sista bubbel-/gradient-läckorna (2026-08-06) ═══════════
+   RUNDA-4 i chat.html sätter gradient-bakgrund på .msg.{dm,npc,player} .bubble
+   med specificitet (0,3,0) + !important och VINNER över body.cli-chat .bubble
+   (0,2,1). Kör över med body.cli-chat .msg.X .bubble = (0,4,1). */
+body.cli-chat .msg.dm .bubble,
+body.cli-chat .msg.npc .bubble,
+body.cli-chat .msg.player .bubble{
+  background: transparent !important;
+}
+/* Topbaren: platt terminal-rad — ingen gradient, inget glow */
+body.cli-chat .topbar{
+  background: var(--ink) !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--edge) 60%, transparent) !important;
+}
+/* Body-bakgrunden: terminalen är slätt svart — inga radial-vinjetter */
+body.cli-chat{
+  background: var(--ink) !important;
+}
+
+/* ═══════════ §36 v37 — CLI-BUSY: laddningen FLYTTAS IN I INPUT-RADEN (2026-08-07) ═══════════
+   Medan DM/Lorekeeper jobbar (body.cli-chat-busy, satt av _cliSetBusy i
+   chat.html) blir själva input-raden statusraden: .cli-prompt byts mot
+   scribe-loadern (🪶 ❯ <logg> ▌ + progressbar) och textarean låses/döljs.
+   Status-boxarna .dm-status/.guardian-status döljs — MEN bara i CLI-läge:
+   varje regel kräver body.cli-chat så bubble-läget är 100% orört. */
+body.cli-chat.cli-chat-busy .dm-status,
+body.cli-chat.cli-chat-busy .guardian-status{
+  display: none !important;
+}
+/* Raden blir laddningsraden: textarea + egna blinkande ▌ göms, loadern
+   (inuti .cli-prompt) tar över hela bredden. */
+body.cli-chat.cli-chat-busy .input-row .cli-cursor,
+body.cli-chat.cli-chat-busy .input-row textarea{
+  display: none !important;
+}
+body.cli-chat.cli-chat-busy .input-row{
+  align-items: center;
+}
+body.cli-chat.cli-chat-busy .input-row .cli-prompt{
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: stretch;
+  white-space: normal;
+  margin-top: 0;
+}
+body.cli-chat.cli-chat-busy .input-row .scribe-loader{
+  flex: 1;
+  max-width: none;
+  padding: .15rem 0 .35rem;
+  gap: .35rem;
+}
+/* ── GUARDIAN-BUSY i CLI-läge (fix 2026-08-30) ──
+   Lorekeeper-vindget gör INTE input-raden till loader — spelaren ska kunna
+   skriva sin nästa draft. .guardian-status (dold av cli-chat-busy ovan när
+   DM jobbar; annars display:none i chat.html) visas som en smal inline-
+   strip UNDER loadern så stridsflödet aldrig ser fruset ut. */
+body.cli-chat.guardian-busy .guardian-status.show{
+  display: flex;
+  padding: .15rem .2rem .3rem;
+  gap: .4rem;
+  opacity: .85;
+}
+body.cli-chat.cli-chat-busy.guardian-busy .guardian-status.show{
+  display: none; /* DM-loader:n i input-raden räcker — dubbla spinnare undviks */
+}
+body.cli-chat .guardian-status .scribe-mini .thought,
+body.cli-chat .guardian-status #guardian-thought-text{
+  font-family: var(--cli-mono);
+  font-size: .78rem;
+  letter-spacing: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHAT SKIN v5 (2026-09-22) — DEN FÖRBJUDNA GRIMSBOKEN
+   Ersätter v4 "platt gothic-HUD". Meddelanden = PERGAMENTBLAD i den brända
+   boken: varmt stenblad med bläckhorn (foxing-tint), tarnished-guld
+   hårfin ram och hörnbeslag. atk-* = skrivarens stridsledger med VAXSIGILL
+   (HIT = oxblood-vaxsigill med guldring · MISS = brutet sigill + överstruken
+   rad + dolk i marginalen · PARRIED = litet vaxstämpel).
+   rr-death-* = DÖDSBLADET — full-bleed svart löv + guldvaxets ROLL-knapp.
+   CLI-läget (§36) ritar SAMMA DOM som en shell och påverkas inte här.
+   ═══════════════════════════════════════════════════════════════ */
+.msg{ max-width: 760px !important; }
+.msg.dm  .bubble{ --b-acc: var(--gold); }
+.msg.npc .bubble{ --b-acc: var(--npc-color, var(--bone-dim)); }
+.msg.player .bubble{ --b-acc: var(--arcane); }
+.bubble{
+  position: relative !important;
+  border: 1px solid color-mix(in srgb, var(--b-acc, var(--gold)) 38%, var(--edge)) !important;
+  background:
+    radial-gradient(140% 90% at 15% 0%, rgba(var(--bone-rgb), .06), transparent 55%),
+    color-mix(in srgb, var(--bone) 5%, var(--stone-2)) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 2px 0 rgba(var(--ink-rgb), .55) !important;
+  padding: .6rem .9rem !important;
+  transition: border-color .18s ease !important;
+}
+@media (any-hover:hover),(hover:hover){
+  .bubble:hover{
+  transform: none !important;
+  border-color: color-mix(in srgb, var(--b-acc, var(--gold)) 60%, var(--edge)) !important;
+  box-shadow: 0 2px 0 rgba(var(--ink-rgb), .55) !important;
+}
+}
+/* Hörnbeslag (grimoire v5): 10px L-beslag i accenten — bladets hörnjärn. */
+.bubble::before, .bubble::after{
+  content: '' !important; position: absolute !important;
+  width: 10px !important; height: 10px !important;
+  border: 0 solid color-mix(in srgb, var(--b-acc, var(--gold)) 75%, transparent) !important;
+  border-radius: 0 !important; opacity: .85 !important;
+}
+.bubble::before{ top: -1px !important; left: -1px !important; border-top-width: 1px !important; border-left-width: 1px !important; }
+.bubble::after{ bottom: -1px !important; right: -1px !important; border-bottom-width: 1px !important; border-right-width: 1px !important; }
+/* NPC-citat inuti DM-svar + inre monolog + systemrutor: samma bladspråk */
+.npc-quote{
+  border-radius: 0 !important;
+  border-left: 3px solid var(--npc-color, var(--bone-dim)) !important;
+  background: color-mix(in srgb, var(--npc-color, var(--bone-dim)) 4%, transparent) !important;
+}
+.reasoning, .msg.system .box, .box{ border-radius: 0 !important; box-shadow: none !important; }
+.reasoning-body .inner p{ font-size: 1rem !important; line-height: 1.7 !important; }
+/* ── THE GILT FRAME (f.d. THE WARD, signatur 2026-09-10) ────────
+   1px guld-hairline + 4 hörn-tickar runt chattens primära yta. Ligger på
+   main.main (icke-scrollande panel) så ramen står stilla. Pulserar när ett
+   mekaniskt event landar (renderEffects → wardPulse()). */
+main.main{ position: relative; }
+.ward-frame{
+  position: absolute; inset: 6px; pointer-events: none; z-index: 4;
+  border: 1px solid color-mix(in srgb, var(--gold) 26%, transparent);
+  background-image:
+    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)),
+    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)),
+    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)),
+    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold));
+  background-repeat: no-repeat;
+  background-size: 9px 1px, 1px 9px, 9px 1px, 1px 9px, 9px 1px, 1px 9px, 9px 1px, 1px 9px;
+  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
+  opacity: .8; transition: opacity .3s ease;
+}
+main.main.ward-pulse .ward-frame{ animation: ward-pulse 950ms ease-out; }
+@keyframes ward-pulse{
+  0%   { opacity: .8; box-shadow: inset 0 0 0 0 transparent; }
+  20%  { opacity: 1;  box-shadow: inset 0 0 30px -6px color-mix(in srgb, var(--gold) 60%, transparent); }
+  100% { opacity: .8; box-shadow: inset 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce){ main.main.ward-pulse .ward-frame{ animation: none; } }
+
+/* Bubble-läget: bladets egen ram är enda ramen — radens vänsterregel (§6) blir
+   då en dubbel box. CLI-läget (body.cli-chat) behåller regeln. */
+body:not(.cli-chat) .msg.dm, body:not(.cli-chat) .msg.npc{ border-left: none !important; padding-left: 0 !important; }
+.reasoning-body .inner, .reasoning-body .inner p{
+  color: color-mix(in srgb, var(--bone) 62%, var(--bone-dim)) !important;
+}
+
+/* ── atk-* — SKRIVARENS STRIDSLEDGER (grimoire v5) ──────────────
+   Varje attackrad är ett litet pergamentblad med vaxsigill i vänster
+   marginal (4.4rem slits). HIT = oxblood-vaxsigill + guldring ·
+   MISS = brutet (streckat) sigill + överstruken tärningsrad + †-dolk i
+   marginalen · PARRIED (.atk-parried / .atk-parry) = litet vaxstämpel. */
+.atk-card{
+  position: relative !important;
+  display: block; margin: .45rem 0;
+  padding: .55rem .7rem .55rem 4.4rem !important;
+  background: color-mix(in srgb, var(--bone) 5%, var(--stone-2)) !important;
+  border: 1px solid var(--edge) !important;
+  border-top: 1px solid color-mix(in srgb, var(--gold) 45%, var(--edge)) !important;
+  box-shadow: none !important;
+}
+.atk-card .atk-head{ display: flex; align-items: baseline; gap: .5rem; margin-bottom: .25rem; flex-wrap: wrap; min-width: 0; }
+.atk-card .atk-name{
+  font-family: var(--font-display) !important; font-weight: 700;
+  font-size: var(--fs-sm) !important; letter-spacing: .12em !important;
+  text-transform: uppercase; color: var(--bone-bright) !important;
+}
+.atk-card .atk-verb{
+  font-family: var(--font-marginal) !important; font-style: italic;
+  font-size: var(--fs-tiny) !important; letter-spacing: .04em !important;
+  color: var(--bone-dim) !important;
+}
+.atk-card .atk-roll{
+  display: flex; align-items: baseline; gap: .45rem; flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+}
+.atk-card .atk-expr{ color: var(--bone-dim) !important; }
+.atk-card .atk-arrow{ color: var(--gold) !important; }
+.atk-card .atk-total{
+  font-family: var(--font-display) !important; font-weight: 700;
+  font-size: 1.05rem !important; color: var(--gold-bright) !important;
+}
+.atk-card .atk-vs{ color: var(--bone-dim) !important; }
+.atk-card .atk-verdict{
+  font-family: var(--font-display) !important;
+  font-size: var(--fs-tiny) !important; letter-spacing: .14em !important;
+  text-transform: uppercase; padding: .15em .6em;
+  border: 1px solid var(--gold); color: var(--gold-bright) !important;
+}
+.atk-card .atk-verdict.atk-verdict-miss{ border-color: var(--edge); color: var(--bone-dim) !important; }
+.atk-card .atk-crit{
+  color: var(--bone-bright) !important;
+  font-family: var(--font-display) !important; letter-spacing: .12em !important;
+}
+.atk-card .atk-foot{ display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: .3rem; }
+.atk-card .atk-dmg{
+  color: var(--blood-bright) !important;
+  border: 1px solid rgba(var(--blood-bright-rgb),.55);
+  padding: .15em .55em; font-size: var(--fs-tiny);
+  max-width: 100%; overflow-wrap: break-word;
+}
+.atk-card .atk-dmg i{ font-style: normal; color: var(--bone-dim) !important; }
+.atk-card .atk-dmg.atk-dmg-0{ color: var(--bone-dim) !important; border-color: var(--edge); }
+.atk-card .atk-php{ color: var(--bone-dim) !important; font-variant-numeric: tabular-nums; }
+.atk-card .atk-php b{ color: var(--blood-bright) !important; }
+.atk-card .atk-parry{
+  color: var(--teal) !important;
+  border: 1px solid color-mix(in srgb, var(--teal) 55%, transparent);
+  border-radius: var(--radius-full) !important;
+  background: color-mix(in srgb, var(--teal) 14%, transparent);
+  padding: .2em .7em; font-size: var(--fs-tiny);
+  max-width: 100%; overflow-wrap: break-word;
+}
+/* Vaxsigill — HIT: oxblood-vax med guldring */
+.atk-card.atk-hit::before, .atk-card.atk-miss::before{
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  left: .5rem !important; top: .55rem !important;
+  width: 3.2rem !important; height: 3.2rem !important;
+  border-radius: var(--radius-full) !important;
+}
+.atk-card.atk-hit::before{
+  background:
+    radial-gradient(130% 130% at 30% 22%, color-mix(in srgb, var(--blood-bright) 45%, var(--blood)) 0%, var(--blood) 55%, var(--blood-deep-rgb) 100%) !important;
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 0 0 4px var(--ink),
+    0 3px 10px rgba(0,0,0,.55),
+    inset 0 0 16px rgba(0,0,0,.5) !important;
+}
+.atk-card.atk-hit::after{
+  content: 'HIT' !important;
+  display: block !important;
+  position: absolute !important;
+  left: .5rem !important; top: 1.35rem !important;
+  width: 3.2rem !important;
+  text-align: center !important;
+  font-family: var(--font-display) !important; font-weight: 700 !important;
+  font-size: .62rem !important; letter-spacing: .12em !important;
+  color: var(--gold-bright) !important;
+  pointer-events: none !important;
+}
+/* MISS: BRUTET sigill (streckad ring, sprucket) + överstruken rad + †-dolk */
+.atk-card.atk-miss::before{
+  background:
+    linear-gradient(122deg, transparent 46%, rgba(var(--blood-bright-rgb),.7) 47%, rgba(var(--blood-bright-rgb),.7) 49%, transparent 50%) !important;
+  border: 2px dashed color-mix(in srgb, var(--bone-dim) 75%, transparent);
+  border-radius: var(--radius-full) !important;
+  opacity: .9;
+}
+.atk-card.atk-miss::after{
+  content: 'MISS' !important;
+  display: block !important;
+  position: absolute !important;
+  left: .5rem !important; top: 1.35rem !important;
+  width: 3.2rem !important;
+  text-align: center !important;
+  font-family: var(--font-display) !important; font-weight: 700 !important;
+  font-size: .58rem !important; letter-spacing: .12em !important;
+  color: var(--bone-dim) !important;
+  pointer-events: none !important;
+}
+.atk-card.atk-miss{
+  background: color-mix(in srgb, var(--bone-dim) 4%, var(--stone-2)) !important;
+  border-color: var(--edge) !important;
+  border-left: 2px solid var(--bone-dim) !important;
+}
+.atk-card.atk-miss .atk-total{ color: var(--bone-dim) !important; text-shadow: none !important; }
+.atk-card.atk-miss .atk-name{ color: var(--bone-dim) !important; }
+.atk-card.atk-miss .atk-roll{
+  text-decoration: line-through;
+  text-decoration-color: var(--blood-bright);
+  text-decoration-thickness: 1px;
+}
+.atk-card.atk-miss .atk-head::before{
+  content: '†';
+  color: var(--blood-bright);
+  font-family: var(--font-display) !important;
+  margin-right: .15rem;
+}
+.atk-card.atk-hit .atk-total{ color: var(--gold-bright) !important; }
+/* PARRIED: litet vaxstämpel (lapis-blått, halv storlek) */
+.atk-card.atk-parried::before{
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  left: 1.15rem !important; top: .6rem !important;
+  width: 1.85rem !important; height: 1.85rem !important;
+  border-radius: var(--radius-full) !important;
+  background:
+    radial-gradient(130% 130% at 30% 22%, var(--arcane-bright) 0%, var(--arcane) 45%, var(--arcane-deep) 100%) !important;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--gold) 70%, transparent),
+    0 2px 6px rgba(0,0,0,.5),
+    inset 0 0 10px rgba(0,0,0,.45) !important;
+}
+.atk-card.atk-hit.atk-parried::before, .atk-card.atk-miss.atk-parried::before{
+  left: .5rem !important;
+}
+
+/* ── rr-death-* — DÖDSBLADET (grimoire v5): full-bleed dödsblad ──
+   Ett löv bränt mörkare än resten av boken; ROLL-knappen är ett
+   guldvaxsigill man trycker ner — minst 56px högt. */
+.roll-request.death{
+  position: relative; z-index: 1;
+  display: flex; flex-wrap: wrap; align-items: center; gap: .7rem;
+  max-width: none !important;
+  margin: .8rem 0 !important;
+  padding: 1.2rem 1.1rem !important;
+  background:
+    radial-gradient(70% 90% at 50% 20%, rgba(var(--blood-rgb),.35) 0%, transparent 65%),
+    linear-gradient(180deg, var(--ink), #0f0c0a 34%, var(--ink)) !important;
+  border: none !important;
+  border-top: 2px solid var(--blood) !important;
+  border-bottom: 2px solid var(--blood) !important;
+  box-shadow: inset 0 0 60px rgba(0,0,0,.6) !important;
+}
+.roll-request.death .rr-death-badge{
+  font-size: 1.8rem; line-height: 1; flex-shrink: 0;
+  color: var(--blood-bright);
+}
+.roll-request.death .rr-death-body{
+  display: flex; flex-direction: column; gap: .35rem; flex: 1;
+  min-width: min(220px, 100%);
+}
+.roll-request.death .rr-death-title{
+  font-family: var(--font-display) !important; font-weight: 700 !important;
+  color: var(--blood-bright) !important;
+  letter-spacing: .22em !important; text-transform: uppercase !important;
+  font-size: var(--fs-sm) !important; animation: none !important;
+}
+.roll-request.death .rr-death-text{
+  color: var(--bone) !important;
+  font-size: var(--fs-sm) !important; max-width: 54ch;
+}
+.roll-request.death .rr-death-note{
+  color: var(--bone-dim) !important;
+  font-family: var(--font-marginal) !important; font-style: italic;
+  font-size: var(--fs-tiny) !important;
+}
+.roll-request.death .rr-wait{ width: 100%; }
+/* ROLL-knappen: guldvaxsigill att trycka ner — ≥56px (touch-golv överstiger) */
+.roll-request .rr-ico.rr-death-btn{
+  min-height: 56px !important;
+  min-width: min(232px, 100%) !important;
+  font-family: var(--font-display) !important; font-weight: 700 !important;
+  font-size: var(--fs-btn) !important; letter-spacing: .18em !important;
+  text-transform: uppercase !important;
+  color: var(--ink) !important;
+  background:
+    radial-gradient(120% 160% at 50% -20%, var(--gold-bright) 0%, var(--gold) 45%, color-mix(in srgb, var(--gold) 55%, var(--ink)) 100%) !important;
+  border: none !important;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--gold) 65%, transparent),
+    0 4px 0 color-mix(in srgb, var(--gold) 35%, var(--ink)),
+    0 10px 24px rgba(0,0,0,.55) !important;
+  animation: candleflicker 5.5s ease-in-out infinite !important;
+}
+@media (any-hover:hover),(hover:hover){
+  .roll-request .rr-ico.rr-death-btn:hover{
+  filter: brightness(1.07) !important; transform: translateY(-1px) !important;
+}
+}
+.roll-request .rr-ico.rr-death-btn:active{
+  transform: translateY(3px) !important;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--gold) 65%, transparent),
+    0 1px 0 color-mix(in srgb, var(--gold) 35%, var(--ink)),
+    0 4px 12px rgba(0,0,0,.55) !important;
+}
+.roll-request .rr-ico.rr-death-btn:disabled{ opacity: .5 !important; cursor: wait !important; }
+@media (max-width: 640px){
+  .roll-request .rr-ico.rr-death-btn{ min-width: 100% !important; }
+  .roll-request.death .rr-death-body{ min-width: min(220px, 100%) !important; }
+}
+@media (prefers-reduced-motion: reduce){
+  .roll-request .rr-ico.rr-death-btn{ animation: none !important; }
+}
+
+/* ── .soft — SANKTIONERAD opt-in för radie (2026-09-10) ──────────
+   Global-regeln `*{border-radius:0 !important}` (§0) är avsiktlig: platt är språket.
+   De få ytor som legitimt vill ha mjuk form (avatar-ringar, pills) får INTE återinföra
+   radie med egna !important-regler huller om buller — sätt .soft på elementet.
+   Ett värde, ett ställe. Nya radievärden (6/8/10/12/14/20px) är inte tillåtna. */
+.soft{ border-radius: var(--radius-lg) !important; }
+.soft-full{ border-radius: var(--radius-full) !important; }
+/* ═══════════════════════════════════════════════════════════════════
+   COMPOSER v5 (2026-09-10) — en kontrollklunga, ETT hover
+   Ersätter tre absolut-positionerade knappar + 8.6rem padding-right på
+   textarean (som åt mer än halva fältet) och tre olika hover-beteenden.
+   ⚠️ Knapp-stilen är scopad till `body:not(.cli-chat)` — annars kolliderar
+   `.send-btn{background:--gold}` med `body.cli-chat .send-btn{transparent}`
+   och utfallet hänger på specificitets-tur. CLI-läget äger sina egna knappar.
+   ═══════════════════════════════════════════════════════════════════ */
+.input-area{
+  padding: .6rem .9rem .7rem !important;
+  background: var(--ink) !important;
+  border-top: 1px solid var(--edge) !important;
+}
+.composer{
+  display: flex !important; gap: .5rem !important; align-items: flex-end !important;
+  background: var(--stone-2) !important; border: 1px solid var(--edge) !important;
+  padding: .28rem .35rem !important;
+}
+.composer:focus-within{ border-color: var(--gold) !important; }
+.input-row{
+  display: flex !important; gap: .35rem !important; align-items: flex-end !important;
+  flex: 1 1 auto !important; min-width: 0 !important;
+}
+#player-input{
+  flex: 1 1 auto !important;
+  /* (2026-09-13) BUGFIX: riktig minimibredd — textarean får aldrig bli en
+     16px-smula igen (prompten krymper först, se .cli-prompt ovan). */
+  min-width: min(180px, 46vw) !important;
+  font-size: 1rem !important; line-height: 1.5 !important;
+  /* (2026-09-13) COMPOSER-SPLITTER: höjden styrs av --composer-h (drag i
+     handtaget ovanför). !important vinner över gamla inline-style.height från
+     autosize-eran. Grow-to-fill: lång text rullar inuti rutan. */
+  height: clamp(2.75rem, var(--composer-h), 75vh) !important;
+  /* chat.html inline hade max-height:120px på .input-row textarea — ID+!important vinner */
+  max-height: 75vh !important;
+  padding: .45rem .55rem .45rem 1.8rem !important;   /* ≥1.7rem så ❯-markören aldrig krockar med texten (§7) */
+  background: transparent !important; border: none !important;
+  color: var(--bone-bright) !important; resize: none !important;
+}
+/* ═══ COMPOSER-SPLITTER (2026-09-13) — draghandtag mellan DM-loggen och
+   kompositören. --composer-h sätts som inline-style på .main av JS:et i
+   chat.html (nyckel 'composer-h-v1'); nedan bara CSS-defaults. Z: i flödet,
+   z-index 3 håller greppet över chat-ytan men långt under drawers (280+)
+   och topbar (300+) enligt z-laddan (kommentar rad 53). ═══ */
+.main{ --composer-h: max(15vh, 90px); }
+body.cli-chat .main{ --composer-h: max(15vh, 114px); }  /* ~5 CLI-rader */
+.composer-splitter{
+  position: relative; flex: 0 0 auto;
+  height: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: row-resize;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;              /* så pointermove fungerar på touch */
+  background: transparent;
+  z-index: 3;
+}
+.composer-splitter::before{        /* tunn guld-streckad linje över hela bredden */
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px dashed color-mix(in srgb, var(--gold) 30%, transparent);
+}
+.composer-splitter::after{         /* osynlig utvidgning uppåt = större träffyta (touch) */
+  content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: 0;
+}
+.composer-splitter .cs-grip{       /* litet centrerat grepp */
+  position: relative; width: 46px; height: 3px;
+  background: var(--gold); opacity: .5;
+  transition: opacity .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.composer-splitter.dragging .cs-grip{
+  opacity: 1; background: var(--gold-bright);
+  box-shadow: 0 0 6px rgba(var(--gold-rgb),.55);   /* samma guld-glow som .composer:focus-within */
+}
+@media (any-hover:hover),(hover:hover){
+  .composer-splitter:hover .cs-grip{
+  opacity: 1; background: var(--gold-bright);
+  box-shadow: 0 0 6px rgba(var(--gold-rgb),.55);   /* samma guld-glow som .composer:focus-within */
+}
+}
+.composer-splitter:focus-visible{ outline: 1px solid var(--gold); outline-offset: -1px; }
+body.composer-resizing,
+body.composer-resizing *{ cursor: row-resize !important; user-select: none !important; }
+/* Kontrollklungan (bubble-läget): samma box, samma storlek, ETT hover */
+body:not(.cli-chat) .mic-btn,
+body:not(.cli-chat) .undo-btn,
+body:not(.cli-chat) .send-btn{
+  position: static !important; transform: none !important; top: auto !important; right: auto !important;
+  height: 34px !important; min-height: 34px !important; width: auto !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  gap: .3em !important; flex: 0 0 auto !important; padding: 0 .55rem !important;
+  font-size: .72rem !important; line-height: 1 !important;
+  background: var(--stone-3) !important; border: 1px solid var(--edge) !important;
+  color: var(--bone) !important; box-shadow: none !important; cursor: pointer !important;
+  transition: background .15s ease, border-color .15s ease, color .15s ease !important;
+}
+body:not(.cli-chat) .mic-btn,
+body:not(.cli-chat) .undo-btn{ width: 34px !important; padding: 0 !important; }
+@media (any-hover:hover),(hover:hover){
+  body:not(.cli-chat) .mic-btn:hover,
+body:not(.cli-chat) .undo-btn:hover,
+body:not(.cli-chat) .send-btn:hover{
+  background: var(--stone-2) !important; border-color: var(--gold) !important;
+  color: var(--gold-bright) !important; transform: none !important; filter: none !important;
+  box-shadow: none !important;
+}
+}
+body:not(.cli-chat) .mic-btn:active,
+body:not(.cli-chat) .undo-btn:active,
+body:not(.cli-chat) .send-btn:active{ transform: scale(.95) !important; }
+body:not(.cli-chat) .send-btn{
+  background: var(--gold) !important; border-color: var(--gold-bright) !important; color: var(--ink) !important;
+  font-family: var(--font-display) !important; font-weight: 700 !important;
+  letter-spacing: .12em !important; text-transform: uppercase !important;
+}
+@media (any-hover:hover),(hover:hover){
+  body:not(.cli-chat) .send-btn:hover{ background: var(--gold-bright) !important; color: var(--ink) !important; }
+}
+body:not(.cli-chat) .send-btn:disabled{ opacity: .4 !important; cursor: not-allowed !important; }
+body:not(.cli-chat) .mic-btn.recording{
+  background: var(--blood) !important; border-color: var(--blood-bright) !important;
+  color: #fff !important; animation: mic-pulse 1.1s ease-in-out infinite;
+}
+@keyframes mic-pulse{
+  0%,100%{ box-shadow: 0 0 10px -2px rgba(var(--blood-bright-rgb),.5); }
+  50%{ box-shadow: 0 0 18px 0 rgba(var(--blood-bright-rgb),.9); }
+}
+
+/* ── UNDO vid SENASTE meddelandet (2026-09-10) — flyttad ur composern ──
+   JS håller .undo-inline som sista barn i #chat, så den följer med nya svar. */
+.undo-inline{ display: flex; justify-content: flex-start; padding: .1rem 0 .6rem; }
+.undo-inline button{
+  display: inline-flex; align-items: center; gap: .45em;
+  font-family: var(--font-mono) !important; font-size: .72rem !important; letter-spacing: .04em;
+  color: var(--gold) !important; background: transparent !important;
+  border: 1px dashed color-mix(in srgb, var(--gold) 45%, transparent) !important;
+  padding: .3rem .65rem !important; cursor: pointer !important;
+  transition: background .15s ease, color .15s ease, border-color .15s ease !important;
+}
+@media (any-hover:hover),(hover:hover){
+  .undo-inline button:hover{
+  background: color-mix(in srgb, var(--gold) 12%, transparent) !important;
+  color: var(--gold-bright) !important; border-color: var(--gold) !important;
+}
+}
+.undo-inline .ui-cost{ color: var(--bone-dim); font-size: .66rem; }
+
+/* ═══ CLI = RIKTIG TERMINAL (2026-09-10): input och svar i SAMMA ström ═══
+   Ingen separator, ingen box, ingen hint-rad — prompten är helt enkelt nästa
+   rad i loggen, med samma sidmarginal (1.6rem) och samma yta som #chat. */
+body.cli-chat .input-area{
+  background: transparent !important; border-top: none !important;
+  padding: .1rem 1.6rem .8rem !important;
+}
+body.cli-chat .composer{ background: transparent !important; border: none !important; padding: 0 !important; }
+body.cli-chat .composer:focus-within{ border: none !important; }
+body.cli-chat .input-row{ align-items: center !important; gap: .4rem !important; }
+body.cli-chat #player-input{
+  font-family: var(--cli-mono) !important; font-size: .95rem !important;
+  min-height: 2.4rem !important; padding: .25rem .4rem .25rem .5rem !important;
+  color: var(--bone-bright) !important;
+}
+body.cli-chat .mic-btn,
+body.cli-chat .send-btn,
+body.cli-chat .undo-btn{
+  position: static !important; height: auto !important; min-height: 0 !important; width: auto !important;
+  background: transparent !important; border: none !important; color: var(--gold) !important;
+  font-family: var(--cli-mono) !important; font-size: .8rem !important;
+  letter-spacing: .04em !important; text-transform: none !important; font-weight: 400 !important;
+  padding: .3rem .25rem !important; box-shadow: none !important;
+}
+@media (any-hover:hover),(hover:hover){
+  body.cli-chat .mic-btn:hover,
+body.cli-chat .send-btn:hover{
+  background: transparent !important; color: var(--gold-bright) !important; border: none !important;
+}
+}
+body.cli-chat .input-hint{ display: none !important; }
+body.cli-chat .undo-inline{ padding: 0 0 .5rem; }
+body.cli-chat .undo-inline button{ border-style: none !important; padding: .15rem 0 !important; }
+
+/* Mobil (≤768px): kompositören hålls i 2 synliga rader; knapparna thumb-vänliga
+   men smalare än desktop. ID-selektorn vinner över snes.css .input-area textarea. */
+@media (max-width: 768px){
+  .input-area{ padding: .5rem .6rem .6rem !important; }
+  #player-input{ height: clamp(3.4rem, var(--composer-h), 75vh) !important; min-height: 3.4rem !important; padding: .4rem .45rem .4rem 1.4rem !important; }
+  body:not(.cli-chat) .mic-btn,
+  body:not(.cli-chat) .undo-btn{ width: 32px !important; height: 32px !important; min-height: 32px !important; }
+  body:not(.cli-chat) .send-btn{ height: 32px !important; min-height: 32px !important; }
+  body.cli-chat #player-input{ min-height: 2.4rem !important; padding: .25rem .4rem .25rem .5rem !important; }
+}
+
+/* ═══════════ Touch-golv + focus-re-assert (design v4) ═══════════
+   Touch-golv (WCAG 2.5.8: AA 24px / AAA 44px + Apple HIG 44px): interaktiva
+   chips/knappar ≥44×44 på mobil. Sen position + !important → vinner över §5/§28s
+   äldre knappmått, men förlorar mot MER specifika medvetna undantag (t.ex.
+   Composer v5-knapparna i §36 — 32px, dokumenterat i design-spec:en).
+   Inputs ≥16px = iOS-zoom-golvet (klass/id-regler får sätta högre, t.ex. 18px). */
+@media (max-width: 900px){
+  button, [role="button"], .btn-gold, .btn-ghost, .btn-blood,
+  .fchip, .vault-chip, .mini-btn, .top-btn, .rr-btn{
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  input, textarea, select{ font-size: 16px; }
+}
+/* Focus-re-assert: §36 CLI-undantagen kväver ALL outline — tangentbordsfokus
+   ska ändå ha 2px guld (design v4). (0,3,1)+ slår förtryckarna på (0,2,1)/(0,3,1). */
+body.cli-chat .input-row textarea:focus-visible,
+body.cli-chat .tts-select:focus-visible{
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 2px !important;
+}
+
+/* ═══════════ Reduced motion — global (§5, audit 2026-09-17) ═══════════
+   Covers every page that lacks its own prefers-reduced-motion block
+   (chat, character, npcs, loggbok, facts, pricing, screenshots,
+   book-souls, reset, admin). */
+/* ── Design-v4: composer touch-target reconciliation (44px floor) ── */
+@media (max-width: 900px){
+  body:not(.cli-chat) .mic-btn, body:not(.cli-chat) .undo-btn, body:not(.cli-chat) .send-btn,
+  body.cli-chat .mic-btn, body.cli-chat .undo-btn, body.cli-chat .send-btn{
+    min-height: 44px !important; height: 44px !important;
+  }
+  .starter-chips .fchip-starter{ min-height: 44px !important; }
+}
+/* ── Design-v5: "fresh impression" shared kit — page headers, corner frames, empty states, tables ── */
+.page-eyebrow{ font-family: var(--font-accent); font-size: var(--fs-micro); letter-spacing: .22em; text-transform: uppercase; color: color-mix(in srgb, var(--gold) 62%, var(--bone-dim)); margin-bottom: .3rem; }
+.page-rule{ display: flex; align-items: center; gap: .6rem; color: var(--gold); font-size: var(--fs-micro); margin: .35rem 0 .9rem; opacity: .85; }
+.page-rule::before, .page-rule::after{ content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--gold) 38%, transparent); }
+.fresh-frame{ position: relative; }
+.fresh-frame::before, .fresh-frame::after{ content: ''; position: absolute; width: 10px; height: 10px; opacity: .6; pointer-events: none; }
+.fresh-frame::before{ top: -1px; left: -1px; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+.fresh-frame::after{ bottom: -1px; right: -1px; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+.fresh-empty{ text-align: center; padding: 1.8rem 1rem; color: var(--bone-dim); font-style: italic; font-size: var(--fs-sm); }
+.fresh-empty .fe-glyph{ display: block; font-size: 2rem; font-style: normal; opacity: .85; margin-bottom: .45rem; }
+.fresh-table{ width: 100%; border-collapse: collapse; }
+.fresh-table th{ font-family: var(--font-display); font-size: var(--fs-tiny); letter-spacing: .12em; text-transform: uppercase; color: var(--gold); border-bottom: 1px solid var(--edge); padding: .5rem .6rem; text-align: left; }
+.fresh-table td{ padding: .45rem .6rem; border-bottom: 1px solid color-mix(in srgb, var(--edge) 45%, transparent); font-size: var(--fs-sm); color: var(--bone); }
+.fresh-table tbody tr:nth-child(even){ background: color-mix(in srgb, var(--stone-2) 55%, transparent); }
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+  }
+  html{ scroll-behavior:auto; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GRIMSBOKENS ORNAMENTSPRÅK (2026-09-22) — .frame-vine · .rubric ·
+   .dropcap · .flicker (+ bläckdropparnas HP-beräkning .hp-tally).
+   ALL rörelse i den här sektionen döds av prefers-reduced-motion-garden
+   nedanför (och av den globala garden ovan). Ingen svartskrift någonsin.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* — .frame-vine: SVG-vinrankor i hörnen (topleft + bottomright) — */
+.frame-vine{ position: relative; }
+.frame-vine::before, .frame-vine::after{
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  width: clamp(56px, 8vw, 110px) !important;
+  height: clamp(56px, 8vw, 110px) !important;
+  pointer-events: none !important;
+  opacity: .8 !important;
+  background-repeat: no-repeat !important;
+  background-size: contain !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='%238a6f1c' stroke-width='2.4'%3E%3Cpath d='M4 116 C 4 48, 48 4, 116 4' stroke-width='3'/%3E%3Cpath d='M18 100 C 34 74, 34 50, 26 32 C 46 38, 62 54, 60 74'/%3E%3Cpath d='M26 32 c -5 -10 -2 -20 5 -25 c 5 10 3 19 -5 25z' fill='%238a6f1c' stroke='none'/%3E%3Cpath d='M60 74 c 10 -4 15 -13 13 -22 c -10 3 -15 11 -13 22z' fill='%238a6f1c' stroke='none'/%3E%3Ccircle cx='42' cy='38' r='3' fill='%238a6f1c' stroke='none'/%3E%3C/svg%3E") !important;
+}
+.frame-vine::before{ top: 0 !important; left: 0 !important; }
+.frame-vine::after{ bottom: 0 !important; right: 0 !important; transform: rotate(180deg); }
+
+/* — .rubric: röda Grenze-kapitäler (rubricering) med hårfin röd regel — */
+.rubric{
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  font-variant: small-caps;
+  font-size: var(--fs-tiny) !important;
+  letter-spacing: .22em !important;
+  color: var(--blood-bright) !important;
+  text-shadow: none !important;
+  display: flex; align-items: baseline; gap: .7rem;
+  margin: 0 0 .9rem;
+}
+.rubric::after{
+  content: '';
+  flex: 1; height: 2px; align-self: center;
+  background: linear-gradient(90deg, var(--blood), transparent);
+  opacity: .7;
+}
+
+/* — .dropcap: illuminerad initial — lapisjuvel med guld-bokstav — */
+.dropcap{
+  float: left;
+  width: calc(var(--fs-dropcap) + 1.4rem);
+  height: calc(var(--fs-dropcap) + 1.4rem);
+  margin: .3rem 1.1rem .4rem 0;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  background:
+    radial-gradient(130% 130% at 28% 18%, var(--arcane) 0%, var(--arcane-deep) 55%, #101c2e 100%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--gold) 65%, transparent),
+    0 0 0 4px var(--ink),
+    0 6px 22px rgba(0,0,0,.55),
+    inset 0 0 26px rgba(10,8,6,.6);
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  font-size: var(--fs-dropcap);
+  line-height: 1;
+}
+.dropcap .letter, .dropcap::first-letter{
+  color: var(--gold-bright) !important;
+}
+
+/* — .flicker: vaxlågeflämtning (candleflicker) — */
+@keyframes candleflicker{
+  0%,100%{ filter: brightness(1); }
+  37%{ filter: brightness(1.08); }
+  62%{ filter: brightness(.95); }
+  81%{ filter: brightness(1.05); }
+}
+.flicker{ animation: candleflicker 5.5s ease-in-out infinite; }
+
+/* — .hp-tally: BLÄCKDROPPARNA — skrivarens HP-beräkning — */
+.hp-tally{
+  display: flex; align-items: center; gap: .4rem;
+  margin-top: .5rem;
+}
+.hp-tally .drop{
+  width: .72rem; height: 1.1rem;
+  border: 1px solid var(--blood);
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38% !important;
+  background: transparent;
+}
+.hp-tally .drop.wet{
+  background: var(--blood);
+  box-shadow: 0 0 8px rgba(var(--blood-bright-rgb), .5);
+}
+.hp-tally .tally-note{
+  font-family: var(--font-marginal) !important;
+  font-style: italic;
+  font-size: var(--fs-tiny) !important;
+  letter-spacing: .08em;
+  color: var(--bone-dim) !important;
+  margin-left: .6rem;
+}
+
+/* ── MOTION-GUARD (grimoire v5): all ornamentrörelse dör här ── */
+@media (prefers-reduced-motion: reduce){
+  .flicker,
+  .hp-tally .drop.wet,
+  .frame-vine,
+  .dropcap,
+  .rubric{
+    animation: none !important;
+    transition: none !important;
+    filter: none !important;
+  }
+}

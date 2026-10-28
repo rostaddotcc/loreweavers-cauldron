@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#09070B">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>The Lore Weaver's Cauldron — Logbook</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<style>
+/* ═══════════ Codex loggbok — day-card transition (2026-08-05) — EFTER snes.css ═══════════ */
+
+
+.day-card{ transition: border-color var(--dur-2) var(--ease), transform var(--dur-2) var(--ease) !important; }
+</style>
+<script src="sprites.js?v=20260806b"></script>
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%}body{font-family:var(--font-body,'Spectral',Georgia,serif);color:var(--bone);background:radial-gradient(1000px 500px at 50% 115%,color-mix(in srgb, var(--ember) 10%, transparent),transparent 60%),radial-gradient(700px 400px at 10% -5%,color-mix(in srgb, var(--gold) 7%, transparent),transparent 55%),var(--ink);display:flex;flex-direction:column;overflow:hidden}.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:0;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(var(--ink-rgb),.88)}.layout{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:1.5rem 2rem 4rem}.layout::-webkit-scrollbar{width:8px}.layout::-webkit-scrollbar-thumb{background:var(--edge-hi);border-radius:var(--radius-sm)}.log-head{text-align:center;margin-bottom:2rem}.log-head h1{font-family:var(--font-display,'Grenze',serif);font-weight:900;font-size:1.5rem;color:var(--bone-bright);text-shadow:0 1px 0 var(--ink)}.log-head .sub{font-style:italic;color:var(--bone-dim);font-size:.98rem;margin-top:.3rem}.log-title{font-family:var(--font-display,'Grenze',serif);font-size:var(--fs-sm);color:var(--gold-bright);margin-top:.6rem;letter-spacing:.08em}/* ── Laddning: krönikören skriver ── */.writing{display:none;text-align:center;padding:4rem 2rem}.writing.show{display:block}.writing .quill{font-size:2.5rem;animation:quill-bob 1.2s ease-in-out infinite}
+  @keyframes quill-bob{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-8px) rotate(5deg)}}.writing p{font-style:italic;color:var(--arcane);margin-top:1rem;text-shadow:0 0 12px color-mix(in srgb, var(--arcane) 40%, transparent)}.writing .dots span{display:inline-block;width:6px;height:6px;background:var(--gold);margin:0 3px;animation:dot-bounce 1.2s infinite}.writing .dots span:nth-child(2){animation-delay:.15s}.writing .dots span:nth-child(3){animation-delay:.3s}
+  @keyframes dot-bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}/* ── Sammanfattning ── */.log-summary{max-width:700px;margin:0 auto 2.5rem;padding:1.2rem 1.5rem;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4);text-align:center}.log-summary .label{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.68rem;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem}.log-summary p{font-style:italic;color:var(--bone);line-height:1.7;font-size:var(--fs-base)}.updated-stamp{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.65rem;letter-spacing:.12em;color:var(--bone-dim);margin-top:.7rem}.updated-stamp b{color:var(--gold);font-weight:400}/* ── Tidslinje ── */.timeline{position:relative;max-width:700px;margin:0 auto;padding-left:3rem}.timeline::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,rgba(var(--gold-rgb),.9),rgba(var(--ember-rgb),.45) 50%,transparent)}.day-card{position:relative;margin-bottom:2rem;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);padding:1.2rem 1.4rem;box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4);transition:border-color var(--dur-2) var(--ease),transform var(--dur-2) var(--ease);animation:day-in .5s cubic-bezier(.22,1,.36,1) backwards}@media (hover:hover){.day-card:hover{transform:translateY(-1px);border-color:var(--accent)}.day-card:active{transform:none}}
+  @keyframes day-in{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}/* Dag-märket på tidslinjen */.day-marker{position:absolute;left:-3rem;top:1rem;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--stone-3);border:1px solid rgba(var(--gold-rgb),.6);border-radius:var(--emb-r-xs)!important;font-family:var(--font-display,'Grenze',serif);font-weight:900;font-size:.7rem;color:var(--gold-bright);box-shadow:0 0 0 3px var(--ink),0 0 12px -3px rgba(var(--gold-bright-rgb),.45);z-index:2}.day-head{display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap;margin-bottom:.3rem;cursor:pointer;user-select:none;transition:opacity .2s}.day-head:hover{opacity:.85}.day-head .caret{font-size:var(--fs-tiny);color:var(--gold);margin-left:.15rem;display:inline-block;transition:transform .25s}.day-card.collapsed{padding-bottom:.85rem}.day-card.collapsed .day-loc,.day-card.collapsed .day-events,.day-card.collapsed .day-tags{display:none}.tl-controls{max-width:700px;margin:0 auto 1rem;display:flex;gap:.5rem;justify-content:flex-end}.tl-ctl{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge-ui);color:var(--bone-dim);padding:.38rem .75rem;cursor:pointer;border-radius:var(--emb-r-sm)!important;transition:border-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}@media (hover:hover){.tl-ctl:hover{color:var(--accent-hi);border-color:var(--accent)}}.day-num{font-family:var(--font-display,'Grenze',serif);font-weight:900;font-size:var(--fs-chat);color:var(--gold-bright)}.day-title{font-family:var(--font-display,'Grenze',serif);font-weight:700;font-size:var(--fs-sm);color:var(--bone-bright)}.day-mood{font-size:.85rem;font-style:italic;color:var(--arcane);margin-left:auto}.day-loc{font-size:var(--fs-sm);color:var(--teal);margin-bottom:.7rem}.day-loc::before{content:'📍 '}.day-loc a{color:inherit;text-decoration:none;border-bottom:1px dotted rgba(var(--teal-rgb),.6);transition:color var(--dur-1) var(--ease),border-bottom-color var(--dur-1) var(--ease)}@media (hover:hover){.day-loc a:hover{color:var(--accent-hi);border-bottom-color:var(--accent)}}.day-events{list-style:none;margin-bottom:.7rem}.day-events li{position:relative;padding:.3rem 0 .3rem 1.3rem;font-size:1.01rem;color:var(--bone);line-height:1.5;border-bottom:1px solid color-mix(in srgb, var(--edge) 30%, transparent)}.day-events li:last-child{border-bottom:none}.day-events li::before{content:'✦';position:absolute;left:0;color:var(--gold);font-size:.7rem;top:.4rem}.day-tags{display:flex;gap:.4rem;flex-wrap:wrap}.day-tag{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.68rem;letter-spacing:.08em;padding:.25rem .6rem;border:1px solid rgba(var(--gold-rgb),.3)}.day-tag.npc{color:var(--arcane);border-color:color-mix(in srgb, var(--arcane) 45%, transparent)!important}.day-tag.npc::before{content:'🎭 '}.day-tag.quest{color:var(--ember);border-color:color-mix(in srgb, var(--ember) 45%, transparent)!important}.day-tag.quest::before{content:'⚑ '}.empty-state{text-align:center;padding:4rem 2rem;color:var(--bone-dim)}.empty-state .icon{font-size:3rem;margin-bottom:1rem;opacity:.4}.empty-state p{font-style:italic;font-size:var(--fs-base)}/* ── Två kolumner: Quest-log | Krönika ── */.log-columns{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:2rem;max-width:1200px;margin:0 auto;align-items:start}.log-col{min-width:0}.col-head{font-family:var(--font-display,'Grenze',serif);font-weight:900;font-size:.85rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-bright);border-bottom:1px solid rgba(var(--gold-rgb),.34);padding-bottom:.5rem;margin-bottom:1.2rem}/* Justera krönika-komponenter så de passar i kolumnen */.log-col .log-summary{max-width:none;margin:0 0 1.8rem}.log-col .timeline{max-width:none;margin:0;padding-left:2.6rem}.log-col .day-marker{left:-2.6rem}/* ── Quest-log-kort ── */.qlog-item{position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.28);border-left:3px solid rgba(var(--gold-rgb),.85);border-radius:var(--emb-r-sm)!important;padding:1rem 1.1rem;margin-bottom:1rem;box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4);transition:border-color var(--dur-2) var(--ease),transform var(--dur-2) var(--ease);animation:day-in .5s cubic-bezier(.22,1,.36,1) backwards}@media (hover:hover){.qlog-item:hover{transform:translateY(-1px);border-color:var(--accent)}.qlog-item:active{transform:none}}.qlog-item.done{border-left-color:rgba(var(--poison-rgb),.8)}.qlog-item.failed{border-left-color:rgba(var(--blood-bright-rgb),.65)}.qlog-status{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.65rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:.4rem}.qlog-status.aktiv{color:var(--gold-bright)}.qlog-status.done{color:var(--poison)}.qlog-status.failed{color:var(--blood-bright)}.qlog-name{font-family:var(--font-display,'Grenze',serif);font-weight:700;font-size:.95rem;color:var(--bone-bright);line-height:1.35;margin-bottom:.35rem}.qlog-item.done .qlog-name,.qlog-item.failed .qlog-name{text-decoration:line-through;color:var(--bone-dim)}.qlog-desc{font-size:.98rem;font-style:italic;color:var(--bone);line-height:1.55}.qlog-reward{font-size:var(--fs-sm);color:var(--poison);margin-top:.5rem}.qlog-reward::before{content:'🪙 '}.qlog-empty{text-align:center;padding:3rem 1rem;color:var(--bone-dim);font-style:italic;font-size:1.01rem;border:1px dashed var(--edge-hi)}
+
+  @media(max-width:960px){.log-columns{grid-template-columns:1fr;gap:2.5rem}
+  }/* surface, gold hairline and colour are snes.css §13 (all !important there) — this rule only places the pill and animates it */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:var(--font-display,'Grenze',serif);font-size:var(--fs-sm);letter-spacing:.12em;border-radius:var(--emb-r)!important;padding:.7rem 1.5rem;opacity:0;transition:opacity .3s var(--ease-out),transform .3s var(--ease-out);pointer-events:none}.toast.show{transform:translate(-50%,0);opacity:1}
+
+  @media(max-width:900px){html{-webkit-tap-highlight-color:transparent}
+  
+  .tl-ctl{min-height:44px}
+}
+  @media(max-width:640px){.layout{padding:1rem .75rem 3rem}.timeline{padding-left:2.5rem}.day-marker{left:-2.5rem}.log-head h1{font-size:1.25rem}.log-summary{padding:1rem .9rem;margin-bottom:1.8rem}.log-summary p{font-size:1.01rem}.day-card{padding:1rem .9rem;margin-bottom:1.4rem}.day-card:hover{transform:none}.day-head{gap:.5rem}.day-num{font-size:1rem}.day-title{font-size:.84rem}.day-mood{margin-left:0;width:100%}.day-events li{font-size:.97rem;padding-left:1.2rem}.day-tag{padding:.3rem .55rem}.toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}.toast.show{transform:translateY(0)}
+  }
+  @media(max-width:400px){.layout{padding:.8rem .5rem 2.5rem}.timeline{padding-left:2.2rem}.day-marker{left:-2.2rem;width:26px;height:26px;font-size:.6rem}.day-card{padding:.85rem .7rem}
+  }
+
+/* ── reduced motion: the page's own animation and lifts only (ember.css owns the rest) ── */
+@media (prefers-reduced-motion: reduce){
+  .day-card,.qlog-item{animation:none!important}
+  .day-card:hover,.qlog-item:hover,.day-card:active,.qlog-item:active{transform:none!important}
+  .writing .quill,.writing .dots span{animation:none!important}
+  .day-card,.qlog-item,.tl-ctl,.day-loc a,.day-head,.toast{transition:none!important}
+}
+</style>
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+<div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
+
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">LOGBOOK</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="log-head">
+    <div class="page-eyebrow">THE LEDGER · JOURNAL</div>
+    <h1>📜 Logbook</h1>
+    <div class="page-rule">✦</div>
+    <p class="sub">The chronicler summarizes your adventure, day by day</p>
+    <div class="log-title" id="log-title"></div>
+  </div>
+
+  <div class="writing" id="writing">
+    <div class="quill">🪶</div>
+    <p>The chronicler leafs through the halls of memory…</p>
+    <div class="dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <div id="log-content" style="display:none">
+    <div class="log-columns fresh-frame">
+      <!-- ═══ Vänster: Quest-log ═══ -->
+      <div class="log-col">
+        <div class="col-head">⚑ Quest Log</div>
+        <div id="quest-column"></div>
+      </div>
+      <!-- ═══ Höger: Krönikan ═══ -->
+      <div class="log-col">
+        <div class="col-head">🪶 The Chronicle</div>
+        <div class="log-summary fresh-frame" id="log-summary" style="display:none">
+          <div class="label">✦ The Adventure So Far ✦</div>
+          <p id="summary-text"></p>
+          <div class="updated-stamp" id="updated-stamp" style="display:none"></div>
+        </div>
+        <div class="tl-controls">
+          <button class="tl-ctl btn-ghost" onclick="setAllDays(true)">▾ Expand all</button>
+          <button class="tl-ctl btn-ghost" onclick="setAllDays(false)">▸ Collapse all</button>
+        </div>
+        <div class="timeline" id="timeline"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty-state fresh-empty" id="empty-state" style="display:none"><span class="fe-glyph">✦</span>
+    <div class="icon">📜</div>
+    <p>No journal entries yet — your tale has just begun…</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="api.js?v=20261010a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+<script src="i18n.js?v=20261028a"></script>
+<script>
+// Auth-guard
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Tidslinje: nyaste dag först + vikbara dagar ──
+let LOG_DATA = null;          // senast renderad loggbok
+let dayOpenState = null;      // dag-nyckel → öppen/stängd (null = ej initierad)
+let LAST_KEYS = [];           // dag-nycklar i nuvarande visningsordning
+
+function dayKeyOf(d, ri) {
+  return 'd' + (d.day ?? (LOG_DATA.days.length - ri));
+}
+
+function renderTimeline() {
+  const tl = document.getElementById('timeline');
+  const days = [...(LOG_DATA.days || [])].reverse(); // nyaste överst
+  if (dayOpenState === null) dayOpenState = {};
+  LAST_KEYS = days.map((d, ri) => dayKeyOf(d, ri));
+  tl.innerHTML = days.map((d, ri) => {
+    const key = dayKeyOf(d, ri);
+    if (!(key in dayOpenState)) dayOpenState[key] = (ri === 0); // nyaste öppen som standard
+    const open = !!dayOpenState[key];
+    const dayNum = d.day || (LOG_DATA.days.length - ri);
+    const events = (d.events || []).map(e => `<li>${esc(e)}</li>`).join('');
+    const npcs = (d.npcs_met || []).map(n => `<span class="day-tag npc">${esc(n)}</span>`).join('');
+    const quests = (d.quests || []).map(q => `<span class="day-tag quest">${esc(q)}</span>`).join('');
+    return `
+      <div class="day-card ${open ? '' : 'collapsed'}" style="animation-delay:${ri * .12}s">
+        <div class="day-marker">${dayNum}</div>
+        <div class="day-head" onclick="toggleDay('${esc(key)}')" title="${open ? 'Minimize' : 'Expand'}">
+          <span class="day-num">Day ${dayNum}</span>
+          <span class="day-title">${esc(d.title || '')}</span>
+          <span class="caret">${open ? '▾' : '▸'}</span>
+          ${d.mood ? `<span class="day-mood">"${esc(d.mood)}"</span>` : ''}
+        </div>
+        ${d.location ? `<div class="day-loc"><a href="platser.html" title="Open the map">${esc(d.location)}</a></div>` : ''}
+        <ul class="day-events">${events}</ul>
+        <div class="day-tags">${npcs}${quests}</div>
+      </div>`;
+  }).join('');
+}
+
+function toggleDay(key) {
+  if (dayOpenState === null) dayOpenState = {};
+  dayOpenState[key] = !dayOpenState[key];
+  renderTimeline();
+}
+
+function setAllDays(open) {
+  if (dayOpenState === null) dayOpenState = {};
+  for (const k of LAST_KEYS) dayOpenState[k] = open;
+  renderTimeline();
+}
+
+function renderLogbook(data) {
+  const writing = document.getElementById('writing');
+  const content = document.getElementById('log-content');
+  const empty = document.getElementById('empty-state');
+  writing.classList.remove('show');
+
+  if (!data || !data.days || data.days.length === 0) {
+    content.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
+  // Titel
+  if (data.title) {
+    document.getElementById('log-title').textContent = '— ' + data.title + ' —';
+  }
+
+  // Sammanfattning
+  if (data.summary) {
+    document.getElementById('log-summary').style.display = 'block';
+    document.getElementById('summary-text').textContent = data.summary;
+  }
+
+  // Uppdaterad-stämpel
+  const stamp = document.getElementById('updated-stamp');
+  if (data.generated_at) {
+    let ts;
+    try { ts = new Date(data.generated_at).toLocaleString(I18N.getLang() === 'sv' ? 'sv-SE' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' }); }
+    catch (_) { ts = data.generated_at; }
+    stamp.innerHTML = '✦ Updated: <b>' + esc(ts) + '</b>';
+    stamp.style.display = 'block';
+  } else {
+    stamp.style.display = 'none';
+  }
+
+  // Tidslinje — nyaste dag först, varje dag vikbar
+  LOG_DATA = data;
+  renderTimeline();
+
+}
+
+async function loadLogbook() {
+  // Initialize i18n with campaign language
+  try {
+    const r = await fetch('/api/campaign', { credentials: 'include' });
+    if (r.ok) { const d = await r.json(); I18N.init(d?.meta?.language || 'en'); }
+  } catch(e) {}
+  // Visa cachad loggbok direkt (localStorage) — uppdatera sedan från servern
+  const cached = localStorage.getItem('dnd_logbook_cache');
+  if (cached) {
+    try {
+      const data = JSON.parse(cached);
+      if (data && data.days && data.days.length) {
+        renderLogbook(data);
+        // Hämta fräsch data i bakgrunden (backend har egen turn_count-cache)
+        fetch('/api/campaign/logbook', { credentials: 'include' })
+          .then(r => r.ok ? r.json() : null)
+          .then(fresh => {
+            if (fresh && JSON.stringify(fresh) !== cached) {
+              localStorage.setItem('dnd_logbook_cache', JSON.stringify(fresh));
+              renderLogbook(fresh);
+            }
+          }).catch(() => {});
+        return;
+      }
+    } catch (_) { /* korrupt cache — hämta från servern */ }
+  }
+
+  document.getElementById('writing').classList.add('show');
+  try {
+    const res = await fetch('/api/campaign/logbook', { credentials: 'include' });
+    if (!res.ok) throw new Error('No campaign');
+    const data = await res.json();
+    localStorage.setItem('dnd_logbook_cache', JSON.stringify(data));
+    renderLogbook(data);
+  } catch (e) {
+    document.getElementById('writing').classList.remove('show');
+    document.getElementById('empty-state').style.display = 'block';
+  }
+}
+
+loadLogbook();
+
+// ── Quest-log: hämta quests från kampanjstate och rendera i vänsterkolumnen ──
+async function loadQuestLog() {
+  const col = document.getElementById('quest-column');
+  if (!col) return;
+  try {
+    const res = await fetch('/api/campaign', { credentials: 'include' });
+    if (!res.ok) throw new Error('no campaign');
+    const state = await res.json();
+    const quests = state.quests || [];
+    if (!quests.length) {
+      col.innerHTML = '<div class="qlog-empty fresh-empty"><span class="fe-glyph">✦</span>No quests yet — the road lies open…</div>';
+      return;
+    }
+    // Aktiva först, därefter slutförda/misslyckade
+    const order = s => (s === 'aktiv' || s === 'active') ? 0 : 1;
+    const sorted = [...quests].sort((a, b) => order(a.status) - order(b.status));
+    col.innerHTML = sorted.map((q, i) => {
+      const done = q.status === 'slutförd' || q.status === 'completed';
+      const failed = q.status === 'misslyckad' || q.status === 'failed';
+      const cls = done ? 'done' : failed ? 'failed' : 'aktiv';
+      const label = done ? '✓ Completed' : failed ? '✗ Failed' : '⚑ Active';
+      return `
+      <div class="qlog-item ${cls}" style="animation-delay:${i * .08}s">
+        <div class="qlog-status ${cls}">${label}</div>
+        <div class="qlog-name">${esc(q.name || 'Unnamed quest')}</div>
+        ${q.description ? `<div class="qlog-desc">${esc(q.description)}</div>` : ''}
+        ${q.reward && q.reward !== 'Okänd' && q.reward !== 'Unknown' ? `<div class="qlog-reward">${esc(q.reward)}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    col.innerHTML = '<div class="qlog-empty fresh-empty"><span class="fe-glyph">✦</span>No quests yet — the road lies open…</div>';
+  }
+}
+loadQuestLog();
+
+// ── Logga ut ──
+async function doLogout() {
+  try { await API.logout(); } catch(_) {}
+  sessionStorage.removeItem('dnd_user');
+  location.href = 'login.html';
+}
+
+// Toast
+let toastTimer;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
+
+// Embers
+const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
+let W,H,embers=[];
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+resize();addEventListener('resize',resize);
+function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+Math.random()*1.5,vy:.2+Math.random()*.55,vx:(Math.random()-.5)*.3,life:0,max:400+Math.random()*500,hue:Math.random()<.82?22+Math.random()*18:268+Math.random()*20};}
+for(let i=0;i<30;i++)embers.push(spawn(true));
+const GLOW={};function glowSprite(hue){const key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');const rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,'hsla('+key+',90%,65%,1)');rg.addColorStop(.4,'hsla('+key+',85%,55%,.55)');rg.addColorStop(1,'hsla('+key+',80%,50%,0)');g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
+function tick(){
+if (document.hidden) { requestAnimationFrame(tick); return; }ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.globalAlpha=.4*fade*fl;ctx.drawImage(glowSprite(e.hue),e.x-e.r*2,e.y-e.r*2,e.r*4,e.r*4);if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}ctx.globalAlpha=1;requestAnimationFrame(tick);}
+tick();
+</script>
+<script src="embed.js?v=20261001a"></script>
+<script src="rail.js?v=20261006a"></script>
+</body>
+</html>

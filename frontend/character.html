@@ -1,0 +1,2742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#09070B">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>The Lore Weaver's Cauldron — Character Sheet</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>:root{
+    /* Sidlokala tokens — färgpaletten bor i snes.css (Emberwatch 2026-10-22).
+       Den lokala kopian av paletten (17 tokens, --ink … --poison) togs bort
+       2026-10-22: den låg före snes.css-länken och förlorade varje krock. */
+    --edge-warm: #3E3247;
+    --hp-glow: rgba(var(--blood-bright-rgb),0.55);
+  --font-flavor:'EB Garamond',Georgia,serif;--rubric:#E4616F;--gilt:rgba(236,196,104,.42);--gilt-hi:rgba(255,224,160,.6);--parch-a:#15111B;--parch-b:#100D14;}*{ margin: 0; padding: 0; box-sizing: border-box; }html{ scroll-behavior: smooth; }body{
+    font-family: var(--font-body,'Spectral',Georgia,serif);
+    color: var(--bone);
+    min-height: 100vh;
+    background:
+      radial-gradient(1100px 520px at 50% 112%, color-mix(in srgb, var(--ember) 13%, transparent), transparent 62%),
+      radial-gradient(820px 460px at 12% -8%, color-mix(in srgb, var(--arcane) 10%, transparent), transparent 58%),
+      radial-gradient(640px 380px at 88% -4%, rgba(var(--blood-rgb),0.09), transparent 56%),
+      var(--ink);
+    background-attachment: fixed;
+    overflow-x: hidden;
+  font-size:17px;line-height:1.65}/* ── Stenkorn / noise ── */.grain{
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }/* ── Drivande dimma ── */.fog{ position: fixed; inset: -20%; z-index: 0; pointer-events: none; }.fog::before, .fog::after{
+    content: ''; position: absolute; width: 70vw; height: 70vw; border-radius: 50%;
+    filter: blur(90px); opacity: 0.5;
+  }.fog::before{
+    left: -10%; top: 20%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--arcane) 7%, transparent), transparent 65%);
+    animation: drift-a 70s ease-in-out infinite alternate;
+  }.fog::after{
+    right: -15%; bottom: 5%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--ember) 6%, transparent), transparent 65%);
+    animation: drift-b 90s ease-in-out infinite alternate;
+  }
+  @keyframes drift-a { from { transform: translate(0,0) scale(1); } to { transform: translate(14vw, -8vh) scale(1.25); } }
+  @keyframes drift-b { from { transform: translate(0,0) scale(1.15); } to { transform: translate(-12vw, 6vh) scale(0.9); } }/* ── Glöd ── */#embers{ position: fixed; inset: 0; z-index: 1; pointer-events: none; }/* ── Vinjett ── */.vignette{
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    box-shadow: inset 0 0 180px 60px rgba(var(--ink-rgb),0.85);
+  }.app{ position: relative; z-index: 2; max-width: 940px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }/* ═══════════ Header ═══════════ */.masthead{ text-align: center; margin-bottom: 2.2rem; }.masthead .over{
+    font-family: var(--font-display,'Grenze',serif); font-size: 0.68rem; letter-spacing: 0.45em;
+    text-transform: uppercase; color: var(--bone-dim); margin-bottom: 0.6rem;
+  font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}.masthead h1{
+    font-family: var(--font-display,'Grenze',serif); font-weight: 900; font-size: clamp(1.9rem, 5.5vw, 3rem);
+    color: var(--bone-bright); letter-spacing: 0.06em;
+    text-shadow: 0 0 22px rgba(var(--gold-bright-rgb),0.28), 0 2px 0 #000;
+    animation: candle 5s ease-in-out infinite;
+  }
+  @keyframes candle {
+    0%, 100% { text-shadow: 0 0 22px rgba(var(--gold-bright-rgb),0.28), 0 2px 0 #000; }
+    42% { text-shadow: 0 0 30px rgba(var(--gold-bright-rgb),0.42), 0 2px 0 #000; }
+    47% { text-shadow: 0 0 16px rgba(var(--gold-bright-rgb),0.2), 0 2px 0 #000; }
+    76% { text-shadow: 0 0 26px color-mix(in srgb, var(--ember) 36%, transparent), 0 2px 0 #000; }
+  }.rune-divider{ display: flex; align-items: center; gap: 0.9rem; margin: 0.9rem auto 0; max-width: 420px; }.rune-divider::before, .rune-divider::after{
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.55;
+  height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.7) 15%,rgba(var(--gold-rgb),.7) 85%,transparent) center/100% 1px no-repeat;height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.7) 15%,rgba(var(--gold-rgb),.7) 85%,transparent) center/100% 1px no-repeat}.rune-divider span{ color: var(--gold); font-size:var(--fs-sm); text-shadow: 0 0 8px rgba(var(--gold-rgb),0.6); }/* ═══════════ Tabs — stentavlor ═══════════ */.tabs{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0; }.tab{
+    font-family: var(--font-display,'Grenze',serif); font-weight: 700; font-size:var(--fs-tiny); letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--bone-dim);
+    background: linear-gradient(180deg, var(--stone-2), var(--stone));
+    border: 1px solid var(--edge); border-bottom: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 0.75rem 1.4rem 0.65rem;
+    cursor: pointer; user-select: none; position: relative; top: 1px;
+    transition: color 0.25s, background 0.25s, transform 0.15s;
+  min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-color:rgba(var(--gold-rgb),.4)}
+  @media (any-hover:hover),(hover:hover){ .tab:hover{ color: var(--bone-bright); transform: translateY(-2px); } }
+  @media (prefers-reduced-motion: reduce){ .tab{ transition: none; } .tab:hover{ transform: none; } }.tab.active{
+    color: var(--gold-bright);
+    background: linear-gradient(180deg, var(--stone-3), var(--stone-2));
+    border-color: var(--gold);
+    box-shadow: 0 -6px 18px -8px rgba(var(--gold-bright-rgb),0.35);
+    text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),0.5);
+  }/* ═══════════ Paneler — stenplattor med hörnornament ═══════════ */.panel{
+    display: none; position: relative;
+    background: linear-gradient(165deg, var(--stone-2) 0%, var(--stone) 55%, var(--ink) 100%);
+    border: 1px solid var(--edge);
+    box-shadow: 0 24px 60px -24px rgba(0,0,0,0.9), inset 0 1px 0 color-mix(in srgb, var(--bone-bright) 5%, transparent);
+    padding: 2rem 1.75rem;
+    animation: panel-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}.panel.active{ display: block; }
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }.corner{ position: absolute; width: 18px; height: 18px; border-color: var(--gold); border-style: solid; opacity: 0.75; }.corner.tl{ top: 6px; left: 6px; border-width: 2px 0 0 2px; }.corner.tr{ top: 6px; right: 6px; border-width: 2px 2px 0 0; }.corner.bl{ bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }.corner.br{ bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }.section-title{
+    font-family: var(--font-display,'Grenze',serif); font-weight: 700; font-size:var(--fs-tiny);
+    letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold);
+    display: flex; align-items: center; gap: 0.9rem; margin: 1.8rem 0 1rem;
+  font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.85rem}.section-title:first-child{ margin-top: 0; }.section-title::after{
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(var(--gold-rgb),0.5), transparent);
+  height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.7) 15%,rgba(var(--gold-rgb),.7) 85%,transparent) center/100% 1px no-repeat}/* ═══════════ Karaktärshuvud ═══════════ */.char-header{ display: flex; gap: 1.9rem; align-items: center; margin-bottom: 1.6rem; }.portrait-frame{
+    position: relative; width: 150px; height: 150px; flex-shrink: 0; cursor: pointer;
+    background: var(--stone-3); border: 2px solid var(--edge-warm);
+    box-shadow: 0 0 0 4px var(--stone), 0 0 0 5px var(--edge), 0 10px 30px -8px rgba(0,0,0,0.8);
+    transform: rotate(-1.5deg); transition: transform 0.3s, box-shadow 0.3s;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }.portrait-frame:hover{
+    transform: rotate(0deg) scale(1.04);
+    box-shadow: 0 0 0 4px var(--stone), 0 0 0 5px var(--gold), 0 0 26px -4px rgba(var(--gold-bright-rgb),0.4);
+  }.portrait-frame .emoji{ font-size: 3.6rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }.portrait-frame img{ width: 100%; height: 100%; object-fit: cover; }.portrait-frame .hint{
+    position: absolute; inset: auto 0 0 0; padding: 5px 0; text-align: center;
+    font-family: var(--font-display,'Grenze',serif); font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    background: color-mix(in srgb, var(--ink) 82%, transparent); color: var(--gold-bright);
+    transform: translateY(100%); transition: transform 0.25s;
+  }.portrait-frame:hover .hint{ transform: translateY(0); }.portrait-frame input{ display: none; }.char-identity{ flex: 1; min-width: 0; }.char-name{
+    font-family: var(--font-display,'Grenze',serif); font-weight: 900; font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--bone-bright); letter-spacing: 0.03em; line-height: 1.1;
+    text-shadow: 0 2px 0 #000, 0 0 24px color-mix(in srgb, var(--blood) 25%, transparent);
+  text-shadow:0 0 18px rgba(var(--gold-bright-rgb),.25)}.char-class{
+    font-family: var(--font-body,'Spectral',serif); font-style: italic; font-weight: 400;
+    color: var(--arcane); font-size:var(--fs-chat); margin: 0.3rem 0 0.7rem;
+    text-shadow: 0 0 12px color-mix(in srgb, var(--arcane) 40%, transparent);
+  font-family:var(--font-flavor);font-style:italic}.char-meta{ display: flex; gap: 0.5rem 1.1rem; flex-wrap: wrap; font-size:var(--fs-sm); color: var(--bone-dim); }.char-meta b{ color: var(--bone-bright); font-weight: 600; }.char-meta .stat{ display: flex; gap: 0.35rem; align-items: baseline; }.char-meta .stat i{ font-style: normal; color: var(--gold); font-size:var(--fs-sm); letter-spacing: 0.08em; }/* ═══════════ Mätare ═══════════ */.vitals{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.5rem; }.vital{ grid-column: span 1; }.vital.wide{ grid-column: 1 / -1; }.vital-head{
+    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;
+    font-family: var(--font-display,'Grenze',serif); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase;
+  }.vital-head .label{ color: var(--bone-dim); font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}.vital-head .nums{ font-family: var(--font-body,'Spectral',serif); font-size:var(--fs-base); letter-spacing: 0; color: var(--bone-bright); font-weight: 600; }.vital-head .nums small{ color: var(--bone-dim); font-weight: 400; }.trough{
+    position: relative; height: 16px; background: var(--ink);
+    border: 1px solid var(--edge); box-shadow: inset 0 3px 8px rgba(0,0,0,0.8);
+    overflow: hidden;
+  }.fill{ position: absolute; inset: 0 auto 0 0; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }.fill::after{
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%);
+    background-size: 220% 100%; animation: sheen 3.4s linear infinite;
+  }
+  @keyframes sheen { from { background-position: 200% 0; } to { background-position: -60% 0; } }.fill.hp{ background: linear-gradient(180deg, var(--blood-bright), color-mix(in srgb, var(--blood-bright) 35%, var(--ink)) 85%); box-shadow: 0 0 14px var(--hp-glow); }.fill.xp{ background: linear-gradient(180deg, var(--gold-bright), color-mix(in srgb, var(--gold-bright) 35%, var(--ink)) 85%); box-shadow: 0 0 12px rgba(var(--gold-bright-rgb),0.4); }.trough.low .fill.hp{ animation: hp-alarm 1s ease-in-out infinite; }
+  @keyframes hp-alarm { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.6); } }.mini-btn{
+    font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); letter-spacing: 0.1em;
+    background: var(--stone-3); color: var(--bone-dim); border: 1px solid var(--edge);
+    padding: 0.28rem 0.7rem; cursor: pointer; transition: all 0.18s;
+  min-height:44px}.mini-btn:hover{ color: var(--bone-bright); border-color: var(--gold); box-shadow: 0 0 10px -2px rgba(var(--gold-bright-rgb),0.4); }.mini-btn.hurt:hover{ border-color: var(--blood-bright); color: var(--blood-bright); box-shadow: 0 0 10px -2px rgba(var(--blood-bright-rgb),0.5); }.empty-hint{ font-size:var(--fs-sm); font-style: italic; color: var(--bone-dim); margin-left: 0.4rem; font-family:var(--font-flavor);font-style:italic}/* ═══════════ Förmågor — sköldar ═══════════ */.abilities{ display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.7rem; }.ability{
+    position: relative; text-align: center; padding: 0.9rem 0.3rem 0.75rem;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--edge);
+    clip-path: polygon(50% 0, 100% 12%, 100% 88%, 50% 100%, 0 88%, 0 12%);
+    transition: transform 0.2s, filter 0.2s; cursor: default;
+  background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34)}.ability:hover{ transform: translateY(-4px); filter: brightness(1.25) drop-shadow(0 6px 12px rgba(0,0,0,0.6)); }.ability .abbr{ font-family: var(--font-display,'Grenze',serif); font-size: 0.73rem; letter-spacing: 0.25em; color: var(--gold); }.ability .score{ font-family: var(--font-display,'Grenze',serif); font-weight: 900; font-size: 1.55rem; color: var(--bone-bright); line-height: 1.15; text-shadow: 0 2px 0 #000; }.ability .mod{ font-size:var(--fs-sm); color: var(--arcane); font-weight: 600; }/* ═══════════ Egenskaper — runchips ═══════════ */.traits{ display: flex; flex-wrap: wrap; gap: 0.5rem; }.trait{
+    font-size:var(--fs-sm); padding: 0.32rem 0.85rem; border: 1px solid var(--edge);
+    background: var(--stone); color: var(--bone); border-radius: var(--radius-sm);
+    transition: all 0.2s; cursor: default;
+  border-color:rgba(var(--gold-rgb),.35);background:linear-gradient(180deg,var(--stone-2),var(--stone))}.trait:hover{ transform: translateY(-2px); border-color: var(--bone-dim); }.trait.magic{
+    border-color: color-mix(in srgb, var(--arcane) 55%, transparent); color: var(--arcane-bright);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 14%, transparent), color-mix(in srgb, var(--arcane) 4%, transparent));
+    box-shadow: 0 0 10px -3px color-mix(in srgb, var(--arcane) 50%, transparent);
+  }.trait.magic:hover{ border-color: var(--arcane); box-shadow: 0 0 16px -3px color-mix(in srgb, var(--arcane) 80%, transparent); }.trait.prof{ border-color: rgba(var(--gold-rgb),0.45); color: var(--gold-bright); }/* ═══════════ Utrustning — kortlayout (kompakt 2026-09-30) ═══════════
+   Kompaktheten kommer från BORTTAGNA rader (typ + footer med vikt/status) —
+   kortet är nu ~2 rader högt i stället för ~4. Kolumnbredd 240px behålls så
+   långa namn får plats (2-raders wrap, se .inv-card-name). */.inv-grid{
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.5rem; padding: 0.2rem 0;
+  }.inv-card{
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--edge); padding: 0.5rem 0.6rem; cursor: pointer;
+    transition: all 0.22s; position: relative; overflow: hidden;
+  position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}.inv-card:hover{
+    transform: translateY(-3px); border-color: var(--bone-dim);
+    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7);
+  }.inv-card.equipped{ border-color: color-mix(in srgb, var(--poison) 50%, transparent); }.inv-card.equipped::before{
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--poison), transparent);
+  }/* Rarity: magic */.inv-card.r-magic{ border-color: color-mix(in srgb, var(--arcane) 45%, transparent); }.inv-card.r-magic:hover{ box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--arcane) 40%, transparent); }/* Rarity: rare */.inv-card.r-rare{ border-color: rgba(var(--gold-bright-rgb),0.45); }.inv-card.r-rare:hover{ box-shadow: 0 8px 24px -8px rgba(var(--gold-bright-rgb),0.4); }/* Rarity: legendary */.inv-card.r-legendary{
+    border-color: rgba(var(--gold-bright-rgb),0.7);
+    background: linear-gradient(180deg, rgba(var(--gold-bright-rgb),0.08), var(--stone-3) 40%, var(--stone));
+  }.inv-card.r-legendary:hover{ box-shadow: 0 8px 28px -8px rgba(var(--gold-bright-rgb),0.6); }.inv-card.r-legendary .inv-card-name{ animation: candle 4s ease-in-out infinite; }.inv-card-row{ display: flex; align-items: flex-start; gap: 0.55rem; }.inv-card-icon{
+    font-size: 1.25rem; line-height: 1; flex-shrink: 0; margin-top: 0.1rem;
+    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--gold-rgb), 30%, transparent);
+    background: color-mix(in srgb, var(--ink) 45%, transparent); border-radius: var(--radius-xs);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  }/* AI-målat konstverk i kortet — samma inramning som emoji-fallbacken */.inv-card-art{
+    width: 40px; height: 40px; flex-shrink: 0; margin-top: 0.1rem; border-radius: var(--radius-xs);
+    background-size: cover; background-position: center;
+    border: 1px solid rgba(var(--gold-rgb),0.55);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), 0 0 8px -2px rgba(var(--gold-bright-rgb),0.35);
+  }.inv-card-r-magic .inv-card-art, .inv-card.r-magic .inv-card-art{ border-color: color-mix(in srgb, var(--arcane) 65%, transparent); box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px -2px color-mix(in srgb, var(--arcane) 60%, transparent); }.inv-card.r-legendary .inv-card-art{ border-color: rgba(var(--gold-bright-rgb),0.8); box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), 0 0 12px -2px rgba(var(--gold-bright-rgb),0.55); }.inv-card-info{ flex: 1; min-width: 0; }.inv-card-name{
+   font-family: var(--font-display,'Grenze',serif); font-weight: 700; font-size:var(--fs-tiny);
+   color: var(--bone-bright); line-height: 1.25;
+   /* Långa namn (”Worn Ritual Dagger”) får linda till 2 rader i stället för
+      att trunkeras till oigenkännlighet — korta namn förblir 1 rad så korten
+      håller sig kompakta. line-clamp kapar vid 2 rader med ellips. */
+   display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+   -webkit-box-orient: vertical; overflow: hidden;
+   overflow-wrap: anywhere;
+ }.inv-card-name.r-magic{ color: var(--arcane-bright); text-shadow: 0 0 8px color-mix(in srgb, var(--arcane) 45%, transparent); }.inv-card-name.r-rare{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.35); }.inv-card-name.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(var(--gold-bright-rgb),0.6); }.inv-card-stats{
+    display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.25rem;
+  }.inv-badge{
+    font-family: var(--font-display,'Grenze',serif); font-size: 0.62rem; letter-spacing: 0.06em;
+    padding: 0.1rem 0.38rem; border: 1px solid var(--edge); background: var(--stone);
+    color: var(--bone); white-space: nowrap; border-radius: var(--radius-xs);
+  }.inv-badge.dmg{ border-color: rgba(var(--blood-rgb),0.5); color: var(--blood-bright); }.inv-badge.ac{ border-color: color-mix(in srgb, var(--poison) 50%, transparent); color: var(--poison); }.inv-badge.charges{ border-color: color-mix(in srgb, var(--arcane) 50%, transparent); color: var(--arcane); }.inv-badge.magic-bonus{ border-color: rgba(var(--gold-bright-rgb),0.5); color: var(--gold-bright); }.inv-badge.range{ color: var(--bone-dim); }.inv-badge.qty{ color: var(--bone-dim); }.inv-badge.wt{ color: var(--bone-dim); border-style: dashed; font-style: italic; }/* Status-märke: ⚔ buren (gift-grön glöd) / 🎒 i väska (diskret men synlig) */.inv-card-eq-dot{
+    flex-shrink: 0; font-size: 0.78rem; width: 22px; height: 22px; margin-top: 0.1rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; opacity: 0.7;
+  }.inv-card-eq-dot.on{
+    opacity: 1; filter: none; color: var(--poison);
+    border: 1px solid color-mix(in srgb, var(--poison) 55%, transparent);
+    box-shadow: 0 0 7px -2px color-mix(in srgb, var(--poison) 55%, transparent);
+  }/* Måla-knapp på VARJE föremålskort (2026-10-28): bilder av sin utrustning
+     ska gå att göra utan att öppna detaljmodalen först — samma motor, samma
+     1 turn, samma 10€-grind. Diskreet guld-ring tills man hover:ar. */.inv-card-paint{
+    flex-shrink: 0; width: 30px; height: 30px; margin-top: -2px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(var(--gold-rgb),.34); border-radius: 50%;
+    background: color-mix(in srgb, var(--gold-rgb) 7%, transparent);
+    font-size: 0.8rem; line-height: 1; color: var(--bone-bright);
+    cursor: pointer; opacity: 0.82; transition: opacity .18s, border-color .18s, background .18s;
+  }.inv-card-paint:hover, .inv-card-paint:focus-visible{
+    opacity: 1; border-color: rgba(var(--gold-rgb),.6);
+    background: color-mix(in srgb, var(--gold-rgb) 12%, transparent);
+  }.inv-card-paint:disabled{ cursor: progress; opacity: 1; border-color: rgba(var(--gold-rgb),.6); }.inv-card-paint.busy{
+    animation: inv-paint-pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes inv-paint-pulse{ 0%,100%{ transform: scale(1); } 50%{ transform: scale(1.14); } }/* ── Föremålsmålning i detaljmodalen (2026-09-30) ── */.item-modal-art-wrap{
+    display: flex; justify-content: center; margin-bottom: 0.9rem;
+  }.item-modal-art{
+    width: 180px; height: 180px; border-radius: var(--radius-xs); overflow: hidden;
+    border: 1px solid rgba(var(--gold-rgb),0.55);
+    background: radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--gold-rgb) 8%, transparent), color-mix(in srgb, var(--ink) 55%, transparent));
+    box-shadow: inset 0 0 0 1px rgba(var(--edge-rgb),.5), 0 0 18px -6px rgba(var(--gold-bright-rgb),0.4);
+    display: flex; align-items: center; justify-content: center;
+  }.item-modal-art-emoji{ font-size: 3rem; opacity: 0.85; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6)); }.item-modal-paint{
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+    margin-top: 1.1rem; padding-top: 0.9rem;
+    border-top: 1px solid color-mix(in srgb, var(--edge) 45%, transparent);
+  }.item-modal-paint .av-btn{ font-size: 0.72rem; }.item-paint-status{ font-size: 0.75rem; color: var(--bone-dim); font-style: italic; flex: 1; min-width: 0; }/* ── Detaljmodal ── */.item-modal-overlay{
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(var(--ink-rgb),0.82); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    animation: modal-fade-in 0.2s ease;
+  }
+  @keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }.item-modal{
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--gold); padding: 2rem 2.2rem;
+    max-width: 480px; width: 92vw; max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 30px -8px rgba(var(--gold-bright-rgb),0.3);
+    animation: modal-slide-up 0.25s ease;
+  position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  @keyframes modal-slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }.item-modal-close{
+    position: absolute; top: 0.8rem; right: 1rem; background: none; border: none;
+    color: var(--bone-dim); font-size:var(--fs-narr); cursor: pointer; transition: color 0.2s;
+  min-height:44px}.item-modal-close:hover{ color: var(--blood-bright); }.item-modal-header{
+    font-family: var(--font-display,'Grenze',serif); font-weight: 900; font-size:var(--fs-chat);
+    color: var(--bone-bright); margin-bottom: 0.3rem;
+    text-shadow: 0 2px 0 #000;
+  }.item-modal-header.r-magic{ color: var(--arcane-bright); text-shadow: 0 0 12px color-mix(in srgb, var(--arcane) 50%, transparent); }.item-modal-header.r-rare{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(var(--gold-bright-rgb),0.4); }.item-modal-header.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 16px rgba(var(--gold-bright-rgb),0.7); }.item-modal-sub{
+    font-size:var(--fs-sm); color: var(--bone-dim); font-style: italic;
+    margin-bottom: 1.1rem; padding-bottom: 0.8rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--edge) 50%, transparent);
+  }.item-modal-stat-row{
+    display: flex; justify-content: space-between; padding: 0.35rem 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--edge) 25%, transparent); font-size: 0.98rem;
+  }.item-modal-stat-label{
+    color: var(--bone-dim); font-size:var(--fs-sm); letter-spacing: 0.04em;
+    font-family: var(--font-display,'Grenze',serif); text-transform: uppercase;
+  font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}.item-modal-stat-val{ color: var(--bone-bright); font-weight: 500; }.item-modal-desc{
+    margin-top: 1rem; padding: 0.8rem; font-size: 0.98rem;
+    color: var(--bone); font-style: italic; line-height: 1.6;
+    background: color-mix(in srgb, var(--ink) 40%, transparent); border-left: 2px solid var(--edge);
+  }.item-modal-lore{
+    margin-top: 1rem; padding: 0.8rem; font-size:var(--fs-sm);
+    color: var(--gold); font-style: italic; line-height: 1.55;
+    background: color-mix(in srgb, var(--stone) 50%, transparent); border-left: 2px solid rgba(var(--gold-rgb),.4);
+    letter-spacing: 0.01em;
+  font-family:var(--font-flavor);font-style:italic}.item-modal-props{
+    display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem;
+  }.item-modal-prop-tag{
+    font-size:var(--fs-tiny); padding: 0.15rem 0.5rem;
+    border: 1px solid var(--edge); color: var(--bone-dim);
+    background: var(--stone); border-radius: var(--radius-xs);
+  }.inv-summary{
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+    margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid color-mix(in srgb, var(--edge) 50%, transparent);
+    font-size:var(--fs-sm); color: var(--bone-dim);
+  }.inv-summary b{ color: var(--bone-bright); }.overloaded{ color: var(--blood-bright) !important; animation: hp-alarm 1.2s infinite; }.inv-empty{
+    text-align: center; color: var(--bone-dim); font-style: italic;
+    padding: 2.5rem 1rem; font-size:var(--fs-base);
+  }/* ═══════════ Besvärjelser — spell-kort ═══════════ */.spell-slots{
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 9%, transparent), color-mix(in srgb, var(--arcane) 2%, transparent));
+    border: 1px solid color-mix(in srgb, var(--arcane) 30%, transparent);
+    padding: 0.7rem 0.9rem; margin-bottom: 0.9rem;
+  }.ss-label{ font-family: var(--font-display,'Grenze',serif); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}.ss-pips{
+    display: flex; gap: 0.32rem; flex-wrap: wrap; align-items: center;
+  }.ss-pip{
+    width: 20px; height: 20px;
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    background: var(--stone-3);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; color: transparent;
+    transition: all 0.25s;
+  }.ss-pip.available{
+    /* Laddad slot = guld-manakristall (fix 2026-08-10: guld-fyllning när slots är fyllda) */
+    background: linear-gradient(160deg, var(--gold-bright), var(--gold) 55%, var(--gold));
+    color: color-mix(in srgb, var(--ink) 90%, transparent);
+    filter: drop-shadow(0 0 6px rgba(var(--gold-bright-rgb),0.5));
+  }.ss-pip.used{
+    /* Förbrukad slot = tom krypta */
+    opacity: 0.42;
+    background: color-mix(in srgb, var(--stone-3) 75%, #000);
+  }
+  /* Alla slots fulla → pulserande guldglöd som "fully charged"-clue */
+  .ss-pips.charged .ss-pip.available{ animation: ssGemPulse 2.2s ease-in-out infinite; }
+  .ss-pips.charged .ss-pip.available:nth-child(2){ animation-delay: .25s; }
+  .ss-pips.charged .ss-pip.available:nth-child(3){ animation-delay: .5s; }
+  .ss-pips.charged .ss-pip.available:nth-child(4){ animation-delay: .75s; }
+  @keyframes ssGemPulse { 0%,100% { filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.35)); } 50% { filter: drop-shadow(0 0 12px rgba(var(--gold-bright-rgb),0.85)); } }.ss-count{
+    font-size:var(--fs-sm); color: var(--bone-bright); font-variant-numeric: tabular-nums;
+  }.ss-count b{ color: var(--gold-bright); }.ss-note{ font-size: 0.72rem; color: var(--bone-dim); font-style: italic; flex-basis: 100%; margin-top: 0.15rem; font-family:var(--font-flavor);font-style:italic}
+  .spells-grid{
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.7rem; padding: 0.2rem 0;
+  }.spell-card{
+    background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 10%, transparent), color-mix(in srgb, var(--arcane) 3%, transparent));
+    border: 1px solid color-mix(in srgb, var(--arcane) 35%, transparent); padding: 0.85rem 1rem;
+    transition: all 0.22s; position: relative; overflow: hidden;
+  border:1px solid rgba(var(--gold-rgb),.38);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5)}.spell-card:hover{
+    transform: translateY(-3px); border-color: color-mix(in srgb, var(--arcane) 70%, transparent);
+    box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--arcane) 45%, transparent);
+  }.spell-card.cantrip{ border-color: color-mix(in srgb, var(--poison) 40%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--poison) 8%, transparent), color-mix(in srgb, var(--poison) 2%, transparent)); }.spell-card.cantrip:hover{ border-color: color-mix(in srgb, var(--poison) 65%, transparent); box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--poison) 40%, transparent); }.spell-card-head{
+    display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+  }.spell-name{
+    font-family: var(--font-display,'Grenze',serif); font-weight: 700; font-size:var(--fs-tiny);
+    color: var(--arcane-bright); line-height: 1.25; text-shadow: 0 0 8px color-mix(in srgb, var(--arcane) 35%, transparent);
+  }.spell-card.cantrip .spell-name{ color: var(--poison); text-shadow: 0 0 8px color-mix(in srgb, var(--poison) 35%, transparent); }.spell-level{
+    font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--bone-dim); border: 1px solid var(--edge); padding: 0.1rem 0.4rem; flex-shrink: 0;
+  }.spell-card-sub{
+    font-size:var(--fs-tiny); color: var(--bone-dim); font-style: italic; margin-top: 0.35rem;
+  }.spell-card-desc{
+    font-size:var(--fs-tiny); color: var(--bone); margin-top: 0.5rem; line-height: 1.45;
+    border-top: 1px dashed color-mix(in srgb, var(--arcane) 20%, transparent); padding-top: 0.45rem;
+  }.add-form{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.2rem; }.add-form input, .add-form select{
+    font-family: var(--font-body,'Spectral',serif); font-size: 0.98rem; color: var(--bone-bright);
+    background: var(--ink); border: 1px solid var(--edge); padding: 0.55rem 0.8rem;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s; border-radius: var(--radius-xs);
+  }.add-form input:focus, .add-form select:focus{
+    border-color: var(--gold); box-shadow: 0 0 12px -3px rgba(var(--gold-bright-rgb),0.45);
+  }.add-form input::placeholder{ color: var(--bone-dim); font-style: italic; }.add-form input{ flex: 1; min-width: 150px; }.add-form select{ flex: 0 1 auto; min-width: 100px; }.rune-btn{
+    font-family: var(--font-display,'Grenze',serif); font-weight: 700; font-size:var(--fs-sm); letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--ink); cursor: pointer;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold) 60%, var(--gold));
+    border: 1px solid var(--gold); padding: 0.55rem 1.3rem; border-radius: var(--radius-xs);
+    box-shadow: 0 4px 14px -4px rgba(var(--gold-bright-rgb),0.5), inset 0 1px 0 rgba(255,255,255,0.4);
+    transition: all 0.18s;
+  min-height:44px;display:inline-flex;align-items:center;justify-content:center}.rune-btn:hover{ filter: brightness(1.12); transform: translateY(-2px); box-shadow: 0 8px 20px -4px rgba(var(--gold-bright-rgb),0.6), inset 0 1px 0 rgba(255,255,255,0.4); }.rune-btn:active{ transform: translateY(0); }/* ── Anteckningar + Bilagor ── */.notes-layout{ display: grid; grid-template-columns: 1fr 300px; gap: 1.6rem; align-items: start; }.notes-hint{ font-size:var(--fs-sm); color: var(--bone-dim); font-style: italic; text-transform: none; letter-spacing: 0; font-weight: 400; font-family:var(--font-flavor);font-style:italic}#notes-editor{
+    width: 100%; min-height: 380px; resize: vertical;
+    font-family: var(--font-body,'Spectral',Georgia,serif); font-size:var(--fs-base); line-height: 1.7;
+    color: var(--bone-bright); background: var(--stone-2);
+    border: 1px solid var(--edge); padding: 1rem 1.1rem; outline: none; border-radius: var(--radius-xs);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }#notes-editor:focus{ border-color: var(--gold); box-shadow: 0 0 16px -5px rgba(var(--gold-bright-rgb),0.35); }#notes-editor::placeholder{ color: color-mix(in srgb, var(--bone-dim) 45%, transparent); font-style: italic; }.notes-actions{ display: flex; align-items: center; gap: 1rem; margin-top: 0.9rem; }.notes-status{ font-size:var(--fs-sm); font-style: italic; color: var(--poison); min-height: 1em; }.notes-status.err{ color: var(--blood-bright); }/* ── Character Growth (Lorekeeper character_updates) — read-only kort ── */.growth-wrap{ margin-top: 2.2rem; padding-top: 1.6rem; border-top: 1px solid var(--edge); }.growth-list{ display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.9rem; }.growth-item{
+    position: relative; padding: 0.8rem 1rem 0.8rem 1.1rem;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--arcane) 10%, transparent), color-mix(in srgb, var(--arcane) 3%, transparent));
+    border: 1px solid color-mix(in srgb, var(--arcane) 35%, transparent); border-left: 3px solid var(--arcane);
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+  }.growth-item:hover{ border-color: color-mix(in srgb, var(--arcane) 60%, transparent); transform: translateX(3px); box-shadow: 0 0 14px -6px color-mix(in srgb, var(--arcane) 50%, transparent); }.growth-field{
+    font-family: var(--font-display,'Grenze',serif); font-size: 0.69rem; font-weight: 700;
+    letter-spacing: 0.22em; text-transform: uppercase; color: var(--arcane);
+    display: inline-block; margin-bottom: 0.35rem;
+  }.growth-text{ font-size: 1.01rem; color: var(--bone-bright); line-height: 1.55; font-style: italic; }.growth-turn{ font-size:var(--fs-tiny); color: var(--bone-dim); margin-top: 0.4rem; font-family: var(--font-accent,'Silkscreen',monospace); letter-spacing: 0.08em; }.growth-empty{ font-size:var(--fs-sm); font-style: italic; color: var(--bone-dim); }.backstory-wrap{ margin-top: 2.2rem; padding-top: 1.6rem; border-top: 1px solid var(--edge); }.backstory-text{ font-size:var(--fs-base); color: var(--bone-bright); line-height: 1.7; font-style: italic; white-space: pre-line; }.backstory-empty{ font-size:var(--fs-sm); font-style: italic; color: var(--bone-dim); }.att-dropzone{
+    position: relative; border: 2px dashed var(--edge); padding: 1.4rem 1rem; text-align: center;
+    cursor: pointer; transition: all 0.2s; border-radius: var(--radius-xs); margin-bottom: 1rem;
+  }.att-dropzone:hover, .att-dropzone.dragover{ border-color: var(--gold); background: rgba(var(--gold-rgb),0.05); }.att-dropzone .att-icon{ font-size: 1.6rem; display: block; margin-bottom: 0.4rem; }.att-dropzone .att-text{ font-size:var(--fs-sm); color: var(--bone-dim); display: block; }.att-dropzone .att-text b{ color: var(--gold-bright); }.att-dropzone .att-formats{ font-size:var(--fs-tiny); color: var(--bone-dim); display: block; margin-top: 0.3rem; opacity: 0.7; }.att-dropzone input{ display: none; }.att-list{ display: flex; flex-direction: column; gap: 0.5rem; }.att-item{
+    display: flex; align-items: center; gap: 0.6rem;
+    background: var(--stone-2); border: 1px solid var(--edge); padding: 0.55rem 0.7rem;
+    border-radius: var(--radius-xs); transition: border-color 0.2s;
+  }.att-item:hover{ border-color: var(--gold); }.att-item .att-fi{ font-size:var(--fs-chat); flex-shrink: 0; }.att-item a{
+    flex: 1; color: var(--bone-bright); text-decoration: none; font-size:var(--fs-sm);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }.att-item a:hover{ color: var(--gold-bright); text-decoration: underline; }.att-item .att-size{ font-size:var(--fs-tiny); color: var(--bone-dim); flex-shrink: 0; }.att-item .att-del{
+    background: none; border: none; color: var(--bone-dim); cursor: pointer;
+    font-size: 0.98rem; padding: 0 0.2rem; transition: color 0.2s; flex-shrink: 0;
+  }.att-item .att-del:hover{ color: var(--blood-bright); }.att-empty{ font-size:var(--fs-sm); font-style: italic; color: var(--bone-dim); text-align: center; padding: 0.5rem; }
+
+  @media (max-width: 760px) {.notes-layout{ grid-template-columns: 1fr; }
+  }/* ═══════════ Valuta — mynt ═══════════ */.currency-grid{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; }.coin{
+    text-align: center; padding: 1.1rem 0.5rem 0.9rem; position: relative;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--edge); transition: transform 0.2s, box-shadow 0.2s;
+  }.coin:hover{ transform: translateY(-4px); box-shadow: 0 12px 24px -10px rgba(0,0,0,0.8); }.coin-disc{
+    width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 0.6rem;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display,'Grenze',serif); font-weight: 900; font-size:var(--fs-sm);
+    box-shadow: inset 0 -4px 8px rgba(0,0,0,0.45), inset 0 3px 6px rgba(255,255,255,0.35), 0 4px 10px rgba(0,0,0,0.6);
+    transition: transform 0.3s;
+  }.coin:hover .coin-disc{ transform: rotateY(20deg) rotateZ(-6deg); }
+  .c-pp .coin-disc{ background: radial-gradient(circle at 35% 30%, #efe3c2, #b7a97f 55%, #8a7a58); color: #2c2110; }.c-gp .coin-disc{ background: radial-gradient(circle at 35% 30%, #f0d675, var(--gold) 55%, #6e5716); color: #2c2110; }.c-sp .coin-disc{ background: radial-gradient(circle at 35% 30%, #d9c9a6, #9d8a6a 55%, #5a4a35); color: var(--ink); }.c-cp .coin-disc{ background: radial-gradient(circle at 35% 30%, #c99763, #8a5423 55%, #4a2c10); color: #241206; }.coin-name{ font-family: var(--font-display,'Grenze',serif); font-size: 0.73rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--bone-dim); margin-bottom: 0.25rem; }.coin-amount{ font-family: var(--font-display,'Grenze',serif); font-weight: 900; font-size: 1.5rem; color: var(--bone-bright); text-shadow: 0 2px 0 #000; position: relative; }.coin-btn{
+    width: 30px; height: 30px; font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-sm);
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    cursor: pointer; transition: all 0.15s; border-radius: var(--radius-xs);
+  min-height:44px;min-width:44px}.coin-btn:hover{ color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 10px -2px rgba(var(--gold-bright-rgb),0.5); }.coin-btn:active{ transform: scale(0.88); }
+  .hoard{
+    margin-top: 1.4rem; padding: 1.2rem; text-align: center; position: relative;
+    border: 1px solid var(--edge-warm);
+    background: radial-gradient(ellipse at 50% 0%, rgba(var(--gold-rgb),0.1), transparent 70%), var(--stone);
+  }.hoard .label{ font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); letter-spacing: 0.3em; text-transform: uppercase; color: var(--bone-dim); font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}.hoard .value{
+    font-family: var(--font-display,'Grenze',serif); font-weight: 900; font-size: 2rem; color: var(--gold-bright);
+    text-shadow: 0 0 20px rgba(var(--gold-bright-rgb),0.45), 0 2px 0 #000; margin: 0.2rem 0;
+  }.hoard .sub{ font-size:var(--fs-sm); font-style: italic; color: var(--bone-dim); }.tx{
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    padding: 0.6rem 0.2rem; border-bottom: 1px solid color-mix(in srgb, var(--edge) 40%, transparent); font-size: 0.98rem;
+    transition: background 0.2s;
+  }.tx:hover{ background: rgba(var(--gold-rgb),0.04); }.tx-desc{ color: var(--bone); }.tx-date{ font-size:var(--fs-sm); font-style: italic; color: var(--bone-dim); margin-top: 0.1rem; }.tx-amount{ font-family: var(--font-display,'Grenze',serif); font-weight: 700; white-space: nowrap; }.tx-amount.pos{ color: var(--poison); }.tx-amount.neg{ color: var(--blood-bright); }/* ═══════════ Toast ═══════════ */.toast{
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 80px);
+    z-index: 50; font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-sm); letter-spacing: 0.12em;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--gold); color: var(--gold-bright);
+    padding: 0.7rem 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.7), 0 0 20px -6px rgba(var(--gold-bright-rgb),0.5);
+    opacity: 0; transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1); pointer-events: none;
+  }.toast.show{ transform: translate(-50%, 0); opacity: 1; }/* ═══════════ Laddar / tom kampanj ═══════════ */.loading{
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.1rem; padding: 5rem 1rem; text-align: center;
+  }.loading .rune{ font-size: 2.6rem; animation: candle 3s ease-in-out infinite; }.loading p{ font-style: italic; color: var(--bone-dim); letter-spacing: 0.05em; }.no-campaign{ text-align: center; padding: 4.5rem 1.5rem; }.no-campaign .rune{ font-size: 3.2rem; margin-bottom: 1rem; animation: candle 4s ease-in-out infinite; }.no-campaign h2{
+    font-family: var(--font-display,'Grenze',serif); font-weight: 900; font-size:var(--fs-h3);
+    color: var(--bone-bright); letter-spacing: 0.05em; margin-bottom: 0.5rem;
+  }.no-campaign p{ font-style: italic; color: var(--bone-dim); margin-bottom: 1.6rem; font-family:var(--font-flavor);font-style:italic}.no-campaign .rune-btn{ display: inline-block; text-decoration: none; }/* ═══════════ Responsivt ═══════════ */
+  @media (max-width: 720px){.inv-card-paint{ width: 44px; height: 44px; margin-top: -6px; font-size: 1.05rem; opacity: .85; }.abilities{ grid-template-columns: repeat(3, 1fr); }.currency-grid{ grid-template-columns: repeat(2, 1fr); }.vitals{ grid-template-columns: 1fr; }.char-header{ flex-direction: column; text-align: center; }.char-meta{ justify-content: center; }.panel{ padding: 1.5rem 1rem; position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}.inv-grid{ grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }.sk-grid{ grid-template-columns: 1fr; }
+  }/* ═══════════ Mobil — pekskärm & trånga gränder ═══════════ */
+  @media (max-width: 900px){html{ -webkit-tap-highlight-color: transparent; }/* Topnav: radbryt + 44px träffytor (inline-stilar kräver !important) */body > header{ flex-wrap: wrap !important; gap: .4rem .5rem !important; padding: .6rem .75rem !important; }body > header .top-btn{
+      min-height: 44px !important; display: inline-flex !important; align-items: center !important;
+      padding: .4rem .65rem !important; font-size: .68rem !important; white-space: nowrap;
+    }.app{ padding: 1.25rem .75rem 3rem; }
+  
+  a.btn-gold, a.btn-ghost, a.btn-blood, .rune-btn, .av-btn { min-height: 44px; min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px}
+  input, textarea, select { font-size: 16px; }
+}
+  @media (max-width: 640px) {/* Flikar (våg 2, 2026-10-27): 3+2 stentavlor i två rader på full träffhöjd.
+   Före: 2 kolumner ⇒ 3 rader / 145 px ovan panelen med en ensam 5:e flik.
+   Nu: 94 px, alla 5 synliga utan scroll. ≤340 px får etiketten radbrytas
+   (aldrig klippas) — se separat block längst ned. */.tabs{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }.tab{ min-height: 44px; display: flex; align-items: center; justify-content: center;
+      padding: .5rem .3rem; font-size:var(--fs-tiny); line-height:1.15; letter-spacing:.05em;
+      white-space:nowrap; border-radius:var(--radius-lg); border-bottom: 1px solid var(--edge);
+      top:0; min-height:44px;align-items:center;justify-content:center;text-align:center;border-color:rgba(var(--gold-rgb),.4)}.panel{ padding: 1.2rem .8rem; position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}/* Förmågor: 2 kolumner, större siffror */.abilities{ grid-template-columns: repeat(2, 1fr); gap: .55rem; }.ability .score{ font-size:var(--fs-h3); }/* HP/XP-mätare: högre balkar som syns */.trough{ height: 22px; }/* Utrustningstabell: horisontell scroll */.inv-grid{ grid-template-columns: 1fr; gap: 0.5rem; }/* Lägg-till-formulär: staplat, 16px mot iOS-zoom */.add-form input, .add-form select{ font-size: 18px; min-height: 44px; }.add-form input{ flex: 1 1 100%; }.add-form select{ flex: 1 1 42%; }.add-form .rune-btn{ flex: 1 1 100%; min-height: 44px; }/* Skattkammare */.currency-grid{ grid-template-columns: repeat(2, 1fr); gap: .6rem; }.coin-btn{ width: 44px; height: 44px; min-height:44px;min-width:44px}.tx{ flex-wrap: wrap; gap: .3rem; }/* Anteckningar */.notes-layout{ grid-template-columns: 1fr; }#notes-editor{ font-size: 18px; min-height: 280px; }.rune-btn{ min-height: 44px; min-height:44px;display:inline-flex;align-items:center;justify-content:center}.att-item .att-del{ padding: .5rem .45rem; font-size:var(--fs-chat); }.att-item a{ font-size:var(--fs-sm); }
+  }
+  @media (max-width: 400px) {.app{ padding: 1rem .5rem 3rem; }.panel{ padding: 1rem .6rem; position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}.abilities{ gap: .4rem; }.ability{ padding: .7rem .15rem .6rem; background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34)}.ability .abbr{ font-size: .63rem; letter-spacing: .15em; }.ability .score{ font-size:var(--fs-chat); }.coin{ padding: .85rem .3rem .7rem; }.coin-amount{ font-size:var(--fs-narr); }.coin-disc{ width: 44px; height: 44px; }.masthead h1{ letter-spacing: .02em; }.char-name{ font-size:var(--fs-h3); text-shadow:0 0 18px rgba(var(--gold-bright-rgb),.25)}
+  }
+  /* ═══════════ Avatar-modal (AI-generera / uppdatera / ladda upp) ═══════════ */
+  .mi-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(var(--ink-rgb),.85); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
+  .mi-overlay.show{ opacity: 1; visibility: visible; }
+  .mi-modal{ width: min(420px, 100%); max-height: 86vh; overflow-y: auto; background: linear-gradient(165deg, var(--stone-2), var(--stone)); border: 1px solid var(--gold); box-shadow: 0 0 40px rgba(var(--gold-rgb),.22), 0 24px 60px rgba(0,0,0,.7); padding: 1.3rem 1.4rem 1.5rem; position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .mi-head{ display: flex; align-items: center; justify-content: space-between; font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); letter-spacing: .12em; color: var(--gold-bright); text-transform: uppercase; padding-bottom: .8rem; border-bottom: 1px solid var(--edge); margin-bottom: .9rem; }
+  .mi-close{ background: none; border: 1px solid var(--edge); color: var(--bone-dim); font-size:var(--fs-sm); padding: .3rem .55rem; cursor: pointer; min-height:44px}
+  .mi-close:hover{ border-color: var(--gold); color: var(--gold-bright); }
+  .mi-intro{ font-size:var(--fs-sm); color: var(--bone); line-height: 1.6; margin-bottom: .4rem; }
+  .av-btn{ display: flex; align-items: center; justify-content: center; gap: .5rem; width: 100%; padding: .8rem 1rem; font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); letter-spacing: .12em; text-transform: uppercase; background: linear-gradient(180deg, var(--stone-3), var(--stone)); border: 1px solid var(--edge); color: var(--bone-bright); cursor: pointer; transition: all .2s; min-height:44px}
+  .av-btn:hover{ border-color: var(--gold); color: var(--gold-bright); }
+  .av-btn.primary{ background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, var(--gold)); color: var(--ink); border-color: var(--gold); }
+  .av-btn.primary:hover{ filter: brightness(1.1); }
+  .av-btn.danger{ color: var(--blood-bright); border-color: rgba(var(--blood-bright-rgb),.4); }
+  .av-btn.danger:hover{ border-color: var(--blood-bright); }
+  .av-btn:disabled{ opacity: .5; cursor: wait; }
+  /* Avatar-galleri: bläddra bland tidigare porträtt (2026-08-08) */
+  .av-gal-row{ display: flex; align-items: center; justify-content: center; gap: .55rem; }
+  .av-gal-arrow{ flex-shrink: 0; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display,'Grenze',serif); font-size: 1.5rem; line-height: 1; color: var(--gold-bright); background: linear-gradient(180deg, var(--stone-3), var(--stone)); border: 1px solid var(--edge); border-radius: 50%; cursor: pointer; transition: all .18s; padding: 0 0 .18em; min-height:44px}
+  .av-gal-arrow:hover:not(:disabled){ border-color: var(--gold); color: var(--bone-bright); box-shadow: 0 0 14px -3px rgba(var(--gold-bright-rgb),.55); transform: scale(1.08); }
+  .av-gal-arrow:disabled{ opacity: 0; pointer-events: none; }
+  .av-gal-count{ font-family: var(--font-display,'Grenze',serif); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--bone-dim); margin-top: .5rem; min-height: .9rem; }
+  .av-gal-count b{ color: var(--gold-bright); font-weight: 700; }
+  @media (max-width: 640px){ .av-gal-arrow{ width: 44px; height: 44px; font-size:var(--fs-h2); min-height:44px} }
+  .av-lightbox{ position: fixed; inset: 0; z-index: 11000; display: flex; align-items: center; justify-content: center; background: rgba(var(--ink-rgb),.92); opacity: 0; visibility: hidden; transition: opacity .22s ease, visibility .22s; }
+  .av-lightbox.show{ opacity: 1; visibility: visible; }
+  .av-lightbox img{ max-width: min(90vw, 720px); max-height: 85vh; border: 2px solid var(--gold); box-shadow: 0 0 60px rgba(var(--gold-rgb),.25), 0 24px 60px rgba(0,0,0,.8); }
+  .av-lightbox .av-lb-close{ position: fixed; top: 1.2rem; right: 1.4rem; font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); color: var(--gold-bright); background: none; border: 1px solid var(--edge); padding: .5rem .7rem; cursor: pointer; }
+  .av-lightbox .av-lb-title{ position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); font-family: var(--font-display,'Grenze',serif); font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); white-space: nowrap; }
+/* ═══════════ Inuti Codex (iframe): dölj slogan + sub-tabbar — Codex-headern styr ═══════════ */
+  .in-codex .masthead{ display: none; }
+  .in-codex .tabs{ display: none; }
+/* ═══════════ Stor avatar-bakgrund i karaktärsvyn (hero) ═══════════ */
+  #panel-character .char-header{
+    position: relative; display: flex; flex-direction: column; align-items: flex-start;
+    justify-content: flex-end; text-align: left; gap: 0.9rem; min-height: 300px;
+    margin-bottom: 0.9rem;
+  }
+  #panel-character .char-header::after{
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ink) 90%, transparent) 0%, color-mix(in srgb, var(--ink) 60%, transparent) 45%, color-mix(in srgb, var(--ink) 15%, transparent) 72%, transparent 85%),
+                linear-gradient(180deg, transparent 42%, color-mix(in srgb, var(--ink) 50%, transparent) 100%);
+  }
+  #panel-character .portrait-frame{
+    position: absolute; top: 0; right: 0; width: 100%; height: 100%;
+    z-index: 0; transform: none;
+    background: transparent; border: 0; box-shadow: none;
+    display: block;
+  }
+  #panel-character .portrait-frame .emoji{ font-size: 8rem; opacity: .92; }
+  #panel-character .char-identity{ position: relative; z-index: 2; padding-right: 120px; }
+  /* 2026-08-06: textlagret får inte äta klick — hela porträttet ska öppna
+     avatar-modalen (som NPC-dossién). Endast text/siffror här, inga knappar. */
+  #panel-character .char-identity, #panel-character .vitals{ pointer-events: none; }
+  #panel-character .char-class, #panel-character .char-meta{ text-shadow: 0 1px 3px #000, 0 0 14px rgba(0,0,0,.85); }
+  #panel-character .vitals{ position: relative; z-index: 2; width: 100%; margin: 0.4rem 0 0; padding-right: 10px; }
+  #panel-character .vitals .label, #panel-character .vitals .nums{ text-shadow: 0 1px 3px #000, 0 0 12px rgba(0,0,0,.95); }
+/* ═══════════ Tomt porträtt — ingraverad ram (2026-10) ═══════════
+   Empty state: engraved double hairline + corner ticks + hatch/vignette,
+   small-caps label + marginal hint line. Reads intentional from ~84px
+   plates up to the full hero. Copy follows the image-generation canon
+   (no "paint" in visible strings). */
+.portrait-empty{
+  position: absolute; inset: 0; z-index: 1; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: .34rem; padding: .6rem; text-align: center; pointer-events: none;
+  background:
+    repeating-linear-gradient(45deg, rgba(var(--gold-rgb),.035) 0 2px, transparent 2px 7px),
+    radial-gradient(115% 90% at 50% 38%, transparent 34%, rgba(var(--ink-rgb),.55) 100%);
+  box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),.22), inset 0 0 0 5px rgba(var(--ink-rgb),.28),
+              inset 0 0 22px 4px rgba(var(--ink-rgb),.5);
+}
+.portrait-frame:not(.has-portrait) .portrait-empty{ display: flex; }
+.portrait-frame:not(.has-portrait) .emoji{ opacity: .16; filter: saturate(.35) blur(1px); }
+.portrait-empty::before, .portrait-empty::after{
+  content: ''; position: absolute; width: 11px; height: 11px;
+  border: 1px solid rgba(var(--gold-rgb),.4); pointer-events: none;
+}
+.portrait-empty::before{ top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+.portrait-empty::after{ bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
+.portrait-empty .pe-glyph{ font-size: .9rem; line-height: 1; color: rgba(var(--gold-rgb),.55); text-shadow: 0 0 12px rgba(var(--gold-bright-rgb),.3); }
+@media (max-width: 640px){ .portrait-frame > .portrait-empty .pe-glyph{ display: none; } }
+.portrait-empty .pe-label{
+  font-family: var(--font-display); font-variant: small-caps; font-weight: 700;
+  letter-spacing: .14em; font-size: .72rem; line-height: 1.25; color: var(--bone-dim);
+  text-shadow: 0 1px 2px rgba(var(--ink-rgb),.9);
+}
+.portrait-empty .pe-hint{
+  font-family: var(--font-flavor); font-style: italic; font-size: .68rem;
+  display: block; line-height: 1.35; color: var(--bone-dim); max-width: 92%;
+}
+@media (prefers-reduced-motion: no-preference){
+  .portrait-frame:not(.has-portrait) .portrait-empty{ animation: empty-glow 5.5s ease-in-out infinite; }
+  @keyframes empty-glow{
+    0%, 100%{ box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),.20), inset 0 0 0 5px rgba(var(--ink-rgb),.28), inset 0 0 22px 4px rgba(var(--ink-rgb),.5); }
+    45%{ box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),.34), inset 0 0 0 5px rgba(var(--ink-rgb),.28), inset 0 0 26px 6px rgba(var(--ink-rgb),.5), inset 0 0 34px 2px rgba(var(--gold-rgb),.05); }
+  }
+}
+/* Hero (Codex character view): a framed plate upper-right over a subtle
+   vignette instead of the bare 8rem emoji. Frame lifts above the
+   text-safe veil (that gradient keeps guarding .char-header::after). */
+#panel-character .portrait-frame:not(.has-portrait){
+  z-index: 2;
+  background:
+    radial-gradient(85% 70% at 76% 26%, rgba(var(--gold-rgb),.04), transparent 60%),
+    radial-gradient(130% 110% at 50% 45%, transparent 42%, rgba(var(--ink-rgb),.5) 100%);
+}
+#panel-character .portrait-frame:not(.has-portrait) .emoji{ display: none; }
+#panel-character .portrait-empty{
+  top: 12px; right: 12px; left: auto; bottom: auto;
+  width: min(38%, 128px); gap: .3rem; padding: .7rem .5rem;
+  border: 1px solid rgba(var(--gold-rgb),.28);
+  box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),.28), inset 0 0 0 5px rgba(var(--ink-rgb),.24),
+              inset 0 0 18px 3px rgba(var(--ink-rgb),.55), 0 10px 24px -10px rgba(var(--ink-rgb),.9);
+}
+/* Hover-strip + hint copy swap when embedded (CSS-only, standalone untouched) */
+.portrait-frame .hint-codex{ display: none; }
+.in-codex .portrait-frame .hint{ display: none; }
+.in-codex .portrait-frame .hint-codex{ display: block; }
+.portrait-empty .pe-hint-codex{ display: none; }
+.in-codex .portrait-empty .pe-hint{ display: none; }
+.in-codex .portrait-empty .pe-hint-codex{ display: block; }
+/* ═══════════ Codex-knappar — touch-ytor (radier borttagna 2026-09-23, platt canon) ═══════════ */
+.av-btn, .rune-btn, .top-btn{ min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px}
+.av-btn:hover, .rune-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
+/* ═══════════ 5e-mekanik — Skills / Features / Inspiration (2026-08-08) ═══════════ */
+.insp-row{ margin: 0.2rem 0 0.6rem; }
+.insp-badge{
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--bone-dim); background: var(--stone);
+  border: 1px solid var(--edge); border-radius: var(--radius-sm); padding: 0.5rem 1.1rem;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bone-bright) 5%, transparent); transition: all 0.25s;
+}
+.insp-badge b{ font-weight: 700; }
+.insp-badge.off{ opacity: 0.62; }
+.insp-badge.on{
+  color: var(--gold-bright); border-color: rgba(var(--gold-bright-rgb),0.6);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 16%, transparent), color-mix(in srgb, var(--gold) 4%, transparent));
+  text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),0.45);
+  box-shadow: 0 0 18px -4px rgba(var(--gold-bright-rgb),0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+  animation: candle 4s ease-in-out infinite;
+}
+.sk-grid{ display: grid; grid-template-columns: 1fr; gap: 0.3rem 1.5rem; padding: 0.2rem 0 0.4rem; }
+  /* 2 kolumner ENDAST på bred vy (fristående character.html). Codex-iframen (~388px)
+     och mobil måste vara 1 kol — annars klipps högerkolumnens (ability)+bonus mot kanten.
+     Placerad EFTER basregeln: media-query ger ingen extra specificitet, ordningen avgör. */
+  @media (min-width: 721px){ .sk-grid{ grid-template-columns: 1fr 1fr; } }
+.sk-row{
+  display: flex; align-items: baseline; gap: 0.5rem;
+  font-size:var(--fs-sm); padding: 0.3rem 0.55rem; border-radius: var(--radius-sm);
+  border-bottom: 1px dashed color-mix(in srgb, var(--edge) 40%, transparent);
+  transition: background 0.15s;
+}
+.sk-row:hover{ background: rgba(var(--gold-rgb),0.05); }
+.sk-prof{ color: var(--gold); font-size:var(--fs-tiny); width: 1em; text-align: center; flex-shrink: 0; text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.5); }
+.sk-name{ color: var(--bone-bright); font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sk-abil{ font-family: var(--font-display,'Grenze',serif); font-size: 0.72rem; letter-spacing: 0.1em; color: var(--bone-dim); flex-shrink: 0; }
+.sk-bonus{ font-family: var(--font-display,'Grenze',serif); font-weight: 700; font-size:var(--fs-sm); color: var(--gold-bright); font-variant-numeric: tabular-nums; flex-shrink: 0; text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.25); }
+.ft-list{ display: flex; flex-direction: column; gap: 0.7rem; padding: 0.2rem 0 0.4rem; }
+.ft-item{
+  position: relative; padding: 0.75rem 1rem 0.75rem 1.1rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 8%, transparent), color-mix(in srgb, var(--gold) 2%, transparent));
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+  border-left: 3px solid var(--gold); border-radius: var(--radius-md);
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.ft-item:hover{ border-color: color-mix(in srgb, var(--gold) 60%, transparent); transform: translateX(3px); box-shadow: 0 0 14px -6px rgba(var(--gold-bright-rgb),0.4); }
+.ft-lvl{
+  display: inline-block; font-family: var(--font-display,'Grenze',serif); font-size: 0.64rem; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--gold-bright); position: relative; top: -1px;
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  padding: 0.12rem 0.45rem; border-radius: var(--radius-md); margin-right: 0.55rem;
+  text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.4);
+}
+.ft-name{ font-family: var(--font-display,'Grenze',serif); font-weight: 700; font-size:var(--fs-sm); color: var(--bone-bright); letter-spacing: 0.02em; }
+.ft-desc{ font-size:var(--fs-sm); font-style: italic; color: var(--bone-dim); margin-top: 0.4rem; line-height: 1.5; }
+#features-section .section-title{ margin-top: 1.8rem; }
+/* ═══════════ 5e-mekanik P2 — Resistances / Exhaustion / Training (2026-08-08) ═══════════ */
+.res-grid{ display: flex; flex-wrap: wrap; gap: 0.45rem; padding: 0.2rem 0 0.4rem; }
+.res-chip{
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); letter-spacing: 0.06em;
+  color: var(--bone-bright); background: var(--stone-2);
+  border: 1px solid var(--edge); border-radius: 999px; padding: 0.32rem 0.85rem;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bone-bright) 6%, transparent); transition: border-color 0.2s, box-shadow 0.2s;
+}
+.res-chip em{ font-style: normal; font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.9; }
+.res-chip.resistances{ border-color: color-mix(in srgb, var(--poison) 55%, transparent); }
+.res-chip.resistances em{ color: var(--poison); }
+.res-chip.immunities{ border-color: color-mix(in srgb, var(--gold) 60%, transparent); color: var(--gold-bright); text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.35); }
+.res-chip.immunities em{ color: var(--gold-bright); }
+.res-chip.vulnerabilities{ border-color: color-mix(in srgb, var(--blood) 60%, transparent); color: var(--blood-bright); }
+.res-chip.vulnerabilities em{ color: var(--blood-bright); }
+.exh-vital{ flex-wrap: wrap; }
+.exh-pips{ display: inline-flex; gap: 0.28rem; font-family: var(--font-body,'Spectral',serif); font-size:var(--fs-base); letter-spacing: 0.05em; line-height: 1; }
+.exh-pip.on{ color: var(--blood-bright); text-shadow: 0 0 10px rgba(var(--blood-bright-rgb),0.65); }
+.exh-pip.off{ color: var(--edge-ui); }   /* spänd pip = UI-indikator: 3.04:1 (audit #16) */
+.exh-text{ font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); letter-spacing: 0.08em; color: var(--bone-dim); margin-top: 0.35rem; }
+.tr-list{ display: flex; flex-direction: column; gap: 0.7rem; padding: 0.2rem 0 0.4rem; }
+.tr-item{
+  padding: 0.7rem 0.95rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 7%, transparent), color-mix(in srgb, var(--gold) 2%, transparent));
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, transparent); border-radius: var(--radius-md);
+  transition: border-color 0.2s, transform 0.2s;
+}
+.tr-item:hover{ border-color: color-mix(in srgb, var(--gold) 60%, transparent); transform: translateX(3px); }
+.tr-head{ display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.5rem; }
+.tr-name{ font-family: var(--font-display,'Grenze',serif); font-weight: 700; font-size:var(--fs-sm); color: var(--bone-bright); letter-spacing: 0.02em; }
+.tr-days{ font-family: var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); letter-spacing: 0.1em; color: var(--gold-bright); font-variant-numeric: tabular-nums; text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.25); }
+.tr-track{ height: 6px; background: color-mix(in srgb, var(--stone-3) 80%, #000); border: 1px solid var(--edge); border-radius: 999px; overflow: hidden; }
+.tr-bar{ display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); border-radius: 999px; box-shadow: 0 0 10px -2px rgba(var(--gold-bright-rgb),0.6); transition: width 0.3s; }
+#training-section .section-title{ margin-top: 1.8rem; }
+#resistances-section .section-title{ margin-top: 1.8rem; }
+/* ── Våg 2 (2026-10-27): flikar i smalaste laget + skip-länk ──────────────
+   ≤340 px ryms inte 3 kolumner utan att "CHARACTER" klipps (mätt 308 px:
+   93 px cell, 8 px overflow). Föll tillbaka till 2 kolumner där i stället för
+   att klippa. Codex-vyn (308 px iframe) döljer flikarna helt — se
+   .in-codex .tabs{display:none} (rad 462); den regeln har högre specificitet
+   (0,2,0) än .tabs (0,1,0) och gäller fortfarande. */
+@media (max-width:340px){
+  .tabs{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Skip-länk (rail.css ger 149×40 = under 44 px träffyta) */
+a.rr-skip{ display:inline-flex; align-items:center; min-height:44px; font-size:.79rem; }
+a.rr-skip:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:2px; }
+
+/* Träffgolv för ankare som ser ut som knappar: snes.css sätter
+   min-height:38px !important på knappar ⇒ 40 px mätt på "✦ Skapa äventyr". */
+a.rune-btn{ min-height:var(--tap-min) !important; display:inline-flex; align-items:center; justify-content:center; }
+
+</style>
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<style>
+/* ═══════════ Codex karaktärsblad — parchment-stil (2026-08-05) — EFTER snes.css ═══════════ */
+
+
+
+
+.top-btn{ font-family:var(--font-display,'Grenze',serif); font-size:var(--fs-tiny); letter-spacing:.14em;
+  text-transform:uppercase; padding:.45rem .85rem; cursor:pointer; white-space:nowrap; text-decoration:none ;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.top-btn.danger{ border-color:var(--blood) !important; color:var(--rubric) !important }
+.top-btn.danger:hover{ background:var(--blood) !important; color:#fff !important }
+@media (max-width:900px){  }
+.top-btn{ box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.top-btn:hover{ transform: translateY(-1px) !important; }
+.tab{ transition: all .2s !important; min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-color:rgba(var(--gold-rgb),.4)}
+.tab:focus-visible{ outline: 2px solid var(--gold-bright); outline-offset: 2px; }
+.panel{ position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+.ability{ background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34)}
+.trait{ border-color:rgba(var(--gold-rgb),.35);background:linear-gradient(180deg,var(--stone-2),var(--stone))}
+.coin-btn{ min-height:44px;min-width:44px}
+.rune-btn{ min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.av-btn{ min-height:44px}
+</style>
+<script src="sprites.js?v=20260806b"></script>
+
+<style id="grimoire-leaf">
+/* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
+.masthead h1::first-letter{font-family:var(--font-display,'Grenze',serif);font-style:normal;font-weight:700;font-size:1.06em;line-height:1;vertical-align:0;margin-right:0;color:var(--gold);text-shadow:0 0 12px rgba(var(--gold-rgb),.3)}
+.panel::after,.inv-card::after,.spell-card::after,.item-modal::after,.mi-modal::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/svg%3E") left top/24px 24px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg transform='rotate(180 16 16)'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/g%3E%3C/svg%3E") right bottom/24px 24px no-repeat;opacity:.9}
+@keyframes gr-flicker{0%,100%{text-shadow:0 0 20px rgba(var(--gold-bright-rgb),.28),0 2px 0 #000}43%{text-shadow:0 0 26px rgba(var(--gold-bright-rgb),.42),0 2px 0 #000}47%{text-shadow:0 0 12px rgba(var(--gold-bright-rgb),.16),0 2px 0 #000}76%{text-shadow:0 0 22px rgba(var(--gold-bright-rgb),.3),0 2px 0 #000}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.masthead h1{animation:none!important;text-shadow:0 2px 0 #000}}
+</style>
+<style id="sheet-edit">
+/* ── Karaktärsval: spelarens egna rättelser (2026-10-21) ──
+   Nya klassnamn (.sheet-edit/.sheet-form/.fs-row/.spell-rm/.ft-rm) — inga
+   befintliga regler skrivs över, inga @media-block ligger före i kaskaden. */
+.sheet-edit{ display:flex; flex-wrap:wrap; gap:.55rem; align-items:center; margin-top:1rem; }
+.sheet-edit .notes-hint{ margin:0; text-align:left; flex:1 1 12rem; min-width:0; }
+.sheet-edit-btn{ min-height:44px; }
+.sheet-form{ display:flex; flex-direction:column; gap:.55rem; margin-top:.75rem; padding:.85rem;
+  border:1px solid var(--edge); border-radius:var(--radius-md,8px);
+  background: linear-gradient(180deg, rgba(var(--bone-rgb),.048), rgba(var(--bone-rgb),.012)); }
+.sheet-form input, .sheet-form select{ box-sizing:border-box; width:100%; min-width:0; min-height:44px;
+  padding:.45rem .6rem; font-size:16px; font-family:inherit; color:var(--bone);
+  background: rgba(0,0,0,.35); border:1px solid var(--edge); border-radius:var(--radius-sm,6px); }
+.sheet-form input::placeholder{ color: color-mix(in srgb, var(--bone-dim) 78%, transparent); }
+.sheet-form input:focus, .sheet-form select:focus{ outline:none; border-color:var(--gold);
+  box-shadow:0 0 14px -6px rgba(var(--gold-bright-rgb),.55); }
+.sheet-form-actions{ display:flex; flex-wrap:wrap; gap:.5rem; }
+.sheet-form-actions .rune-btn{ flex:1 1 auto; }
+.fs-row{ display:flex; flex-wrap:wrap; gap:.5rem .7rem; align-items:center; margin:.2rem 0 .9rem; }
+.fs-row label{ font-family:var(--font-display,'Grenze',serif); font-size:var(--fs-tiny,.68rem);
+  letter-spacing:.12em; text-transform:uppercase; color:var(--gold-bright); }
+.fs-row select{ flex:1 1 10rem; min-width:0; min-height:44px; padding:.4rem .55rem; font-size:16px;
+  font-family:inherit; color:var(--bone); background: rgba(0,0,0,.35);
+  border:1px solid var(--edge); border-radius:var(--radius-sm,6px); }
+.spell-rm, .ft-rm{ display:inline-flex; align-items:center; justify-content:center; padding:0;
+  width:40px; height:40px; flex:0 0 auto; font-size:.8rem; line-height:1; cursor:pointer;
+  color:var(--bone-dim); background:transparent; border:1px solid rgba(var(--gold-rgb),.32);
+  border-radius:50% !important; transition: color .18s, border-color .18s, transform .18s; }
+.spell-rm:hover, .ft-rm:hover{ color:var(--blood-bright); border-color:var(--blood-bright); transform:translateY(-1px); }
+.ft-rm{ position:absolute; top:.45rem; right:.45rem; }
+#features .ft-item{ padding-right:3.6rem; }
+.ft-empty{ padding:.9rem 0; }
+/* ── 5e-grindarnas chips + tooltips (2026-10-21) ── */
+.sp-cap{ display:flex; flex-wrap:wrap; gap:.4rem; margin:.15rem 0 .9rem; }
+.cap-chip{ position:relative; display:inline-flex; align-items:center; gap:.35rem;
+  font-family:var(--font-display,'Grenze',serif); font-size:var(--fs-tiny,.68rem); letter-spacing:.06em;
+  text-transform:uppercase; color:var(--bone-dim); padding:.32rem .62rem;
+  border:1px solid color-mix(in srgb, var(--gold) 30%, transparent); border-radius:999px;
+  background: color-mix(in srgb, var(--gold) 7%, transparent); }
+.cap-chip b{ color:var(--gold-bright); font-variant-numeric:tabular-nums; text-transform:none; letter-spacing:0; }
+.cap-chip.cap-class{ color:var(--bone); border-color: color-mix(in srgb, var(--gold) 55%, transparent); }
+.tip{ display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; padding:0;
+  font-family:var(--font-body,inherit); font-size:.6rem; font-weight:700; line-height:1; cursor:help;
+  color:var(--gold-bright); background:transparent;
+  /* snes.css sätter border-style:none !important på knappar → ring via box-shadow */
+  border:0; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 60%, transparent);
+  /* snes.css nollar border-radius !important på knappar → tvinga fram cirkeln */
+  border-radius:50% !important;
+  position:relative; left:1px; }
+.tip:hover, .tip:focus-visible{ background: color-mix(in srgb, var(--gold) 18%, transparent); outline:none; box-shadow: inset 0 0 0 1px var(--gold-bright); }
+.tip-pop{ position:absolute; left:0; top:calc(100% + 8px); z-index:30;
+  display:block; width:max-content; max-width:min(300px, 84vw); padding:.55rem .65rem;
+  font-family:var(--font-body,'Spectral',serif); font-size:.8rem; font-weight:400; font-style:normal;
+  letter-spacing:0; text-transform:none; line-height:1.4; text-align:left; color:var(--bone);
+  background:var(--stone-3); border:1px solid color-mix(in srgb, var(--gold) 65%, transparent);
+  border-radius:var(--radius-sm,6px); box-shadow:0 10px 24px -10px rgba(0,0,0,.9);
+  opacity:0; visibility:hidden; transform:translateY(-4px);
+  transition:opacity .16s, transform .16s, visibility .16s;
+  pointer-events:none; }
+.cap-chip:hover .tip-pop, .cap-chip:focus-within .tip-pop{ opacity:1; visibility:visible; transform:translateY(0); }
+/* Sista chipen i raden: ankra från höger så tooltipen inte går utanför ramen */
+.cap-chip:last-child .tip-pop{ left:auto; right:0; }
+/* ── Touch-fallback (2026-10-27, W4/H) ──
+   .tip är en riktig <button aria-describedby>, så :focus-within (rad 758) tänder tooltipen
+   vid tumtryck — mätt 360×780: tap ⇒ knappen får fokus, .tip-pop opacity 1 / visible.
+   Knappen mäter 44×44 px (snes.css tap-min), så ingen extra träffyta behövs.
+   .portrait-frame .hint ("📷 Add image", rad 113-114) låg bakom hover → visas i vila. */
+@media (hover:none){
+  .portrait-frame .hint{ transform:none; }
+}
+.sheet-lock{ margin:.2rem 0 .8rem; padding:.55rem .7rem; font-size:var(--fs-sm);
+  color:var(--blood-bright); border:1px solid color-mix(in srgb, var(--blood-bright) 45%, transparent);
+  border-radius:var(--radius-sm,6px); background: color-mix(in srgb, var(--blood-bright) 9%, transparent); }
+.sheet-edit-btn.is-locked, .spell-rm.is-locked, .ft-rm.is-locked, #fs-select.is-locked{
+  opacity:.42; cursor:not-allowed; }
+/* Tooltipen ska kunna sticka ut ur panelen men inte ur skärmen */
+#panel-spells, #features-section{ position:relative; }
+@media (min-width:641px){
+  .sheet-form{ display:grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); align-items:start; }
+  .sheet-form .sf-full, .sheet-form .sheet-form-actions{ grid-column: 1 / -1; }
+  .sheet-form-actions .rune-btn{ flex:0 0 auto; }
+}
+/* ═══════════ Ember-chrome för arkets egna komponenter (2026-10-22) ═══════════
+   ember.css rundar de delade klasserna; de här finns bara på karaktärsbladet,
+   så opt-in bor här — samma mekanik som ember.css §1: riktig klass-selektor
+   + !important, aldrig :where(). Blocket ligger efter ember.css i dokumentet. */
+.item-modal, .mi-modal, .coin, .spell-card, .ft-item, .tr-item, .sheet-form{
+  border-radius:var(--emb-r)!important; }
+.sheet-form input, .sheet-form select, .fs-row select, .mini-btn, .coin-btn{
+  border-radius:var(--emb-r-sm)!important; }
+.inv-badge, .spell-level, .item-modal-prop-tag, .ft-lvl{
+  border-radius:var(--emb-r-xs)!important; }
+.trait{ border-radius:var(--emb-r-pill)!important; }
+@media (any-hover:hover), (hover:hover){
+  /* border — controls that already carry a fill */
+  .coin-btn:hover, .mini-btn:hover, .mi-close:hover, .att-item:hover, .coin:hover{
+    border-color:var(--accent)!important; }
+  /* lift — the treasury coin is a card */
+  .coin:hover{ transform:translateY(-1px); }
+  /* danger — the sheet's destructive controls */
+  .item-modal-close:hover, .spell-rm:hover, .ft-rm:hover{
+    color:var(--bad)!important; border-color:var(--bad)!important; }
+  .att-dropzone:hover, .att-dropzone.dragover{
+    border-color:var(--accent)!important;
+    background:linear-gradient(90deg,rgba(var(--ember-rgb),.075),rgba(var(--ember-rgb),0) 72%)!important; }
+}
+</style>
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+
+<div class="grain"></div>
+<canvas id="embers"></canvas>
+<div class="vignette"></div>
+
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">CHARACTER</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="app">
+
+  <header class="masthead">
+    <div class="page-eyebrow">THE SHEET · WHO YOU ARE</div>
+    <h1>The Lore Weaver's Cauldron</h1>
+    <div class="page-rule">✦</div>
+    <div class="rune-divider"><span>✦</span></div>
+  </header>
+
+  <div id="loading" class="loading">
+    <div class="rune">🕯️</div>
+    <p>Loading the campaign's state…</p>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <div class="tab active" data-tab="character" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">⚔ Character</div>
+    <div class="tab" data-tab="spells" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">✨ Spells</div>
+    <div class="tab" data-tab="inventory" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">🎒 Equipment</div>
+    <div class="tab" data-tab="currency" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">🪙 Treasury</div>
+    <div class="tab" data-tab="notes" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📜 Notes</div>
+  </nav>
+
+  <!-- ═══════════ KARAKTÄR ═══════════ -->
+  <section class="fresh-frame panel active" id="panel-character">
+
+    <div class="char-header">
+      <div class="portrait-frame" id="portrait" title="Your portrait — click to view or change it">
+        <span class="emoji" id="portrait-emoji">🧙‍♀️</span>
+        <div class="portrait-empty">
+          <span class="pe-glyph">✦</span>
+          <span class="pe-label">No portrait yet</span>
+          <span class="pe-hint">Generate one from the portrait panel</span>
+          <span class="pe-hint pe-hint-codex">Generate one from the character sheet</span>
+        </div>
+        <span class="hint">📷 Add image</span>
+        <span class="hint hint-codex">Open character sheet</span>
+        <input type="file" id="portrait-input" accept="image/*" aria-label="Upload portrait image">
+      </div>
+      <div class="char-identity">
+        <div class="char-name" id="char-name">Thalindra Mörkeld</div>
+        <div class="char-class" id="char-class">Halvälva · Eldbesvärjare · Nivå 7</div>
+        <div class="char-meta">
+          <span class="stat"><i>AC</i><b>14</b></span>
+          <span class="stat"><i>INIT</i><b>+3</b></span>
+          <span class="stat"><i>PERC</i><b>+2</b></span>
+          <span class="stat"><i>FART</i><b>30 ft</b></span>
+          <span class="stat"><i>PROF</i><b>+3</b></span>
+        </div>
+      </div>
+      <div class="vitals">
+        <div class="vital">
+          <div class="vital-head">
+            <span class="label">❤ Hit Points</span>
+            <span class="nums"><span id="hp-cur">38</span><small> / <span id="hp-max">52</span></small></span>
+          </div>
+          <div class="trough" id="hp-trough"><div class="fill hp" id="hp-bar" style="width:73%"></div></div>
+        </div>
+
+        <div class="vital wide">
+          <div class="vital-head">
+            <span class="label">⭐ Experience</span>
+            <span class="nums"><span id="xp-cur">0</span><small> / <span id="xp-next">—</span></small></span>
+          </div>
+          <div class="trough"><div class="fill xp" id="xp-bar" style="width:0%"></div></div>
+        </div>
+
+        <div class="vital wide exh-vital">
+          <div class="vital-head">
+            <span class="label">😮‍💨 Exhaustion</span>
+            <span class="exh-pips" id="exh-pips"></span>
+          </div>
+          <div class="exh-text" id="exh-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- (2026-09-30, rostad: "Generate your portrait" + "Export to Forge" borttagna —
+         porträttet klickas direkt för målning/galleri, Forge-sparning flyttad till
+         karaktärsarks-modalen i chat.html) -->
+
+    <div class="insp-row">
+      <span class="insp-badge off" id="insp-badge">✨ Inspiration — <b>Not available</b></span>
+    </div>
+
+    <div class="section-title">Abilities</div>
+    <div class="abilities" id="abilities"></div>
+
+    <div class="section-title">Traits</div>
+    <div class="traits" id="traits"></div>
+
+    <div class="section-title">Saving Throws</div>
+    <div class="traits" id="saves"></div>
+
+    <div class="section-title">Skills</div>
+    <div class="sk-grid" id="skills"></div>
+
+    <div id="features-section" style="display:none">
+      <div class="section-title">Features</div>
+      <div class="sheet-lock" hidden>⚔ Sheet locked — finish the fight first. Spells, feats and fighting styles can be corrected between scenes.</div>
+      <div class="sp-cap" id="feat-cap"></div>
+      <div class="fs-row" id="fs-row" style="display:none">
+        <label for="fs-select">Fighting style</label>
+        <select id="fs-select" onchange="onFightingStyleChange(this.value)"></select>
+      </div>
+      <div class="ft-list" id="features"></div>
+      <div class="sheet-edit">
+        <button class="rune-btn sheet-edit-btn" id="feat-add-btn" onclick="toggleFeatForm()">＋ Add a feature or feat</button>
+        <span class="notes-hint">Feats too — one for one. If the codex assumed a feat you never picked, drop it and add the right one.</span>
+      </div>
+      <form class="sheet-form" id="feat-form" style="display:none" onsubmit="return addFeature(event)">
+        <input id="ff-name" placeholder="Feature or feat name" maxlength="80" required autocomplete="off">
+        <input id="ff-level" type="number" min="0" max="20" value="1" aria-label="Level gained">
+        <input id="ff-desc" class="sf-full" placeholder="What it does (optional)" maxlength="400" autocomplete="off">
+        <div class="sheet-form-actions">
+          <button class="rune-btn btn-gold" type="submit">Save feature</button>
+          <button class="rune-btn" type="button" onclick="toggleFeatForm(false)">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="resistances-section" style="display:none">
+      <div class="section-title">Resistances</div>
+      <div class="res-grid" id="res-chips"></div>
+    </div>
+
+    <div id="training-section" style="display:none">
+      <div class="section-title">Training</div>
+      <div class="tr-list" id="training-list"></div>
+    </div>
+
+    <!-- ── BACKSTORY — genererad vid karaktärsskapande (read-only) ── -->
+    <div class="backstory-wrap">
+      <div class="section-title">📜 Backstory <span class="notes-hint">— the tale of who you were before the adventure began</span></div>
+      <div class="backstory-text" id="backstory-text"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ UTRUSTNING ═══════════ -->
+  <section class="fresh-frame panel" id="panel-inventory">
+
+    <div class="section-title">Gear & Weapons</div>
+    <div class="inv-grid" id="inv-grid"></div>
+    <div class="inv-summary">
+      <span>Total weight: <b id="inv-weight">0</b> / 120 lbs <span id="inv-warn"></span></span>
+      <span>Items: <b id="inv-count">0</b></span>
+    </div>
+    <div class="inv-managed-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Inventory is managed by the DM &amp; Lorekeeper — items appear here as you find, use, or equip them.</div>
+    <div id="item-modal-container"></div>
+  </section>
+
+  <!-- ═══════════ BESVÄRJELSER ═══════════ -->
+  <section class="panel" id="panel-spells">
+
+    <div class="section-title">✨ Spells</div>
+    <div class="sheet-lock" hidden>⚔ Sheet locked — finish the fight first. Spells, feats and fighting styles can be corrected between scenes.</div>
+    <div class="sp-cap" id="sp-cap"></div>
+    <div class="spell-slots" id="spell-slots"></div>
+    <div class="spells-grid" id="spells-grid"></div>
+    <div class="sheet-edit">
+      <button class="rune-btn sheet-edit-btn" id="spell-add-btn" onclick="toggleSpellForm()">＋ Add a spell</button>
+      <span class="notes-hint">Char-gen pick the wrong spell? Drop it with ✕ and add the one you should have had — nothing else on your sheet changes.</span>
+    </div>
+    <form class="sheet-form" id="spell-form" style="display:none" onsubmit="return addSpell(event)">
+      <input id="sf-name" placeholder="Spell name" maxlength="80" required autocomplete="off">
+      <select id="sf-level" aria-label="Spell level">
+        <option value="0">Cantrip</option>
+        <option value="1">Level 1</option>
+        <option value="2">Level 2</option>
+        <option value="3">Level 3</option>
+        <option value="4">Level 4</option>
+        <option value="5">Level 5</option>
+        <option value="6">Level 6</option>
+        <option value="7">Level 7</option>
+        <option value="8">Level 8</option>
+        <option value="9">Level 9</option>
+      </select>
+      <input id="sf-school" class="sf-full" placeholder="School — e.g. Transmutation (optional)" maxlength="40" autocomplete="off">
+      <input id="sf-desc" class="sf-full" placeholder="What it does (optional)" maxlength="400" autocomplete="off">
+      <div class="sheet-form-actions">
+        <button class="rune-btn btn-gold" type="submit">Save spell</button>
+        <button class="rune-btn" type="button" onclick="toggleSpellForm(false)">Cancel</button>
+      </div>
+    </form>
+    <div class="spells-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Cantrips (level 0) are always ready and cost no slots. Each leveled spell you cast spends one spell slot — when a slot is spent it stays spent until a long rest restores it. The Lorekeeper assigns new spells as you learn them, and long rests refill your slots automatically.</div>
+  </section>
+
+  <!-- ═══════════ SKATTKAMMARE ═══════════ -->
+  <section class="panel" id="panel-currency">
+
+    <div class="section-title">Coins & Gems</div>
+    <div class="currency-grid" id="currency-grid"></div>
+
+    <div class="hoard">
+      <div class="label">The Hoard's Total Value</div>
+      <div class="value" id="total-gold">0 gp</div>
+      <div class="sub" id="total-sub"></div>
+    </div>
+
+    <div class="section-title">Ledger</div>
+    <div id="tx-log"></div>
+  </section>
+
+  <!-- ═══════════ ANTECKNINGAR ═══════════ -->
+  <section class="panel" id="panel-notes">
+
+    <div class="notes-layout">
+      <div class="notes-main">
+        <div class="section-title">Free Notes <span class="notes-hint">— write freely about your character, the world, your goals…</span></div>
+        <textarea id="notes-editor" aria-label="Free notes — anything about your character" spellcheck="false" placeholder="# My Character
+
+Write freely here — backstory, goals, relationships, theories about the world…
+
+Markdown is not rendered, but the structure is yours."></textarea>
+        <div class="notes-actions">
+          <button class="rune-btn btn-gold" onclick="saveNotes()">💾 Save Notes</button>
+          <span class="notes-status" id="notes-status"></span>
+        </div>
+      </div>
+
+      <div class="notes-side">
+        <div class="section-title">Attachments</div>
+        <div class="att-dropzone" id="att-dropzone">
+          <span class="att-icon">📎</span>
+          <span class="att-text">Drag files here or <b>click</b></span>
+          <span class="att-formats">.pdf · .md · .txt</span>
+          <input type="file" id="att-input" multiple accept=".pdf,.md,.txt" aria-label="Upload attachment (PDF, Markdown or text)">
+        </div>
+        <div class="att-list" id="att-list"></div>
+      </div>
+    </div>
+
+    <!-- ── KARAKTÄRSUTVECKLING (Lorekeeper character_updates) — read-only ──
+         Lorekeeper lägger till backstory/traits/förmågor här allt eftersom
+         spelet utvecklas. Separat från dina egna anteckningar (ovan) så att
+         inget skrivs över. -->
+    <div class="growth-wrap">
+      <div class="section-title">🛡️ Character Growth <span class="notes-hint">— things the Lorekeeper has learned about you</span></div>
+      <div class="growth-list" id="growth-list"></div>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="api.js?v=20261021a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+<script src="i18n.js?v=20261028a"></script>
+<script>
+// Auth-guard — omdirigera till porten om ej inloggad
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+</script>
+<script>
+// ═══════════════════════════════════════
+// GAME STATE — laddas från backend via API.getCampaign()
+// ═══════════════════════════════════════
+const state = {
+  character: {},
+  inventory: [],
+  currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
+  transactions: [],
+  world: {},
+  attachments: [],
+};
+
+let _AV_SEQ = {};
+let _CHAR_CAMPAIGN = '';
+const _AV_TOKEN = new WeakMap();
+function _avToken(kind, entry) {
+  if (entry && entry.disk_name) {
+    // Kampanjsopat: valv-startade äventyr kopierar sin avatar till 'player.png'
+    // (main.py ~9663) — samma stam i två kampanjer kan bära olika bytes, så
+    // cid prefixas alltid. Alla andra filnamn är redan slumpunika (key__hex8).
+    const stem = encodeURIComponent(String(entry.disk_name).replace(/\.[a-z0-9]+$/i, ''));
+    return encodeURIComponent(_CHAR_CAMPAIGN || 'c') + '-' + stem;
+  }
+  if (entry && entry.size) return 'sz' + entry.size;
+  // Svaga fallback per entry-objekt (inkommande disk_name efter mutation) →
+  // stabil seq-tagg: samma objekt ger samma URL omgående → ingen reload-bränning.
+  let t = _AV_TOKEN.get(entry);
+  if (!t) { _AV_SEQ[kind] = (_AV_SEQ[kind] || 0) + 1; t = encodeURIComponent(_CHAR_CAMPAIGN || 'c') + '-seq-' + _AV_SEQ[kind]; _AV_TOKEN.set(entry, t); }
+  return t;
+}
+function _avEntry(kind) { return (state.avatars && state.avatars[kind]) || {}; }
+function _avUrl(kind, w) {
+  const e = _avEntry(kind);
+  return API.avatarUrl(kind) + '?v=' + _avToken(kind, e) + (w ? '&w=' + w : '');
+}
+// Fräsch kampanjstate efter mutation → riktiga disk_name på URL:arna.
+// Inkallad AFTER mutation så headern/modalen aldrig står med föråldrad state.
+async function _avRefreshState() {
+  try {
+    const { campaign } = await API.getCampaign();
+    const raw = (campaign && campaign._raw) || {};
+    if (raw.avatars && typeof raw.avatars === 'object') {
+      state.avatars = raw.avatars;
+      renderHeader();
+      renderInventory();
+      const ov = document.getElementById('avatar-overlay');
+      if (ov && ov.classList.contains('show')) openAvatarModal();
+    }
+  } catch (_) { /* seq-URL fungerar tills vidare */ }
+}
+
+// ═══════════════════════════════════════
+// INIT — hämta kampanjens tillstånd från backend
+// ═══════════════════════════════════════
+(async function init() {
+  try {
+    const { campaign } = await API.getCampaign();
+    if (!campaign) { showNoCampaign(); return; }
+    // Initialize i18n with campaign language
+    const lang = (campaign._raw && campaign._raw.meta && campaign._raw.meta.language) || 'en';
+    I18N.init(lang);
+    const raw = campaign._raw || {};
+    state.character    = raw.character || {};
+    state.inventory    = Array.isArray(raw.inventory) ? raw.inventory : [];
+    state.currency     = Object.assign({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }, raw.currency);
+    state.transactions = Array.isArray(raw.transactions) ? raw.transactions : [];
+    state.world        = raw.world || {};
+    state.attachments  = Array.isArray(raw.attachments) ? raw.attachments : [];
+    state.avatars      = raw.avatars || {};
+    _CHAR_CAMPAIGN     = (raw.meta && raw.meta.campaign_id) || '';
+    renderAll();
+    // 5e-grindarna för codex-rättelser (chips, nivå-lås, stridslås) — async
+    loadSheetLimits();
+    document.getElementById('loading').style.display = 'none';
+  } catch (e) {
+    showNoCampaign(I18N.t('Kampanjen kunde inte laddas — kontrollera anslutningen och försök igen.'));
+  }
+})();
+
+function showNoCampaign(msg) {
+  document.getElementById('loading').style.display = 'none';
+  document.querySelector('.tabs').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+  const box = document.createElement('section');
+  box.className = 'panel no-campaign';
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="rune">🗺️</div>
+    <h2>${I18N.t('Ingen aktiv kampanj — skapa ett äventyr först')}</h2>
+    <p>${msg || I18N.t('Karaktärsarket fylls på när spelledaren väckt världen till liv.')}</p>
+    <a class="rune-btn btn-gold" href="adventure.html">${I18N.t('✦ Skapa äventyr')}</a>`;
+  document.querySelector('.app').appendChild(box);
+}
+
+function renderAll() {
+  renderHeader();
+  renderHp();
+  renderXp();
+  renderAbilities();
+  renderTraits();
+  renderSaves();
+  renderInspiration();
+  renderSkills();
+  renderFeatures();
+  renderResistances();
+  renderExhaustion();
+  renderDarkvision();
+  renderTraining();
+  renderInventory();
+  renderSpells();
+  renderCurrency();
+  renderTransactions();
+  renderNotes();
+  renderAttachments();
+  renderGrowth();
+  renderBackstory();
+}
+
+// ═══════════════════════════════════════
+// KARAKTÄRSHUVUD — namn, klass, AC, INIT m.m.
+// ═══════════════════════════════════════
+function fmtMod(m) { return m >= 0 ? '+' + m : '' + m; }
+
+function renderHeader() {
+  const c = state.character;
+  const name = c.name || I18N.t('Namnlös äventyrare');
+  document.getElementById('char-name').textContent = name;
+  document.getElementById('char-class').textContent =
+    [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · ' + I18N.t('Nivå') + ' ' + c.level : '');
+  document.title = name + ' — ' + I18N.t('The Lore Weaver\'s Cauldron');
+  // Porträtt: nytt avatar-system (state.avatars / AI-genererad eller uppladdad)
+  // först — fallback till gammal base64-portrait i character.portrait.
+  const avatarEntry = state.avatars && state.avatars.player;
+  const _frame = document.getElementById('portrait');
+  const _emoji = document.getElementById('portrait-emoji');
+  if (avatarEntry) {
+    _emoji.style.display = 'none';
+    _frame.classList.add('has-portrait');
+    let img = _frame.querySelector('img');
+    if (!img) { img = document.createElement('img'); _frame.insertBefore(img, _frame.querySelector('.hint')); }
+    img.src = _avUrl('player', 512);
+  } else if (c.portrait) {
+    _emoji.style.display = 'none';
+    _frame.classList.add('has-portrait');
+    let img = _frame.querySelector('img');
+    if (!img) { img = document.createElement('img'); _frame.insertBefore(img, _frame.querySelector('.hint')); }
+    img.src = c.portrait;
+  } else {
+    // Tomt tillstånd: ingraverad ram (CSS) — returnera från t.ex. borttagen avatar.
+    _frame.classList.remove('has-portrait');
+    _emoji.style.display = '';
+    const stale = _frame.querySelector('img');
+    if (stale) stale.remove();  // 404:ad gammal avatar syns inte längre
+  }
+  const dex  = c.abilities?.DEX?.mod ?? 0;
+  const wis  = c.abilities?.WIS?.mod ?? 0;
+  const meta = [
+    ['AC',   c.ac ?? '—'],
+    ['INIT', fmtMod(c.initiative ?? dex)],
+    ['PERC', fmtMod(c.perception ?? wis)],
+    [I18N.getLang() === 'en' ? 'SPD' : 'FART', c.speed || '30 ft'],
+    ['PROF', '+' + (c.proficiency ?? 2)],
+  ];
+  document.querySelector('.char-meta').innerHTML = meta
+    .map(([k, v]) => `<span class="stat"><i>${k}</i><b>${v}</b></span>`).join('');
+}
+
+// ═══════════════════════════════════════
+// XP
+// ═══════════════════════════════════════
+function renderXp() {
+  const xp = state.character.xp || {};
+  const cur  = xp.current ?? 0;
+  const next = xp.next_level ?? xp.next ?? 0;
+  document.getElementById('xp-cur').textContent = cur.toLocaleString(I18N.getLang() === 'sv' ? 'sv-SE' : 'en-US');
+  document.getElementById('xp-next').textContent = next ? next.toLocaleString(I18N.getLang() === 'sv' ? 'sv-SE' : 'en-US') + I18N.t(' till nästa nivå') : '—';
+  document.getElementById('xp-bar').style.width = (next > 0 ? Math.min(100, (cur / next) * 100) : 0) + '%';
+}
+
+// ═══════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ═══════════════════════════════════════
+// KODEX-IFRAME — sub-vyerna (Spells/Equipment/Treasury/Notes) styrs av
+// rad 2 i Codex-headern (chat.html) när sidan ligger i Codex-iframe.
+// ═══════════════════════════════════════
+function codexNotifyTab() {
+  const active = document.querySelector('.tab.active');
+  const t = active ? active.dataset.tab : null;
+  if (!t) return;
+  try { window.parent.postMessage({ type: 'codex-subtab-changed', tab: t }, '*'); } catch (_) {}
+}
+if (window.self !== window.top) {
+  document.documentElement.classList.add('in-codex');
+  window.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.type === 'codex-subtab' && typeof d.tab === 'string') {
+      const tab = document.querySelector('.tab[data-tab="' + d.tab + '"]');
+      if (tab && !tab.classList.contains('active')) tab.click();
+    }
+  });
+  codexNotifyTab();
+}
+
+// ═══════════════════════════════════════
+// ANTECKNINGAR — fria noteringar om karaktären
+// ═══════════════════════════════════════
+let notesDirty = false;
+const notesEditor = document.getElementById('notes-editor');
+const notesStatus = document.getElementById('notes-status');
+
+notesEditor.addEventListener('input', () => { notesDirty = true; notesStatus.textContent = ''; });
+
+function renderNotes() {
+  notesEditor.value = state.character.notes || '';
+  notesDirty = false;
+}
+
+async function saveNotes() {
+  try {
+    await API.updateCharacter({ notes: notesEditor.value });
+    state.character.notes = notesEditor.value;
+    notesDirty = false;
+    notesStatus.classList.remove('err');
+    notesStatus.textContent = I18N.t('✓ Sparat');
+    setTimeout(() => { if (!notesDirty) notesStatus.textContent = ''; }, 2000);
+  } catch (e) {
+    notesStatus.classList.add('err');
+    notesStatus.textContent = I18N.t('⚠ Kunde inte spara: ') + (e.message || I18N.t('okänt fel'));
+  }
+}
+
+// ═══════════════════════════════════════
+// KARAKTÄRSUTVECKLING — Lorekeeper:s character_updates (read-only)
+// ═══════════════════════════════════════
+function _esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function renderGrowth() {
+  const list = document.getElementById('growth-list');
+  if (!list) return;
+  const updates = state.character.updates || [];
+  if (!updates.length) {
+    list.innerHTML = `<div class="growth-empty fresh-empty"><span class="fe-glyph">✦</span>${I18N.t('Inget ännu — Lorekeeper lägger till backstory, drag och förmågor här allt eftersom äventyret utvecklar din karaktär.')}</div>`;
+    return;
+  }
+  // Nyaste först
+  const items = updates.slice().reverse();
+  list.innerHTML = items.map(u => {
+    const field = _esc(u.field || 'note');
+    const text = _esc(u.text || '');
+    const turn = u.turn != null ? ` · ${I18N.t('tur')} ${u.turn}` : '';
+    return `<div class="growth-item">
+      <span class="growth-field">${field}</span>
+      <div class="growth-text">${text}</div>
+      <div class="growth-turn">🦉 Lorekeeper${turn}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// BACKSTORY — genererad backstory (read-only)
+// ═══════════════════════════════════════
+function renderBackstory() {
+  const el = document.getElementById('backstory-text');
+  if (!el) return;
+  const c = state.character || {};
+  const story = c.story || c.background || '';
+  if (!story) {
+    el.innerHTML = `<div class="backstory-empty fresh-empty"><span class="fe-glyph">✦</span>No backstory written yet — the story unfolds as you adventure.</div>`;
+    return;
+  }
+  el.innerHTML = _esc(story).replace(/\n/g, '<br>');
+}
+
+// ═══════════════════════════════════════
+// BILAGOR — pdf/md/txt som klickbara länkar
+// ═══════════════════════════════════════
+const ATT_ICONS = { '.pdf': '📕', '.md': '📄', '.txt': '📄' };
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function renderAttachments() {
+  const list = document.getElementById('att-list');
+  const atts = state.attachments || [];
+  if (atts.length === 0) {
+    list.innerHTML = `<div class="att-empty fresh-empty"><span class="fe-glyph">✦</span>${I18N.t('Inga bilagor ännu.')}</div>`;
+    return;
+  }
+  list.innerHTML = atts.map(a => `
+    <div class="att-item">
+      <span class="att-fi">${ATT_ICONS[a.ext] || '📄'}</span>
+      <a href="${API.attachmentUrl(a.id)}" target="_blank" rel="noopener" title="${I18N.t('Öppna')} ${a.name}">${a.name}</a>
+      <span class="att-size">${fmtSize(a.size)}</span>
+      <button class="att-del" onclick="deleteAttachment('${a.id}')" title="${I18N.t('Ta bort')}">✕</button>
+    </div>`).join('');
+}
+
+async function deleteAttachment(attId) {
+  try {
+    await API.deleteAttachment(attId);
+    state.attachments = (state.attachments || []).filter(a => a.id !== attId);
+    renderAttachments();
+    toast(I18N.t('🗑️ Bilaga borttagen'));
+  } catch (e) {
+    toast('⚠ ' + (e.message || I18N.t('Kunde inte ta bort bilagan')));
+  }
+}
+
+// Dropzone-hantering
+const attDropzone = document.getElementById('att-dropzone');
+const attInput = document.getElementById('att-input');
+
+attDropzone.addEventListener('click', () => attInput.click());
+['dragenter', 'dragover'].forEach(ev => attDropzone.addEventListener(ev, e => { e.preventDefault(); attDropzone.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(ev => attDropzone.addEventListener(ev, e => { e.preventDefault(); attDropzone.classList.remove('dragover'); }));
+attDropzone.addEventListener('drop', e => { uploadFiles(e.dataTransfer.files); });
+attInput.addEventListener('change', e => { uploadFiles(e.target.files); attInput.value = ''; });
+
+async function uploadFiles(fileList) {
+  const ALLOWED = ['.pdf', '.md', '.txt'];
+  for (const f of fileList) {
+    const ext = '.' + f.name.split('.').pop().toLowerCase();
+    if (!ALLOWED.includes(ext)) {
+      toast('⚠ ' + f.name + I18N.t(' — endast .pdf, .md och .txt tillåts'));
+      continue;
+    }
+    try {
+      const { attachment } = await API.uploadAttachment(f);
+      if (!state.attachments) state.attachments = [];
+      state.attachments.push(attachment);
+      renderAttachments();
+      toast('📎 ' + f.name + I18N.t(' uppladdad'));
+    } catch (e) {
+      toast(I18N.t('⚠ Kunde inte ladda upp ') + f.name + ': ' + (e.message || I18N.t('okänt fel')));
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+async function doLogout() {
+  try { await API.logout(); } catch(_) {}
+  sessionStorage.removeItem('dnd_user');
+  location.href = 'login.html';
+}
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════
+// PORTRAIT — uppladdning synkas via samma avatar-system som chatten
+// ═══════════════════════════════════════
+const portrait = document.getElementById('portrait');
+const portraitInput = document.getElementById('portrait-input');
+// Inne i Codex-iframe: klick på porträttet (både lilla ramen och hero-
+// bakgrunden — samma #portrait) öppnar KARAKTÄRSARKS-MODALEN hos föräldern
+// (chat.html cs-overlay) i stället för den lokala avatar-modalen. Fristående
+// behåller lokal modal. Detekteringen matchar .in-codex-villkoret (sätts
+// ovan i denna script-block when embedded — och av embed.js).
+function _isCodexEmbedded() {
+  if (document.documentElement.classList.contains('in-codex')) return true;
+  try { return window.self !== window.top; } catch (_) { return true; }
+}
+if (_isCodexEmbedded()) portrait.title = 'Open character sheet';
+portrait.addEventListener('click', () => {
+  if (_isCodexEmbedded()) {
+    try { window.parent.postMessage({ type: 'codex-portrait-click', kind: 'player' }, '*'); } catch (_) {}
+    return;
+  }
+  openAvatarModal();
+});
+portraitInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const res = await API.uploadAvatar('player', file);
+    state.avatars = state.avatars || {};
+    // Okänt nyt filnamn → WeakMap-seq-tagg bustar omgående; _avRefreshState
+    // byter till riktiga disk_name (cachebar URL) strax efter.
+    state.avatars.player = {
+      gallery: new Array((res && res.gallery_count) || 1).fill({}),
+      gallery_index: (res && res.gallery_index) || 0,
+    };
+    renderHeader();
+    toast(I18N.t('🖼 Porträtt sparat'));
+    await _avRefreshState();
+  } catch (err) {
+    toast('⚠ ' + (err.message || I18N.t('Kunde inte spara porträttet')));
+  }
+  portraitInput.value = '';
+});
+
+// ═══════════════════════════════════════
+// HP — visas från backend-state, ändras via DM/Lorekeeper
+// ═══════════════════════════════════════
+function renderHp() {
+  const hp = state.character.hp || { current: 0, max: 0 };
+  const pct = hp.max > 0 ? (hp.current / hp.max) * 100 : 0;
+  document.getElementById('hp-cur').textContent = hp.current ?? 0;
+  document.getElementById('hp-max').textContent = hp.max ?? 0;
+  document.getElementById('hp-bar').style.width = pct + '%';
+  document.getElementById('hp-trough').classList.toggle('low', hp.max > 0 && pct < 25);
+}
+
+// ═══════════════════════════════════════
+// ABILITIES / TRAITS / SAVES
+// ═══════════════════════════════════════
+function abilityNames() {
+  return I18N.getLang() === 'en'
+    ? { STR: 'STR', DEX: 'DEX', CON: 'CON', INT: 'INT', WIS: 'WIS', CHA: 'CHA' }
+    : { STR: 'STY', DEX: 'SMI', CON: 'TÅL', INT: 'INT', WIS: 'VIS', CHA: 'KAR' };
+}
+const abilityOrder = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+const ABILITY_FULL = { STR: 'Strength', DEX: 'Dexterity', CON: 'Constitution', INT: 'Intelligence', WIS: 'Wisdom', CHA: 'Charisma' };
+
+function renderAbilities() {
+  const abilities = state.character.abilities || {};
+  document.getElementById('abilities').innerHTML = abilityOrder.map(key => {
+    const v = abilities[key] || {};
+    const score = v.score ?? 10;
+    const mod = v.mod ?? Math.floor((score - 10) / 2);
+    return `<div class="ability" title="${ABILITY_FULL[key] || key}">
+      <div class="abbr">${abilityNames()[key]}</div>
+      <div class="score">${score}</div>
+      <div class="mod">${mod >= 0 ? '+' + mod : mod}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTraits() {
+  const traits = state.character.traits || [];
+  document.getElementById('traits').innerHTML = traits.length
+    ? traits.map(t => {
+        // Backend kan skicka antingen strängar eller {name, magic}-objekt
+        if (typeof t === 'string') return `<span class="trait">${t}</span>`;
+        return `<span class="trait ${t.magic ? 'magic' : ''}">${t.magic ? '✦ ' : ''}${t.name}</span>`;
+      }).join('')
+    : `<span class="empty-hint">${I18N.t('Inga egenskaper noterade ännu…')}</span>`;
+}
+
+function renderSaves() {
+  const saves = state.character.saves || [];
+  document.getElementById('saves').innerHTML = saves.length
+    ? saves.map(s => {
+        if (typeof s === 'string') return `<span class="trait">${s}</span>`;
+        return `<span class="trait ${s.prof ? 'prof' : ''}">${s.prof ? '●' : '○'} ${s.name}</span>`;
+      }).join('')
+    : `<span class="empty-hint">${I18N.t('Inga sparade sparningskast ännu…')}</span>`;
+}
+
+// ═══════════════════════════════════════
+// 5E-MEKANIK — Inspiration / Skills / Features (2026-08-08)
+// ═══════════════════════════════════════
+function renderInspiration() {
+  const el = document.getElementById('insp-badge');
+  if (!el) return;
+  const on = !!(state.character && state.character.inspiration);
+  el.classList.toggle('on', on);
+  el.classList.toggle('off', !on);
+  el.innerHTML = '✨ Inspiration — <b>' + (on ? 'Available' : 'Not available') + '</b>';
+}
+
+function renderSkills() {
+  const el = document.getElementById('skills');
+  if (!el) return;
+  const c = state.character || {};
+  const skills = Array.isArray(c.skills) ? c.skills : [];
+  const abilities = c.abilities || {};
+  const proficiency = parseInt(c.proficiency, 10) || 2;
+  if (!skills.length) {
+    el.innerHTML = `<span class="empty-hint">No skills recorded yet…</span>`;
+    return;
+  }
+  el.innerHTML = skills.map(s => {
+    const name = _esc(s && s.name);
+    const abil = String((s && s.ability) || '').toUpperCase();
+    const a = abilities[abil] || {};
+    let mod = a.mod;
+    if (mod == null && a.score != null) mod = Math.floor((a.score - 10) / 2);
+    if (mod == null) mod = 0;
+    const proficient = !!(s && s.proficient);
+    const bonus = mod + (proficient ? proficiency : 0);
+    const abbr = abilityNames()[abil] || abil || '—';
+    return `<div class="sk-row">
+      <span class="sk-prof" title="${proficient ? 'Proficient' : 'Not proficient'}">${proficient ? '●' : '○'}</span>
+      <b class="sk-name">${name}</b>
+      <span class="sk-abil">(${abbr})</span>
+      <span class="sk-bonus">${bonus >= 0 ? '+' : ''}${bonus}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderFeatures() {
+  const section = document.getElementById('features-section');
+  const el = document.getElementById('features');
+  if (!section || !el) return;
+  // 2026-10-21: sektionen är alltid synlig — den är spelarens enda yta att
+  // rätta char-genens antaganden (feats/fighting style), även när listan är tom.
+  section.style.display = '';
+  const features = Array.isArray(state.character && state.character.features) ? state.character.features : [];
+  renderFightingStyleRow(features);
+  if (!features.length) {
+    el.innerHTML = `<div class="ft-empty fresh-empty"><span class="fe-glyph">✦</span>No features on the sheet yet — add one below if the codex missed it.</div>`;
+    renderSheetLock();
+    return;
+  }
+  const items = features.slice().sort((a, b) => ((a && a.level) || 0) - ((b && b.level) || 0));
+  el.innerHTML = items.map(f => {
+    const lvl = f && f.level != null ? f.level : '';
+    const name = _esc(f && f.name);
+    const desc = f && f.description ? `<div class="ft-desc">${_esc(f.description)}</div>` : '';
+    return `<div class="ft-item">
+      ${lvl !== '' ? `<span class="ft-lvl">L${lvl}</span>` : ''}
+      <b class="ft-name">${name}</b>
+      <button class="ft-rm" type="button" title="Remove this feature" aria-label="Remove ${_escAttr(f && f.name)}" data-name="${_escAttr(f && f.name)}" onclick="removeFeature(this.dataset.name)">✕</button>${desc}
+    </div>`;
+  }).join('');
+  renderSheetLock();
+}
+
+// ═══════════════════════════════════════
+// KARAKTÄRSVAL — spelarens egna rättelser (2026-10-21)
+// Codexen var read-only: char-genens antaganden om spells/feats/fighting style
+// gick inte att ändra någonstans, så DM:ns "fixat" landade bara i en logg
+// (spelarfeedback 2026-10-21). De här funktionerna PATCHar
+// /api/campaign/character. notes-vägen finns kvar; abilities/hp/ac/xp är
+// fortfarande server-/Guardian-ägda och går INTE att ändra här.
+// ═══════════════════════════════════════
+const FIGHTING_STYLES = ['Archery', 'Defense', 'Dueling', 'Great Weapon Fighting', 'Two-Weapon Fighting', 'Protection', 'Blind Fighting', 'Interception', 'Superior Technique', 'Thrown Weapon Fighting', 'Unarmed Fighting'];
+
+function _escAttr(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _sheetSpells() { return Array.isArray(state.character.spells) ? state.character.spells.slice() : []; }
+function _sheetFeatures() { return Array.isArray(state.character.features) ? state.character.features.slice() : []; }
+
+// ── 5e-grindarna från /api/campaign/sheet-limits (2026-10-21) ──
+// UI:t får aldrig erbjuda något backend ändå avvisar: bara giltiga spell-
+// nivåer, tydliga räknare och låst ark mitt i strid.
+let SHEET_LIMITS = null;
+let _tipSeq = 0;
+
+async function loadSheetLimits() {
+  try {
+    const r = await API.sheetLimits();
+    SHEET_LIMITS = (r && r.limits) || null;
+  } catch (_) { SHEET_LIMITS = null; }
+  renderSheetCaps();
+  syncSpellLevelOptions();
+  // Features-ytan måste ritas om: fighting-style-listan kommer från klassens
+  // grindar och renderades med fallback-listan innan svaret fanns.
+  if (typeof renderFeatures === 'function') renderFeatures();
+}
+
+function _unlockLevelFor(level) {
+  if (!SHEET_LIMITS || !level) return null;
+  const kind = SHEET_LIMITS.caster_kind;
+  let needed = null;
+  if (kind === 'full') needed = level * 2 - 1;                  // 1,3,5,7,9,11,13,15,17
+  else if (kind === 'half') needed = level === 1 ? 2 : 4 * level - 3;   // 2,5,9,13,17
+  else if (kind === 'pact') needed = level === 1 ? 1 : 2 * level - 1;   // 1,3,5,7,9
+  else if (kind === 'third') needed = ({1: 3, 2: 7, 3: 13, 4: 19})[level] || null;
+  // Bortom nivå 20 = klassen får aldrig den nivån (t.ex. half caster + nivå 9)
+  return (needed && needed <= 20) ? needed : null;
+}
+
+function _capChip(label, tip, cls) {
+  // Tooltipen är ett RIKTIGT element (inte ::after på en <button> — knappens
+  // pseudo-element målade inte i Chrome-headless och gick inte att mäta).
+  const id = tip ? 'cap-tip-' + (++_tipSeq) : '';
+  return `<span class="cap-chip${cls ? ' ' + cls : ''}">${label}` +
+    (tip ? `<button type="button" class="tip" aria-label="More info" aria-describedby="${id}" data-tip="${_escAttr(tip)}">?</button>` +
+           `<span class="tip-pop" role="tooltip" id="${id}">${_esc(tip)}</span>` : '') +
+    '</span>';
+}
+
+function renderSheetCaps() {
+  const L = SHEET_LIMITS;
+  _tipSeq = 0;
+  const sp = document.getElementById('sp-cap');
+  if (sp) {
+    if (!L) { sp.innerHTML = ''; }
+    else {
+      const c = L.counts || {};
+      const kindWord = {none: 'non-caster', half: 'half caster', pact: 'pact magic', third: 'third caster', full: 'full caster'}[L.caster_kind] || 'caster';
+      const next = _unlockLevelFor(L.allow_level + 1);
+      sp.innerHTML = [
+        _capChip(`${_esc(L.class || 'Adventurer')} · level ${L.level}`,
+          `${kindWord} — the limits below come from your class and level, not from the DM.`, 'cap-class'),
+        _capChip(`Spell level ≤ <b>${L.allow_level}</b>`,
+          L.allow_level <= 0
+            ? 'Your class has no spellcasting right now, so no leveled spells can be added.'
+            : `You can hold spells up to level ${L.allow_level} (5e: level ${L.max_level} for a ${kindWord} at level ${L.level}).` +
+              (next ? ` Level ${L.allow_level + 1} spells unlock at character level ${next}.` : '')),
+        _capChip(`Cantrips <b>${c.cantrips || 0} / ${L.allow_cantrips}</b>`,
+          L.max_cantrips === 0
+            ? 'This class has no cantrips in 5e. Anything already on the sheet is grandfathered: you can keep or remove it, but not add more.'
+            : `Cantrips cost no slot and are always ready. ${L.max_cantrips} at level ${L.level}.`),
+        _capChip(`Spells known <b>${c.leveled || 0} / ${L.allow_spells}</b>`,
+          `Leveled spells on your sheet. 5e allows ${L.max_spells} for a ${kindWord} at level ${L.level}.` +
+          (L.allow_spells > L.max_spells ? ' The extra headroom is so you can fix what char-gen handed you — not to grow.' : '')),
+      ].join('');
+    }
+  }
+  const ft = document.getElementById('feat-cap');
+  if (ft) {
+    ft.innerHTML = L
+      ? _capChip(`Features <b>${L.features} / ${L.max_features}</b>`,
+          'One for one: drop a feature you never picked and add the one you should have had. Extras cannot be stacked on top.')
+      : '';
+  }
+  renderSheetLock();
+}
+
+function renderSheetLock() {
+  const locked = !!(SHEET_LIMITS && SHEET_LIMITS.combat_active);
+  document.querySelectorAll('.sheet-lock').forEach(el => { el.hidden = !locked; });
+  document.querySelectorAll('.sheet-edit-btn, .spell-rm, .ft-rm, #fs-select').forEach(el => {
+    if (locked) { el.setAttribute('disabled', 'disabled'); el.classList.add('is-locked'); }
+    else { el.removeAttribute('disabled'); el.classList.remove('is-locked'); }
+  });
+}
+
+function _sheetLocked() {
+  if (SHEET_LIMITS && SHEET_LIMITS.combat_active) {
+    toast('⚔ Sheet locked — finish the fight first');
+    return true;
+  }
+  return false;
+}
+
+function syncSpellLevelOptions() {
+  const sel = document.getElementById('sf-level');
+  if (!sel || !SHEET_LIMITS) return;
+  [...sel.options].forEach(o => {
+    const lvl = parseInt(o.value, 10) || 0;
+    const ok = lvl === 0
+      ? (SHEET_LIMITS.counts.cantrips || 0) < SHEET_LIMITS.allow_cantrips
+      : lvl <= SHEET_LIMITS.allow_level;
+    o.disabled = !ok;
+    const base = lvl === 0 ? 'Cantrip' : 'Level ' + lvl;
+    let why = '';
+    if (!ok) {
+      if (lvl === 0) why = ' — none for this class';
+      else { const u = _unlockLevelFor(lvl); why = u ? ` — unlocks at level ${u}` : ' — out of reach'; }
+    }
+    o.textContent = base + why;
+  });
+  const firstOk = [...sel.options].find(o => !o.disabled);
+  if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled && firstOk) sel.value = firstOk.value;
+}
+
+async function _patchSheet(payload, okMsg) {
+  try {
+    const res = await API.updateCharacter(payload);
+    if (res && res.character) {
+      // Backendens svar är hela character-objektet (inkl. den sanna updates-loggen)
+      state.character = Object.assign({}, state.character, res.character);
+    }
+    // Verifiera att servern FAKTISKT applicerade ändringen — en äldre backend
+    // svarar 200 men ignorerar okända fält, och då ska vi inte ljuga i en toast.
+    const _namesOf = (list) => (Array.isArray(list) ? list : [])
+      .map(x => String((x && x.name) || '').trim().toLowerCase()).sort().join('|');
+    if (payload && 'spells' in payload && _namesOf(payload.spells) !== _namesOf(state.character.spells)) {
+      toast('⚠ The sheet did not change — please try again, and tell us if it keeps failing.');
+      return false;
+    }
+    if (payload && 'features' in payload && _namesOf(payload.features) !== _namesOf(state.character.features)) {
+      toast('⚠ The sheet did not change — please try again, and tell us if it keeps failing.');
+      return false;
+    }
+    if (payload && 'fighting_style' in payload &&
+        String(state.character.fighting_style || '') !== String(payload.fighting_style || '')) {
+      toast('⚠ The fighting style did not change — please try again, and tell us if it keeps failing.');
+      return false;
+    }
+    renderFeatures();
+    renderSpells();
+    renderGrowth();
+    await loadSheetLimits();
+    toast(okMsg);
+    return true;
+  } catch (e) {
+    toast('⚠ ' + (e && e.message ? e.message : 'Could not save'));
+    return false;
+  }
+}
+
+function renderFightingStyleRow(features) {
+  const row = document.getElementById('fs-row');
+  const sel = document.getElementById('fs-select');
+  if (!row || !sel) return;
+  const list = Array.isArray(features) ? features : [];
+  const hasFs = !!state.character.fighting_style || list.some(f => f && /fighting\s*style/i.test(String(f.name || '')));
+  if (!hasFs) { row.style.display = 'none'; return; }
+  row.style.display = '';
+  const current = String(state.character.fighting_style || '');
+  // Klassens lista när vi har den — annars hela 5e-listan
+  const allowed = (SHEET_LIMITS && Array.isArray(SHEET_LIMITS.fighting_styles) && SHEET_LIMITS.fighting_styles.length)
+    ? SHEET_LIMITS.fighting_styles : FIGHTING_STYLES;
+  const opt = (s, note) => `<option value="${_escAttr(s)}"${s.toLowerCase() === current.toLowerCase() ? ' selected' : ''}>${_esc(s)}${note ? ' ' + note : ''}</option>`;
+  const opts = ['<option value="">— choose —</option>'].concat(allowed.map(s => opt(s)));
+  // Ett legacy-val utanför klassens lista ska synas (och gå att byta bort) — aldrig tystas
+  if (current && !allowed.some(s => s.toLowerCase() === current.toLowerCase())) opts.push(opt(current, '(current)'));
+  sel.innerHTML = opts.join('');
+}
+
+function toggleSpellForm(force) {
+  const f = document.getElementById('spell-form');
+  if (!f) return;
+  if (_sheetLocked()) return;
+  const show = force === undefined ? f.style.display === 'none' : !!force;
+  f.style.display = show ? '' : 'none';
+  if (show) { syncSpellLevelOptions(); const n = document.getElementById('sf-name'); if (n) n.focus(); }
+}
+
+function toggleFeatForm(force) {
+  const f = document.getElementById('feat-form');
+  if (!f) return;
+  if (_sheetLocked()) return;
+  const show = force === undefined ? f.style.display === 'none' : !!force;
+  // 1:1-regeln: inget att lägga till förrän en plats är fri
+  if (show && SHEET_LIMITS && SHEET_LIMITS.features >= SHEET_LIMITS.max_features) {
+    toast('You already hold ' + SHEET_LIMITS.max_features + ' features — remove one first (one for one).');
+    return;
+  }
+  f.style.display = show ? '' : 'none';
+  if (show) { const n = document.getElementById('ff-name'); if (n) n.focus(); }
+}
+
+async function addSpell(ev) {
+  if (ev) ev.preventDefault();
+  if (_sheetLocked()) return false;
+  const name = (document.getElementById('sf-name').value || '').trim();
+  if (!name) return false;
+  const level = parseInt(document.getElementById('sf-level').value, 10) || 0;
+  // Klientkoll (=backendens regel): bara nivåer klassen faktiskt kan
+  if (SHEET_LIMITS) {
+    if (level === 0 && (SHEET_LIMITS.counts.cantrips || 0) >= SHEET_LIMITS.allow_cantrips) {
+      toast('No cantrip slots left for this class');
+      return false;
+    }
+    if (level > 0 && level > SHEET_LIMITS.allow_level) {
+      const u = _unlockLevelFor(level);
+      toast('Level ' + level + ' spells are out of reach' + (u ? ' until character level ' + u : ''));
+      return false;
+    }
+  }
+  const list = _sheetSpells();
+  if (list.some(s => String(s.name || '').trim().toLowerCase() === name.toLowerCase())) {
+    toast('That spell is already in your spellbook');
+    return false;
+  }
+  list.push({
+    name: name,
+    level: level,
+    school: (document.getElementById('sf-school').value || '').trim(),
+    casting_time: '',
+    damage_dice: null,
+    description: (document.getElementById('sf-desc').value || '').trim(),
+  });
+  const ok = await _patchSheet({ spells: list }, '✨ ' + name + ' added to the spellbook');
+  if (ok) { document.getElementById('spell-form').reset(); toggleSpellForm(false); }
+  return false;
+}
+
+async function removeSpell(name) {
+  if (!name) return;
+  if (_sheetLocked()) return;
+  if (!confirm('Remove "' + name + '" from your spellbook?')) return;
+  const list = _sheetSpells().filter(s => String(s.name || '').trim().toLowerCase() !== String(name).trim().toLowerCase());
+  await _patchSheet({ spells: list }, 'Spell removed');
+}
+
+async function addFeature(ev) {
+  if (ev) ev.preventDefault();
+  if (_sheetLocked()) return false;
+  const name = (document.getElementById('ff-name').value || '').trim();
+  if (!name) return false;
+  if (SHEET_LIMITS && _sheetFeatures().length >= SHEET_LIMITS.max_features) {
+    toast('One for one — remove a feature before adding another');
+    return false;
+  }
+  const level = parseInt(document.getElementById('ff-level').value, 10);
+  const list = _sheetFeatures();
+  if (list.some(f => String(f.name || '').trim().toLowerCase() === name.toLowerCase())) {
+    toast('That feature is already on your sheet');
+    return false;
+  }
+  list.push({
+    name: name,
+    level: isNaN(level) ? 1 : Math.max(0, Math.min(20, level)),
+    description: (document.getElementById('ff-desc').value || '').trim(),
+  });
+  const ok = await _patchSheet({ features: list }, '⚔ ' + name + ' added');
+  if (ok) { document.getElementById('feat-form').reset(); toggleFeatForm(false); }
+  return false;
+}
+
+async function removeFeature(name) {
+  if (!name) return;
+  if (_sheetLocked()) return;
+  if (!confirm('Remove "' + name + '" from your features?')) return;
+  const list = _sheetFeatures().filter(f => String(f.name || '').trim().toLowerCase() !== String(name).trim().toLowerCase());
+  const payload = { features: list };
+  // Fighting style-valet hör till featuren — ta bort valet med den
+  if (/fighting\s*style/i.test(name)) payload.fighting_style = '';
+  await _patchSheet(payload, 'Feature removed');
+}
+
+async function onFightingStyleChange(v) {
+  if (_sheetLocked()) { renderFeatures(); return; }
+  if (v && SHEET_LIMITS && Array.isArray(SHEET_LIMITS.fighting_styles)
+      && !SHEET_LIMITS.fighting_styles.some(s => s.toLowerCase() === v.toLowerCase())) {
+    toast('Not a ' + (SHEET_LIMITS.class || 'class') + ' fighting style');
+    renderFeatures();
+    return;
+  }
+  const ok = await _patchSheet({ fighting_style: v || '' }, v ? ('⚔ Fighting style: ' + v) : 'Fighting style cleared');
+  if (!ok) renderFeatures();
+}
+
+// ═══════════════════════════════════════
+// 5E-MEKANIK P2 — Resistances / Exhaustion / Darkvision / Training (2026-08-08)
+// ═══════════════════════════════════════
+const RESISTANCE_EMOJI = { fire:'🔥', cold:'❄️', acid:'🧪', poison:'☠️', lightning:'⚡', thunder:'🌩️', radiant:'☀️', necrotic:'💀', psychic:'🧠', force:'💥', bludgeoning:'🔨', piercing:'🗡️', slashing:'⚔️' };
+const RESISTANCE_SUFFIX = { immunities: 'Immune', resistances: 'Resistant', vulnerabilities: 'Vulnerable' };
+const EXHAUSTION_PENALTIES = ['', 'ability checks', 'speed halved', 'attacks + saves', 'HP max halved', 'speed 0', 'death'];
+
+function renderResistances() {
+  const section = document.getElementById('resistances-section');
+  const el = document.getElementById('res-chips');
+  if (!section || !el) return;
+  const c = state.character || {};
+  const chips = [];
+  ['immunities', 'resistances', 'vulnerabilities'].forEach(key => {
+    const arr = Array.isArray(c[key]) ? c[key] : [];
+    arr.forEach(t => {
+      const type = String(t == null ? '' : t).trim().toLowerCase();
+      if (type) chips.push({ type, key });
+    });
+  });
+  if (!chips.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  el.innerHTML = chips.map(g =>
+    `<span class="res-chip ${g.key}">${RESISTANCE_EMOJI[g.type] || '✦'} ${_esc(g.type)} <em>${RESISTANCE_SUFFIX[g.key]}</em></span>`
+  ).join('');
+}
+
+function renderExhaustion() {
+  const pips = document.getElementById('exh-pips');
+  const text = document.getElementById('exh-text');
+  if (!pips || !text) return;
+  const lvl = Math.max(0, Math.min(6, parseInt(state.character && state.character.exhaustion, 10) || 0));
+  let html = '';
+  for (let i = 0; i < 6; i++) html += `<span class="exh-pip ${i < lvl ? 'on' : 'off'}">${i < lvl ? '●' : '○'}</span>`;
+  pips.innerHTML = html;
+  text.textContent = EXHAUSTION_PENALTIES[lvl] ? 'L' + lvl + ' — ' + EXHAUSTION_PENALTIES[lvl] : '';
+}
+
+function renderDarkvision() {
+  const c = state.character || {};
+  const dv = c.darkvision ? String(c.darkvision).trim() : '';
+  const meta = document.querySelector('.char-meta');
+  if (!meta) return;
+  let stat = meta.querySelector('.dv-stat');
+  if (!stat) { stat = document.createElement('span'); stat.className = 'stat dv-stat'; meta.appendChild(stat); }
+  stat.innerHTML = '<i>DV</i><b>' + _esc(dv || 'None') + '</b>';
+}
+
+function renderTraining() {
+  const section = document.getElementById('training-section');
+  const el = document.getElementById('training-list');
+  if (!section || !el) return;
+  const training = Array.isArray(state.character && state.character.training) ? state.character.training : [];
+  if (!training.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  el.innerHTML = training.map(t => {
+    const spent = Math.max(0, parseInt(t && t.days_spent, 10) || 0);
+    const needed = Math.max(1, parseInt(t && t.days_needed, 10) || 10);
+    const pct = Math.min(100, Math.round((spent / needed) * 100));
+    return `<div class="tr-item">
+      <div class="tr-head">
+        <b class="tr-name">${_esc(t && t.name)}</b>
+        <span class="tr-days">${spent}/${needed} days</span>
+      </div>
+      <div class="tr-track"><div class="tr-bar" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// INVENTORY — kortlayout + detaljmodal
+// ═══════════════════════════════════════
+
+// Typ-ikoner
+const TYPE_ICONS = { Vapen: '⚔️', Rustning: '🛡️', Dryck: '🧪', Magisk: '✦', Verktyg: '🔧', Annat: '📦', Weapon: '⚔️', Armor: '🛡️', Potion: '🧪', Magic: '✦', Tool: '🔧', Other: '📦' };
+
+// ── Föremålsmålningar (2026-09-30): varje item kan AI-målas som en avatar ──
+// Slug MÅSTE matcha backendens _item_slug() exakt:
+// strip("-") → slice(48) → rstrip("-").
+function _itemSlug(name) {
+  return String(name || '').trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    .slice(0, 48).replace(/-+$/, '');
+}
+function _itemArtKey(item) { return 'item:' + _itemSlug(item.name); }
+function _itemArtUrl(item, w) {
+  const key = _itemArtKey(item);
+  const e = state.avatars && state.avatars[key];
+  if (!e) return null;
+  return _avUrl(key, w);
+}
+
+// Hjälp: bygg badge-HTML för ett item
+function _invBadges(item) {
+  let badges = '';
+  // Skada
+  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
+  if (dmg) badges += `<span class="inv-badge dmg">⚔ ${dmg}</span>`;
+  // AC
+  if (item.ac_bonus != null && item.ac_bonus !== undefined) badges += `<span class="inv-badge ac">🛡 ${item.ac_bonus}</span>`;
+  // Magisk bonus
+  if (item.magic_bonus > 0) badges += `<span class="inv-badge magic-bonus">+${item.magic_bonus}</span>`;
+  // Laddningar
+  if (item.charges != null || item.max_charges != null) {
+    const c = item.charges != null ? item.charges : '?';
+    const m = item.max_charges != null ? item.max_charges : '?';
+    badges += `<span class="inv-badge charges">⚡ ${c}/${m}</span>`;
+  }
+  // Räckvidd
+  if (item.range) badges += `<span class="inv-badge range">◎ ${item.range}</span>`;
+  return badges;
+}
+
+function renderInventory() {
+  const grid = document.getElementById('inv-grid');
+  grid.innerHTML = '';
+  if (!state.inventory.length) {
+    grid.innerHTML = `<div class="inv-empty fresh-empty"><span class="fe-glyph">✦</span>Your pack is empty — the world will provide…</div>`;
+  }
+  let totalWeight = 0;
+  state.inventory.forEach((item, i) => {
+    const w = (item.weight || 0) * (item.qty || 1);
+    totalWeight += w;
+    const rarityCls = item.rarity ? 'r-' + item.rarity : '';
+    const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
+    // Kompakt kort (2026-09-30): konst-verk i stället för emoji när item
+    // är målat, status som litet märke i hörnet, vikt i samma rad.
+    const artUrl = _itemArtUrl(item, 128);
+    const art = artUrl
+      ? `<span class="inv-card-art" style="background-image:url('${artUrl}')"></span>`
+      : `<span class="inv-card-icon">${icon}</span>`;
+    const card = document.createElement('div');
+    card.className = 'inv-card' + (item.equipped ? ' equipped' : '') + (rarityCls ? ' ' + rarityCls : '');
+    card.innerHTML = `
+      <div class="inv-card-row" title="Item — click for details" onclick="openItemModal(${i})">
+        ${art}
+        <div class="inv-card-info">
+          <div class="inv-card-name ${rarityCls}">${item.rarity === 'magic' || item.rarity === 'legendary' ? '✦ ' : ''}${_esc(item.name)}</div>
+          <div class="inv-card-stats">${_invBadges(item)}${item.qty > 1 ? `<span class="inv-badge qty">×${item.qty}</span>` : ''}<span class="inv-badge wt">${w.toFixed(1)} lbs</span></div>
+        </div>
+        <button type="button" class="inv-card-paint" onclick="paintItemFromCard(event, ${i})"
+                title="Generate an image of this item — 1 turn" aria-label="Generate an image of ${_esc(item.name)}">🎨</button>
+        <span class="inv-card-eq-dot ${item.equipped ? 'on' : ''}" title="${item.equipped ? 'Equipped' : 'In bag'}">${item.equipped ? '⚔' : '🎒'}</span>
+      </div>`;
+    grid.appendChild(card);
+  });
+  document.getElementById('inv-weight').textContent = totalWeight.toFixed(1);
+  document.getElementById('inv-count').textContent = state.inventory.length;
+  const warn = document.getElementById('inv-warn');
+  const weightEl = document.getElementById('inv-weight');
+  if (totalWeight > 120) { warn.textContent = I18N.t('⚠ ÖVERBELASTAD'); weightEl.classList.add('overloaded'); }
+  else { warn.textContent = ''; weightEl.classList.remove('overloaded'); }
+}
+
+// ── Besvärjelser (v28) ──
+function _esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderSpells() {
+  const grid = document.getElementById('spells-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  // Spell slots — tydlig vy: used (guld, fast) vs available (dashed).
+  // OBS: state.spell_slots.current = TILLGÄNGLIGA slots nu (minskar vid kast,
+  // återställs till max vid long rest). used = max - current (fix 2026-08-05:
+  // logiken var inverterad → visade '2/2 used' när allt var fullt).
+  const slotsBox = document.getElementById('spell-slots');
+  const ss = (state.character && state.character.spell_slots) || {};
+  const maxSlots = parseInt(ss.max, 10) || 0;
+  const availSlots = Math.min(parseInt(ss.current, 10) || 0, maxSlots);
+  const usedSlots = Math.max(0, maxSlots - availSlots);
+  if (slotsBox) {
+    if (maxSlots > 0) {
+      let pips = '';
+      for (let i = 0; i < maxSlots; i++) {
+        // available (laddade) = guld-kristall, used (förbrukade) = tom krypta.
+        // fix 2026-08-10: guld-fyllning när slots är fyllda (tidigare var guld
+        // på förbrukade — tvärtemot vad spelaren ville känna igen).
+        const avail = i >= usedSlots;
+        pips += `<span class="ss-pip ${avail ? 'available' : 'used'}" title="${avail ? 'Available' : 'Used (spent)'}">${avail ? '✦' : ''}</span>`;
+      }
+      const charged = availSlots >= maxSlots ? ' charged' : '';
+      slotsBox.innerHTML = `
+        <span class="ss-label">Spell Slots</span>
+        <span class="ss-pips${charged}">${pips}</span>
+        <span class="ss-count"><b>${availSlots}</b> / ${maxSlots} available · <b style="color:var(--gold)">${usedSlots} used</b></span>
+        <span class="ss-note">Cantrips (level 0) cost nothing — they are always ready. Casting a leveled spell spends one slot. A long rest restores all spent slots.</span>`;
+    } else {
+      slotsBox.innerHTML = '';
+    }
+  }
+  const spells = Array.isArray(state.character && state.character.spells) ? state.character.spells : [];
+  if (!spells.length) {
+    grid.innerHTML = `<div class="inv-empty fresh-empty"><span class="fe-glyph">✦</span>No spells yet — your studies will bear fruit…</div>`;
+    renderSheetLock();
+    return;
+  }
+  [...spells].sort((a, b) => (a.level || 0) - (b.level || 0)).forEach(sp => {
+    const lvl = sp.level || 0;
+    const lvlLabel = lvl === 0 ? 'Cantrip' : 'Lvl ' + lvl;
+    const card = document.createElement('div');
+    card.className = 'spell-card' + (lvl === 0 ? ' cantrip' : '');
+    const sub = [sp.school, sp.casting_time, sp.damage_dice ? '🎲 ' + sp.damage_dice : ''].filter(Boolean).join(' · ');
+    // Spelartillagda spells har ofta bara ett namn — visa det ärligt i stället
+    // för ett tomt kort som ser trasigt ut.
+    const bare = (!sub && !sp.description)
+      ? '<div class="spell-card-sub">No details recorded yet — the name is all that was written down.</div>'
+      : '';
+    card.innerHTML = `
+          <div class="spell-card-head">
+            <span class="spell-name">✦ ${_esc(sp.name)}</span>
+            <span class="spell-level">${lvlLabel}</span>
+            <button class="spell-rm" type="button" title="Remove from the spellbook" aria-label="Remove ${_escAttr(sp.name)}" data-name="${_escAttr(sp.name)}" onclick="removeSpell(this.dataset.name)">✕</button>
+          </div>
+      ${sub ? `<div class="spell-card-sub">${_esc(sub)}</div>` : ''}${bare}
+      ${sp.description ? `<div class="spell-card-desc">${_esc(sp.description)}</div>` : ''}`;
+    grid.appendChild(card);
+  });
+  renderSheetLock();
+}
+
+// ── Detaljmodal ──
+function openItemModal(i) {
+  const item = state.inventory[i];
+  if (!item) return;
+  _itemModalIdx = i;
+  const container = document.getElementById('item-modal-container');
+  const rarityCls = item.rarity ? 'r-' + item.rarity : '';
+  const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
+
+  // Bygg stat-rader
+  let statsHtml = '';
+  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
+  if (item.category) {
+    const catLabel = ({weapon:'⚔ Vapen', armor:'🛡 Rustning', potion:'🧪 Dryck', magic:'✦ Magisk', tool:'🔧 Verktyg', trinket:'🎒 Föremål'})[item.category] || item.category;
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🏷 ${I18N.t('Klass')}</span><span class="item-modal-stat-val">${catLabel}</span></div>`;
+  }
+  if (item.usage) {
+    const usageLabel = ({wielded:'Wielded/carried', consumable:'Consumed', activated:'Activated', trinket:'Passive'})[item.usage] || item.usage;
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🎯 ${I18N.t('Usage')}</span><span class="item-modal-stat-val">${usageLabel}</span></div>`;
+  }
+  if (dmg) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚔ ${I18N.t('Skada')}</span><span class="item-modal-stat-val">${dmg}</span></div>`;
+  if (item.ac_bonus != null && item.ac_bonus !== undefined) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🛡 ${I18N.t('AC-bonus')}</span><span class="item-modal-stat-val">${item.ac_bonus}</span></div>`;
+  if (item.range) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">◎ ${I18N.t('Räckvidd')}</span><span class="item-modal-stat-val">${item.range}</span></div>`;
+  if (item.magic_bonus > 0) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">✦ ${I18N.t('Magisk bonus')}</span><span class="item-modal-stat-val">+${item.magic_bonus}</span></div>`;
+  if (item.charges != null || item.max_charges != null) {
+    const c = item.charges != null ? item.charges : '?';
+    const m = item.max_charges != null ? item.max_charges : '?';
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚡ ${I18N.t('Laddningar')}</span><span class="item-modal-stat-val">${c} / ${m}</span></div>`;
+  }
+  if (item.roll) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🎲 ${I18N.t('Tärning')}</span><span class="item-modal-stat-val">${item.roll}</span></div>`;
+  statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚖ ${I18N.t('Vikt')}</span><span class="item-modal-stat-val">${(item.weight || 0).toFixed(1)} lbs × ${item.qty || 1} = ${((item.weight || 0) * (item.qty || 1)).toFixed(1)} lbs</span></div>`;
+  statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">📊 ${I18N.t('Sällsynthet')}</span><span class="item-modal-stat-val">${item.rarity === 'magic' ? '✦ ' : ''}${item.rarity || 'normal'}</span></div>`;
+  statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">📦 ${I18N.t('Status')}</span><span class="item-modal-stat-val">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('🎒 I väska')}</span></div>`;
+
+  // Properties-taggar
+  let propsHtml = '';
+  const props = item.properties || [];
+  if (props.length) {
+    propsHtml = `<div class="item-modal-props">${props.map(p => `<span class="item-modal-prop-tag">${p}</span>`).join('')}</div>`;
+  }
+
+  // Beskrivning / effekter
+  let descHtml = '';
+  if (item.description) descHtml += `<div class="item-modal-desc">${item.description}</div>`;
+  if (item.effects) descHtml += `<div class="item-modal-desc" style="border-left-color:var(--arcane)">${item.effects}</div>`;
+  if (item.lore) descHtml += `<div class="item-modal-lore">"${item.lore}"</div>`;
+
+  container.innerHTML = `
+    <div class="item-modal-overlay" onclick="closeItemModal(event)">
+      <div class="item-modal" onclick="event.stopPropagation()" style="position:relative">
+        <button class="item-modal-close" onclick="closeItemModal(event, true)">✕</button>
+        <div class="item-modal-art-wrap" id="item-modal-art-wrap">
+          <div class="item-modal-art" id="item-modal-art">${_itemModalArtInner(item)}</div>
+        </div>
+        <div class="item-modal-header ${rarityCls}">${icon} ${_esc(item.name)}</div>
+        <div class="item-modal-sub">${item.type || 'Other'}${item.rarity && item.rarity !== 'normal' ? ' · ' + item.rarity : ''}</div>
+        ${statsHtml}
+        ${propsHtml}
+        ${descHtml}
+        <div class="item-modal-paint">
+          <select id="item-paint-provider" class="tts-select" style="flex:0 0 auto;max-width:130px" title="Image engine for this item" onchange="_itemEngineChanged(this)">
+            ${['wan', 'qwen'].map(v => `<option value="${v}"${v === _imgEngine() ? ' selected' : ''}>${v === 'wan' ? 'Wan 2.7 Pro' : 'Qwen Image 3 Pro'}</option>`).join('')}
+          </select>
+          <button class="av-btn primary btn-gold" id="item-paint-btn" onclick="paintItemAction(${i})" title="Generate an item image — 1 turn, part of the 10€ unlock">🎨 ${I18N.t('Generate item image')}</button>
+          <span class="item-paint-status" id="item-paint-status"></span>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Konstverk i detaljmodalen: målad bild (klickbar → lightbox) eller en
+// inramad emoji-platshållare som visar att målning finns tillgänglig.
+function _itemModalArtInner(item) {
+  const url = _itemArtUrl(item, 256);
+  if (url) {
+    return `<img src="${url}" alt="${_esc(item.name)}" onclick="openItemArtLightbox(${_itemModalIdx})" title="Click for larger view" style="width:100%;height:100%;object-fit:cover;cursor:pointer">`;
+  }
+  const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
+  return `<span class="item-modal-art-emoji">${icon}</span>`;
+}
+
+let _itemModalIdx = -1;
+function openItemArtLightbox(i) {
+  const item = state.inventory[i];
+  if (!item) return;
+  const url = _itemArtUrl(item);
+  if (!url) return;
+  document.getElementById('avatar-lightbox-img').src = url;
+  document.getElementById('avatar-lightbox-title').textContent = item.name;
+  document.getElementById('avatar-lightbox').classList.add('show');
+}
+
+// ── 🎨 Paint this item — samma motor/galleri som avataren (kind=item:slug) ──
+let _itemPaintBusy = false;
+// ── Bildmotor för itemmålning (2026-10-01) ──
+// Rostad: "vi behöver en dropdown så man kan välja imagemodell — nu vet vi
+// inte vilken det är som gäller." Itemmålningen hårdkodade bildmotorn medan
+// avatar-modalen redan hade ett Engine-val. Samma motorer, samma 10€-
+// gate (_require_image_gen_tier skiljer inte per provider) → dropdown utan
+// låsning. Valet sparas i localStorage och delas med avatar-selecten så man
+// inte behöver välja motor två gånger.
+// (StepFun-bildmotorn pensionerad 2026-10-10 → motorerna är wan / qwen.)
+const _IMG_ENGINE_KEY = 'dnd_img_engine';
+function _imgEngine() {
+  const v = (() => { try { return localStorage.getItem(_IMG_ENGINE_KEY); } catch (_) { return null; } })();
+  return (v === 'wan' || v === 'qwen') ? v : 'wan';
+}
+function _saveImgEngine(v) {
+  try { localStorage.setItem(_IMG_ENGINE_KEY, v); } catch (_) {}
+}
+// Sätt båda dropdowns till samma motor (item-modalens + avatar-modalens).
+function _syncImgEngineSelects(from) {
+  const v = _imgEngine();
+  ['item-paint-provider', 'avatar-provider-select'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el !== from) el.value = v;
+  });
+}
+function _itemEngineChanged(sel) {
+  _saveImgEngine(sel.value);
+  _syncImgEngineSelects(sel);
+}
+// ── Delad målning (2026-10-28): kortets 🎨 och modalens knapp gör EXAKT samma
+// anrop — bara statusytan skiljer. mode='new' utan prompt ⇒ backend bygger
+// prompten ur itemets egna fält (namn, typ, sällsynthet, beskrivning, lore).
+// Kostar 1 turn + 1 av dygnets 10 premiumbilder (delad räknare med porträtten).
+async function _paintItemCore(i, onStatus) {
+  const item = state.inventory[i];
+  if (!item) return false;
+  if (!_itemSlug(item.name)) { onStatus('⚠ This item has no name — cannot generate an image'); return false; }
+  const engine = _imgEngine();
+  if (!avatarGenGate(engine)) return false;   // 10€-unlås + toast (delas med avataren)
+  onStatus('🎨 Generating… (10–30 s)');
+  try {
+    const res = await API.generateAvatar(_itemArtKey(item), Date.now() % 1000000, 'new', '', engine);
+    if (res && res.ok) {
+      state.avatars = state.avatars || {};
+      // Okänt filnamn → platshållare först; _avRefreshState nedan sätter
+      // riktiga disk_name (cachebar URL).
+      state.avatars[_itemArtKey(item)] = {
+        gallery: new Array(res.gallery_count || 1).fill({}),
+        gallery_index: res.gallery_index || 0,
+      };
+      await _avRefreshState();
+      const art = document.getElementById('item-modal-art');
+      if (art) art.innerHTML = _itemModalArtInner(item);
+      renderInventory();
+      onStatus('✨ Generated from its description — 1 turn spent');
+      return true;
+    }
+    onStatus('⚠ ' + (res && res.detail ? (typeof res.detail === 'string' ? res.detail : JSON.stringify(res.detail)) : 'Failed'));
+    return false;
+  } catch (e) {
+    onStatus('⚠ ' + (e.message || 'Failed'));
+    return false;
+  }
+}
+
+async function paintItemAction(i) {
+  if (_itemPaintBusy) return;
+  const btn = document.getElementById('item-paint-btn');
+  const status = document.getElementById('item-paint-status');
+  _itemPaintBusy = true;
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = '🎨 Generating… (10–30 s)';
+  await _paintItemCore(i, txt => { if (status) status.textContent = txt; });
+  _itemPaintBusy = false;
+  if (btn) btn.disabled = false;
+}
+
+// 🎨 direkt på föremålskortet i pack-listan: mål utan att öppna modalen.
+// Egen busy-flagga per index så två kort inte kan dubbelspendera en turn.
+const _cardPaintBusy = new Set();
+async function paintItemFromCard(ev, i) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  if (_cardPaintBusy.has(i)) return;
+  const item = state.inventory[i];
+  if (!item) return;
+  const card = document.querySelectorAll('#inv-grid .inv-card')[i];
+  const btn = card ? card.querySelector('.inv-card-paint') : null;
+  _cardPaintBusy.add(i);
+  if (btn) { btn.disabled = true; btn.classList.add('busy'); btn.textContent = '⏳'; }
+  let msg = '';
+  await _paintItemCore(i, txt => { msg = txt; });
+  _cardPaintBusy.delete(i);
+  if (btn) { btn.disabled = false; btn.classList.remove('busy'); btn.textContent = '🎨'; }
+  if (msg) toast(msg);
+}
+
+function closeItemModal(e, force) {
+  if (force || (e && e.target && e.target.classList.contains('item-modal-overlay'))) {
+    document.getElementById('item-modal-container').innerHTML = '';
+  }
+}
+
+// Stäng modal med Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeItemModal(null, true); });
+
+// ── D&D-egenskaper toggle (borttagen — inventory hanteras av DM/Lorekeeper) ──
+
+// ═══════════════════════════════════════
+// CURRENCY
+// ═══════════════════════════════════════
+const coinMeta = {
+  pp: { name: 'Platina', disc: 'PP', cls: 'c-pp', rate: 10 },
+  gp: { name: 'Guld',    disc: 'GP', cls: 'c-gp', rate: 1 },
+  sp: { name: 'Silver',  disc: 'SP', cls: 'c-sp', rate: 0.1 },
+  cp: { name: 'Koppar',  disc: 'CP', cls: 'c-cp', rate: 0.01 },
+};
+function renderCurrency() {
+  const grid = document.getElementById('currency-grid');
+  grid.innerHTML = '';
+  for (const [key, m] of Object.entries(coinMeta)) {
+    grid.innerHTML += `
+      <div class="coin ${m.cls}" id="coin-${key}">
+        <div class="coin-disc">${m.disc}</div>
+        <div class="coin-name">${I18N.t(m.name)}</div>
+        <div class="coin-amount">${state.currency[key] || 0}</div>
+      </div>`;
+  }
+  updateHoard();
+}
+function updateHoard() {
+  let total = 0, totalCoins = 0;
+  for (const [key, m] of Object.entries(coinMeta)) {
+    total += (state.currency[key] || 0) * m.rate;
+    totalCoins += (state.currency[key] || 0);
+  }
+  document.getElementById('total-gold').textContent = total.toFixed(1) + ' gp';
+  const gp = Math.floor(total), sp = Math.round((total - gp) * 10);
+  const weight = (totalCoins / 50).toFixed(2);
+  document.getElementById('total-sub').textContent = `= ${gp}${I18N.t(' guldmynt & ')}${sp}${I18N.t(' silvermynt · ')}${totalCoins}${I18N.t(' mynt · ')}${weight} lb`;
+}
+
+// ═══════════════════════════════════════
+// TRANSACTIONS — kontobok från backend
+// ═══════════════════════════════════════
+function renderTransactions() {
+  const txs = state.transactions || [];
+  document.getElementById('tx-log').innerHTML = txs.length
+    ? txs.map(tx => `
+      <div class="tx">
+        <div><div class="tx-desc">${tx.desc || tx.description || '—'}</div><div class="tx-date">${tx.date || ''}</div></div>
+        <div class="tx-amount ${tx.amount >= 0 ? 'pos' : 'neg'}">${tx.amount >= 0 ? '+' : ''}${tx.amount} ${tx.unit || 'gp'}</div>
+      </div>`).join('')
+    : `<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:1.4rem 0;font-size:.85rem">${I18N.t('Inga transaktioner ännu — horden växer med äventyret.')}</div>`;
+}
+
+// ═══════════════════════════════════════
+// GLÖD — ember-partiklar
+// ═══════════════════════════════════════
+const canvas = document.getElementById('embers');
+const ctx = canvas.getContext('2d');
+let W, H, embers = [];
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+function spawnEmber(init) {
+  return {
+    x: Math.random() * W,
+    y: init ? Math.random() * H : H + 10,
+    r: 0.8 + Math.random() * 1.8,
+    vy: 0.25 + Math.random() * 0.7,
+    vx: (Math.random() - 0.5) * 0.35,
+    life: 0, maxLife: 400 + Math.random() * 500,
+    hue: Math.random() < 0.82 ? 22 + Math.random() * 18 : 268 + Math.random() * 20, // glöd eller arkan
+  };
+}
+for (let i = 0; i < 46; i++) embers.push(spawnEmber(true));
+
+const GLOW={};function glowSprite(hue){const key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');const rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,'hsla('+key+',90%,65%,1)');rg.addColorStop(.4,'hsla('+key+',85%,55%,.55)');rg.addColorStop(1,'hsla('+key+',80%,50%,0)');g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
+function tick() {
+if (document.hidden) { requestAnimationFrame(tick); return; }
+  ctx.clearRect(0, 0, W, H);
+  for (let i = 0; i < embers.length; i++) {
+    const e = embers[i];
+    e.life++; e.y -= e.vy; e.x += e.vx + Math.sin(e.life * 0.02) * 0.15;
+    const fade = Math.min(1, e.life / 60) * Math.max(0, 1 - e.life / e.maxLife);
+    const flicker = 0.55 + Math.sin(e.life * 0.15 + i) * 0.35;
+    ctx.globalAlpha = 0.5 * fade * flicker;
+    ctx.drawImage(glowSprite(e.hue), e.x - e.r * 2, e.y - e.r * 2, e.r * 4, e.r * 4);
+    if (e.life > e.maxLife || e.y < -12) embers[i] = spawnEmber(false);
+  }
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(tick);
+}
+tick();
+
+// ═══════════════════════════════════════
+// AVATAR-MODAL (AI-generera / uppdatera / ladda upp / ta bort)
+// ═══════════════════════════════════════
+function currentAvatar() {
+  return (state.avatars && state.avatars.player) ? _avUrl('player') : null;
+}
+
+function openAvatarModal() {
+  // Codex-iframe: den lokala modalen är inte ingången här — porträtt-klick
+  // ber föräldern öppna karaktärsarket (cs-overlay). Vakta även denna funktion
+  // så inga övriga vägar (t.ex. återöppning efter generering) dubbeluppstår.
+  if (typeof _isCodexEmbedded === 'function' && _isCodexEmbedded()) {
+    try { window.parent.postMessage({ type: 'codex-portrait-click', kind: 'player' }, '*'); } catch (_) {}
+    return;
+  }
+  const has = !!currentAvatar();
+  const preview = document.getElementById('avatar-modal-img');
+  preview.innerHTML = has
+    ? `<img src="${currentAvatar()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+    : SPR.html('🎭');
+  preview.style.cursor = has ? 'pointer' : 'default';
+  document.getElementById('avatar-del-btn').style.display = has ? '' : 'none';
+  // "Create from dossier" visas ALLTID — även för en ny karaktär utan
+  // befintlig avatar (regression fixad 2026-08-07).
+  const freeBtn = document.getElementById('avatar-free-btn');
+  if (freeBtn) freeBtn.disabled = false;
+  document.getElementById('avatar-update-btn').disabled = false;
+  document.getElementById('avatar-ai-status').textContent = '';
+  updateAvatarProviderLock();
+  renderAvatarGallery();
+  document.getElementById('avatar-overlay').classList.add('show');
+}
+
+// ── 🖼 Avatar-galleri: bläddra bland tidigare porträtt (2026-08-08) ──
+// Äventyraren håller upp till 5 porträtt. Pilarna roterar den aktiva bilden
+// via backend; den man stannar på blir avataren överallt.
+let _galBusy = false;
+
+function _playerGal() {
+  const e = (state.avatars && state.avatars.player) || {};
+  const gal = Array.isArray(e.gallery) ? e.gallery : (e.disk_name ? [e] : []);
+  return { count: gal.length, index: e.gallery_index || 0 };
+}
+
+function renderAvatarGallery() {
+  const prev = document.getElementById('avatar-gal-prev');
+  const next = document.getElementById('avatar-gal-next');
+  const label = document.getElementById('avatar-gal-count');
+  if (!prev || !next || !label) return;
+  const meta = _playerGal();
+  const show = meta.count > 1;
+  prev.disabled = !show || _galBusy;
+  next.disabled = !show || _galBusy;
+  label.innerHTML = show ? `Portrait <b>${meta.index + 1}</b> / ${meta.count}` : '';
+}
+
+async function rotateAvatarImage(delta) {
+  if (_galBusy) return;
+  if (_playerGal().count < 2) return;
+  _galBusy = true;
+  renderAvatarGallery();
+  try {
+    const res = await API.rotateAvatar('player', delta);
+    state.avatars = state.avatars || {};
+    // KÄNDA gallerifiler: aktivt disk_name ur state → stabil ?v=-tagg utan
+    // nätverks-bust. Saknas gallery (nyss målad) → seq + fräsch state.
+    const e = state.avatars.player || {};
+    const gal = Array.isArray(e.gallery) ? e.gallery : [];
+    const item = gal[res.gallery_index || 0] || {};
+    state.avatars.player = Object.assign({}, e, {
+      gallery_index: res.gallery_index || 0,
+      disk_name: item.disk_name || '',
+    });
+    const preview = document.getElementById('avatar-modal-img');
+    if (preview) preview.innerHTML = `<img src="${currentAvatar()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    renderAll();
+    if (!item.disk_name) await _avRefreshState();
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not switch portrait'));
+  } finally {
+    _galBusy = false;
+    renderAvatarGallery();
+  }
+}
+function closeAvatarModal() {
+  document.getElementById('avatar-overlay').classList.remove('show');
+}
+
+// ── Bildleverantör (2026-09-27: ALL bildgenerering bakom 10€-unlåset) ──
+let _charTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
+function avatarProvider() {
+  const sel = document.getElementById('avatar-provider-select');
+  return (sel && sel.value) || 'wan';
+}
+function avatarGenGate(provider) {
+  // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
+  if (_charTier !== 'tier2' && _charTier !== 'lifetime') {
+    toast('🔒 Image generation is part of the 10€ unlock (+100 turns, all Dungeon Masters, voice & images). Each image costs 1 turn. — pricing.html?plan=unlock10');
+    return false;
+  }
+  return true;
+}
+function avatarProviderChanged(sel) {
+  // 2026-09-27: alla motorer kräver samma 10€-unlås — ingen nedgradering.
+  // 2026-10-01: spara valet + spegla till item-målningsdropdownen (delad motor).
+  if (sel && typeof _saveImgEngine === 'function') {
+    _saveImgEngine(sel.value);
+    _syncImgEngineSelects(sel);
+  }
+}
+function updateAvatarProviderLock() {
+  const sel = document.getElementById('avatar-provider-select');
+  if (!sel) return;
+  // 2026-10-10: återställ senast valda motor (delad 'dnd_img_engine'-nyckel
+  // med chat.html + item-paint-dropdownen — ett val gäller överallt).
+  try {
+    const v = localStorage.getItem('dnd_img_engine');
+    if (v === 'wan' || v === 'qwen') sel.value = v;
+    else sel.value = 'wan';  // gammalt 'stepfun'-val → wan
+  } catch (_) {}
+  if (_charTier === null) {
+    try {
+      fetch('/api/me').then(r => r.ok ? r.json() : null).then(me => {
+        _charTier = (me && me.subscription_status) || 'free';
+        if (_charTier === 'premium') _charTier = 'tier2';
+        updateAvatarProviderLock();
+      }).catch(() => { _charTier = 'free'; updateAvatarProviderLock(); });
+    } catch (_) { _charTier = 'free'; }
+    return;
+  }
+  const unlocked = _charTier === 'tier2' || _charTier === 'lifetime';  // 10€ unlock
+  [['wan', 'Wan 2.7 Pro'], ['qwen', 'Qwen Image 3 Pro']].forEach(([key, name]) => {
+    const opt = sel.querySelector(`option[value="${key}"]`);
+    if (!opt) return;
+    opt.disabled = !unlocked;
+    opt.textContent = unlocked ? name : name + ' — 🔒 10€ unlock';
+  });
+}
+
+async function _runAvatarGen(mode, statusText, btnId) {
+  const status = document.getElementById('avatar-ai-status');
+  const btn = document.getElementById(btnId);
+  if (!avatarGenGate(avatarProvider())) return;
+  let freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
+  // 🖌️ Free prompt: BARA spelarens ord — tom text är ett fel (ingen auto-prompt).
+  if (mode === 'free') {
+    if (!freePrompt.trim()) {
+      toast('✍️ Write what you want to see first — free prompt uses ONLY your words.');
+      return;
+    }
+  }
+  status.textContent = statusText;
+  btn.disabled = true;
+  try {
+    const usedWords = !!freePrompt.trim();
+    const res = await API.generateAvatar('player', Date.now() % 1000000, mode, freePrompt, avatarProvider());
+    if (res && res.ok) {
+      state.avatars = state.avatars || {};
+      // Behåll galleri-metadatan: den nya målningen LÄGGS TILL i galleriet
+      // (backend returnerar count/index) så bläddra-pilarna dyker upp direkt.
+      // Filnamnet är okänt → WeakMap-seq-tagg bustar omgående; refresh nedan
+      // sätter riktiga disk_name (cachebar URL).
+      state.avatars.player = {
+        gallery: new Array(res.gallery_count || 1).fill({}),
+        gallery_index: res.gallery_index || 0,
+      };
+      renderHeader();
+      openAvatarModal();
+      status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar generated — ') + (usedWords ? 'used your words' : 'used your character sheet');
+      await _avRefreshState();
+    } else {
+      status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Failed');
+    }
+  } catch (e) {
+    status.textContent = '⚠ ' + (e.message || 'Failed');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function freePromptAction() {
+  await _runAvatarGen('free', '🎨 Generating from your words only… (10–30 s)', 'avatar-free-btn');
+}
+async function updateAvatarAction() {
+  // "Create from dossier": mode='new' → backend bygger auto-prompt från
+  // backstory + inventory + senaste loggpost (samma som NPC-dossién).
+  await _runAvatarGen('new', '🎨 Generating from your dossier… (10–30 s)', 'avatar-update-btn');
+}
+
+async function deleteAvatarAction() {
+  try {
+    await API.deleteAvatar('player');
+    if (state.avatars) delete state.avatars.player;
+    renderHeader();
+    closeAvatarModal();
+    toast('🗑 Avatar removed');
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Kunde inte ta bort avataren'));
+  }
+}
+
+// Större förhandsvisning (lightbox)
+function openAvatarLightbox() {
+  const src = currentAvatar();
+  if (!src) return;
+  document.getElementById('avatar-lightbox-img').src = src;
+  document.getElementById('avatar-lightbox-title').textContent = I18N.t('The Adventurer');
+  document.getElementById('avatar-lightbox').classList.add('show');
+}
+function closeAvatarLightbox() {
+  document.getElementById('avatar-lightbox').classList.remove('show');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeAvatarModal(); closeAvatarLightbox(); }
+});
+
+// State-export för backend
+function exportState() { return JSON.stringify(state, null, 2); }
+window.getState = exportState;
+</script>
+<script src="embed.js?v=20261001a"></script>
+
+<!-- 🎨 Avatar-modal (AI-generera / uppdatera / ladda upp / ta bort) -->
+<div class="mi-overlay" id="avatar-overlay" onclick="if(event.target===this)closeAvatarModal()">
+  <div class="mi-modal">
+    <div class="mi-head">
+      <span>🎨 Avatar — The Adventurer</span>
+      <button class="mi-close" onclick="closeAvatarModal()">✕</button>
+    </div>
+    <div style="text-align:center;margin:0 0 1rem">
+      <div class="av-gal-row">
+        <button class="av-gal-arrow" id="avatar-gal-prev" onclick="rotateAvatarImage(-1)" title="Previous portrait" aria-label="Previous portrait">&lsaquo;</button>
+        <div id="avatar-modal-img" onclick="openAvatarLightbox()" style="width:112px;height:112px;border-radius:50%;margin:0 auto;border:2px solid var(--gold);overflow:hidden;background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:2.4rem;box-shadow:0 0 22px -4px rgba(var(--gold-rgb),.45);cursor:pointer" title="Click for larger view"></div>
+        <button class="av-gal-arrow" id="avatar-gal-next" onclick="rotateAvatarImage(1)" title="Next portrait" aria-label="Next portrait">&rsaquo;</button>
+      </div>
+      <div class="av-gal-count" id="avatar-gal-count"></div>
+      <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
+    </div>
+    <div class="mi-intro">Generate your portrait with your own words — <b>🖌️ Free prompt</b> generates ONLY what you describe. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: Wan 2.7 Pro, Qwen Image 3 Pro. Or upload your own image.</div>
+    <div style="margin-top:.7rem">
+      <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">✍️ YOUR OWN WORDS</div>
+      <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want to see — e.g. 'hooded figure, lantern light, rain'." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Grenze',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Free prompt uses ONLY your words.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
+      <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
+      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for image generation">
+        <option value="wan">Wan 2.7 Pro</option>
+        <option value="qwen">Qwen Image 3 Pro</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
+      <button class="av-btn primary btn-gold" id="avatar-free-btn" onclick="freePromptAction()" title="Draw exactly what you describe — 1 turn">🖌️ Free prompt</button>
+      <button class="av-btn btn-ghost" id="avatar-update-btn" onclick="updateAvatarAction()" title="Portrait from your character sheet — 1 turn">🎨 Create from dossier</button>
+      <button class="av-btn btn-ghost" onclick="portraitInput.click()">📁 Upload image…</button>
+      <button class="av-btn danger btn-blood" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
+    </div>
+    <div id="avatar-ai-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>
+  </div>
+</div>
+
+<!-- 🔍 Avatar-lightbox — större förhandsvisning -->
+<div class="av-lightbox" id="avatar-lightbox" onclick="if(event.target===this)closeAvatarLightbox()">
+  <img id="avatar-lightbox-img" alt="Avatar">
+  <button class="av-lb-close" onclick="closeAvatarLightbox()">✕</button>
+  <div class="av-lb-title" id="avatar-lightbox-title"></div>
+</div>
+<script src="rail.js?v=20261006a"></script>
+</body>
+</html>

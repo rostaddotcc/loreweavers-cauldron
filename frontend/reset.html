@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#09070B">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>Re-forge Your Word — The Lore Weaver's Cauldron</title>
+<meta name="description" content="Set a new password for your adventurer — The Lore Weaver's Cauldron.">
+<link rel="icon" href="/assets/logo-cauldron.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Paletten (--ink … --term-amber) ägs av snes.css :root (Emberwatch, 2026-10-22) —
+       den lokala violetten finns inte kvar. Kvar här: bara typografitoken. */
+    --font-display:'Grenze',serif;
+    --font-body:'Spectral',Georgia,serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --font-accent:'Silkscreen',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    padding:0;-webkit-tap-highlight-color:transparent}
+  .rite-rail{align-self:stretch}
+  .card{position:relative;z-index:1;width:min(400px,100%);margin:1.2rem auto;background:var(--stone);
+    border:1px solid var(--edge);padding:2.2rem 2rem;text-align:center}
+  .card::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
+  h1{font-family:var(--font-display);font-weight:700;font-size:1.25rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--gold);margin-bottom:.4rem}
+  .sub{font-size:var(--fs-sm);color:var(--bone-dim);margin-bottom:1.6rem;line-height:1.6}
+  .field{margin-bottom:1rem;text-align:left}
+  .field label{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--bone-dim);margin-bottom:.35rem}
+  .field input{width:100%;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
+    background:var(--ink);border:1px solid var(--edge);padding:.72rem .9rem;outline:none}
+  .field input:focus{border-color:var(--gold)}
+  .btn{width:100%;margin-top:.5rem;cursor:pointer;font-family:var(--font-display);
+    font-weight:700;font-size:var(--fs-tiny);letter-spacing:.18em;text-transform:uppercase;
+    padding:.85rem 1rem}
+  .btn:disabled{opacity:.55;cursor:default}
+  .err{min-height:1.4rem;margin-top:.8rem;font-size:var(--fs-tiny);color:var(--blood-bright);line-height:1.5}
+  .err.ok{color:var(--poison)}
+  .back{display:inline-block;margin-top:1.1rem;font-size:var(--fs-tiny);letter-spacing:.06em;
+    color:var(--bone-dim);text-decoration:none}
+  .back:hover{color:var(--gold-bright)}
+  /* ── Mobilpass (2026-09-06, audit-design-system §8.7): reset.html var enda
+     riktiga sidan utan breakpoints — speglar login.html:s småskärmsmönster. ── */
+  @media (max-width:600px){
+    body{padding:0;justify-content:flex-start}
+    .card{width:calc(100% - 1.6rem);margin:1.2rem auto 0;padding:1.6rem 1.2rem}
+    h1{font-size:var(--fs-base);letter-spacing:.12em}
+    .sub{font-size:var(--fs-tiny);margin-bottom:1.2rem}
+    .field input{padding:.8rem .85rem}
+    .btn{padding:.95rem 1rem;font-size:var(--fs-tiny)}
+  
+    .btn,.back{min-height:var(--tap-min)}
+    input{font-size:16px}
+}
+  @media (max-width:360px){
+    .card{padding:1.3rem .95rem}
+    h1{font-size:.95rem}
+  }
+</style>
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">RE-FORGING</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="card fresh-frame">
+  <div class="page-eyebrow">THE GATE · RECOVERY</div>
+  <h1 id="title">Re-forge Your Word</h1>
+  <div class="page-rule">✦</div>
+  <p class="sub" id="sub">The pot remembers you. Speak a new secret word — it will be yours from now on.</p>
+
+  <form id="reset-form">
+    <div class="field">
+      <label for="pass">New Password</label>
+      <input type="password" id="pass" placeholder="A new secret word&hellip;" autocomplete="new-password" required>
+    </div>
+    <div class="field">
+      <label for="confirm">Confirm Password</label>
+      <input type="password" id="confirm" placeholder="Speak it once more&hellip;" autocomplete="new-password" required>
+    </div>
+    <button type="submit" class="btn go-btn btn-gold" id="btn">Re-forge My Word</button>
+    <div class="err" id="err"></div>
+  </form>
+
+  <a class="back btn-ghost" href="login.html">&#8592; Back to the Cauldron</a>
+</div>
+
+<script src="api.js?v=20261010a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const token = (params.get('token') || '').trim();
+  const errEl = document.getElementById('err');
+  const btn = document.getElementById('btn');
+  const form = document.getElementById('reset-form');
+
+  function fail(msg) {
+    errEl.classList.remove('ok');
+    errEl.textContent = msg;
+    btn.disabled = false;
+  }
+  function ok(msg) {
+    errEl.classList.add('ok');
+    errEl.textContent = msg;
+  }
+
+  if (!token) {
+    form.style.display = 'none';
+    document.getElementById('title').textContent = 'Broken Link';
+    document.getElementById('sub').textContent = 'This reset link has no token. Ask for a new one from the login page.';
+    return;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pass = document.getElementById('pass').value;
+    const confirm = document.getElementById('confirm').value;
+    errEl.textContent = '';
+    if (pass !== confirm) { fail('The new words do not match.'); return; }
+    if (pass.length < 6) { fail('The new word needs at least 6 characters.'); return; }
+    btn.disabled = true;
+    btn.textContent = 'Re-forging…';
+    try {
+      const res = await API.resetWithToken(token, pass);
+      sessionStorage.setItem('dnd_user', res.username);
+      ok('🕊️ Your word is re-forged. The Cauldron welcomes you back.');
+      setTimeout(() => { window.location.href = 'adventure.html'; }, 1100);
+    } catch (err) {
+      fail(err && err.message && !/HTTP/.test(err.message) ? err.message : 'That link is invalid or expired. Ask for a new one.');
+      btn.textContent = 'Re-forge My Word';
+    }
+  });
+})();
+</script>
+<script src="i18n.js?v=20261028a"></script>
+<script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20261006a"></script>
+</body>
+</html>

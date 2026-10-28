@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>The Lore Weaver's Cauldron — The Minds, Voices &amp; Brushes</title>
+<meta name="description" content="The minds, voices and brushes behind the mask — the free DM mind (StepFun 3.7 Flash) and unlocked minds (Step 5 Preview, Qwen 3.8 Flash, DeepSeek V4.1 Flash), TTS narrators (StepFun TTS, Qwen TTS) and image generation (Wan 2.7 Pro, Qwen Image 3 Pro) — or bring your own: run the DM on your local Ollama, any model it can play including uncensored ones, at 0 turns per DM step. Context windows, parameters, speeds and what each one does at your table.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://dnd.rostad.cc/models.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Lore Weaver's Cauldron">
+<meta property="og:title" content="The Lore Weaver's Cauldron — The Minds, Voices &amp; Brushes">
+<meta property="og:description" content="Meet the minds, voices and brushes behind the mask: Qwen, DeepSeek and StepFun DMs, TTS narrators and AI image generation — or run the DM on your own Ollama, uncensored models included, at 0 turns per DM step.">
+<meta property="og:url" content="https://dnd.rostad.cc/models.html">
+<meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Lore Weaver's Cauldron — The Minds, Voices &amp; Brushes">
+<meta name="twitter:description" content="Meet the minds, voices and brushes behind the mask: Qwen, DeepSeek and StepFun DMs, TTS narrators and AI image generation — or run the DM on your own Ollama, uncensored models included, at 0 turns per DM step.">
+<meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta name="theme-color" content="#09070B">
+<link rel="icon" href="/assets/logo-cauldron.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════ tokens ═══════════════ */
+  :root{
+    /* Palett = snes.css :root (Emberwatch, 2026-10-22). Inga färgkopior här. */
+    --font-display:'Grenze',serif;
+    --font-body:'Spectral',Georgia,serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --font-accent:'Silkscreen',monospace;
+  --font-flavor:'EB Garamond',Georgia,serif;--rubric:#E8734A;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent;font-size:17px;line-height:1.65}
+
+  /* ═══════════════ hero ═══════════════ */
+  .ledger{max-width:960px;margin:0 auto;padding:4rem 1.25rem 6rem}
+  .eyebrow{font-family:var(--font-display);font-size:var(--fs-micro);letter-spacing:.44em;
+    text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem;letter-spacing:.34em}
+  .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
+    text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
+    margin-bottom:1rem;text-shadow:2px 2px 0 #000;animation:gr-flicker 6s ease-in-out infinite}
+  .ledger-sub{max-width:640px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
+    font-size:var(--fs-base);line-height:1.65;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .ledger-sub b{color:var(--bone);font-weight:600}
+
+  /* ═══════════════ sections ═══════════════ */
+  .sec{margin-bottom:3rem}
+  .sec-head{display:flex;align-items:baseline;gap:.9rem;margin-bottom:1.3rem;
+    border-bottom:1px solid var(--edge);padding-bottom:.7rem}
+  .sec-num{font-family:var(--font-display);font-weight:900;font-size:var(--fs-sm);color:var(--gold);opacity:.8}
+  .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:var(--fs-base);
+    letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
+  .sec-head .rule{height:1px;flex:1;background:var(--edge);align-self:center;height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.7) 15%,rgba(var(--gold-rgb),.7) 85%,transparent) center/100% 1px no-repeat}
+  .sec-head .ruler{height:3px;width:44px;background:var(--gold);align-self:center;flex:none}
+
+  /* model card */
+  .model{position:relative;background:var(--stone);
+    border:1px solid var(--edge);padding:1.7rem 1.6rem 1.4rem;margin-bottom:1.6rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .model::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3;border-color:rgba(var(--gold-rgb),.45);opacity:.45}
+  .model.hot{border-color:var(--gold)}
+  .model-head{display:flex;align-items:center;gap:.8rem;margin-bottom:.4rem;flex-wrap:wrap}
+  .m-logo{width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:900;font-size:var(--fs-base);color:var(--ink);
+    background:var(--gold);border:1px solid var(--gold-bright)}
+  .m-logo.stepfun{background:#5e9aa3}
+  .m-logo.deepseek{background:#7d95c4}
+  .m-logo.wan{background:var(--ember)}
+  .m-title{font-family:var(--font-display);font-weight:700;font-size:.95rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--bone-bright)}
+  .m-maker{font-family:var(--font-body);font-size:var(--fs-tiny);color:var(--bone-dim);letter-spacing:.02em;
+    text-transform:none;font-style:italic;font-family:var(--font-flavor);font-style:italic}
+  .m-tag{font-family:var(--font-display);font-size:.75rem;letter-spacing:.18em;text-transform:uppercase;
+    padding:.22rem .55rem;margin-left:auto}
+  .m-tag.dm{color:var(--poison);border:1px solid rgba(122,163,94,.5)}
+  .m-tag.guardian{color:var(--teal);border:1px solid rgba(94,154,163,.5)}
+  .m-tag.flagship{color:var(--gold);border:1px solid rgba(var(--gold-rgb),.5)}
+  .m-desc{color:var(--bone);font-size:.96rem;line-height:1.65;margin:.7rem 0 1.1rem;font-size:1.0625rem;line-height:1.65}
+  .m-desc b{color:var(--bone-bright);font-weight:600}
+
+  /* spec grid */
+  .spec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.1rem}
+  .spec{background:var(--stone-3);border:1px solid var(--edge);padding:.7rem .8rem}
+  .spec .k{font-family:var(--font-display);font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--bone-dim);display:block;margin-bottom:.28rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .spec .v{font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--gold-bright);
+    letter-spacing:.03em}
+  .spec .v small{font-family:var(--font-body);font-size:.78rem;font-weight:400;color:var(--bone-dim);
+    display:block;margin-top:.1rem;letter-spacing:0}
+  @media(max-width:720px){.spec-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:420px){.spec-grid{grid-template-columns:1fr 1fr;gap:.5rem}.spec{padding:.55rem .6rem}}
+
+  /* role line */
+  .m-role{display:flex;gap:.55rem;align-items:flex-start;color:var(--bone-dim);font-size:var(--fs-sm);
+    line-height:1.55;border-top:1px dashed rgba(40,32,22,.5);padding-top:.85rem}
+  .m-role .ico{color:var(--gold);flex:none;font-size:var(--fs-tiny);margin-top:.12rem}
+  .m-role b{color:var(--bone);font-weight:600}
+
+  /* compare table */
+  .cmp-wrap{overflow-x:auto;border:1px solid var(--edge)}
+  .cmp{width:100%;border-collapse:collapse;min-width:640px}
+  /* fresh-table supersedes: .cmp th{font-family:var(--font-display);var(--fs-micro);letter-spacing:.18em;text-transform:uppercase;
+    color:var(--gold);text-align:left;padding:.85rem 1rem;border-bottom:1px solid var(--edge-hi);
+    background:var(--stone-3);white-space:nowrap} */
+  .cmp td{font-size:var(--fs-sm);color:var(--bone);padding:.75rem 1rem;border-bottom:1px solid rgba(42,42,58,.6);
+    vertical-align:top;line-height:1.5}
+  .cmp tr:last-child td{border-bottom:none}
+  .cmp td b{color:var(--bone-bright);font-weight:600}
+  .cmp td .dim{color:var(--bone-dim)}
+  .cmp .mname{font-family:var(--font-display);font-weight:700;font-size:var(--fs-tiny);letter-spacing:.1em;
+    text-transform:uppercase;color:var(--bone-bright);white-space:nowrap}
+  /* fresh-table supersedes: .cmp .cmp-group td{font-family:var(--font-display);font-size:.58rem;letter-spacing:.24em;
+    text-transform:uppercase;color:var(--gold);background:var(--stone-2);
+    padding:.5rem 1rem;border-bottom:1px solid var(--edge-hi);white-space:nowrap} */
+
+  .note{margin-top:1.4rem;font-size:var(--fs-tiny);color:var(--bone-dim);line-height:1.7}
+  .note b{color:var(--bone);font-weight:600}
+
+  .footer{margin-top:4rem;text-align:center;color:var(--bone-dim);font-size:var(--fs-tiny);line-height:1.7;
+    border-top:1px solid var(--edge);padding-top:2rem}
+  .footer b{color:var(--bone)}
+  .footer a{color:var(--gold);text-decoration:none}
+  .footer a:hover{color:var(--gold-bright)}
+
+  /* reveal */
+  .rv{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+  .rv.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){
+    .rv{opacity:1;transform:none;transition:none}
+  }
+  @media(max-width:900px){
+    .spec-grid{grid-template-columns:repeat(2,1fr)}
+    .model{padding:1.5rem 1.3rem 1.3rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  }
+  @media(max-width:640px){
+    .ledger{padding-top:3rem}
+    .model{padding:1.4rem 1.1rem 1.2rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+    .sec-head h2{font-size:var(--fs-sm);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
+  }
+</style>
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<noscript><style>.rv{opacity:1;transform:none}</style></noscript>
+<style id="grimoire-leaf">
+/* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
+.ledger h1::first-letter{font-family:var(--font-display,'Grenze',serif);font-style:normal;font-weight:700;font-size:1.06em;line-height:1;vertical-align:0;margin-right:0;color:var(--gold);text-shadow:0 0 12px rgba(var(--gold-rgb),.3)}
+.model::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/svg%3E") left top/24px 24px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg transform='rotate(180 16 16)'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/g%3E%3C/svg%3E") right bottom/24px 24px no-repeat;opacity:.9}
+@keyframes gr-flicker{0%,100%{text-shadow:0 0 20px rgba(var(--gold-bright-rgb),.28),0 2px 0 #000}43%{text-shadow:0 0 26px rgba(var(--gold-bright-rgb),.42),0 2px 0 #000}47%{text-shadow:0 0 12px rgba(var(--gold-bright-rgb),.16),0 2px 0 #000}76%{text-shadow:0 0 22px rgba(var(--gold-bright-rgb),.3),0 2px 0 #000}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.ledger h1{animation:none!important;text-shadow:0 2px 0 #000}}
+
+/* ═══ SIDE BY SIDE · mobil (W2/F, 2026-10-27) ═══════════════════════════════
+   >640: äkta scroll-container med synlig scrollbar + "swipe →"-hint (tabellen
+   är 725 px och fick plats i 318 px utan affordans → 407 px osynlig).
+   ≤640: varje modell blir ett kort, fälten blir rader med etikett — all
+   information synlig utan att gissa, 0 px klippt. */
+.cmp-wrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border:1px solid var(--edge);border-radius:var(--emb-r-sm);scrollbar-width:thin;scrollbar-color:var(--gold) rgba(var(--ink-rgb),.65)}
+.cmp-wrap::-webkit-scrollbar{height:9px}
+.cmp-wrap::-webkit-scrollbar-thumb{background:var(--gold);border-radius:var(--emb-r-pill)}
+.cmp-wrap::-webkit-scrollbar-track{background:rgba(var(--ink-rgb),.65)}
+.cmp-wrap:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px}
+.cmp-hint{display:none;margin:.55rem 0 0;font-family:var(--font-mono);font-size:.75rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);text-align:right}
+@media(min-width:641px) and (max-width:940px){.cmp-hint{display:block}}
+@media(max-width:640px){
+  .cmp-hint{display:none}
+  .cmp-wrap{overflow:visible;border:0;border-radius:0}
+  .cmp{display:block;min-width:0}
+  .cmp thead{display:none}
+  .cmp tbody{display:block}
+  .cmp tr,.cmp tbody tr:nth-child(even){display:block;margin:0 0 .8rem;padding:.7rem .85rem .5rem;border:1px solid rgba(var(--gold-rgb),.3);border-radius:var(--emb-r);background:linear-gradient(180deg,rgba(var(--bone-rgb),.05),rgba(var(--bone-rgb),.012) 60%),var(--stone-2);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5)}
+  .cmp tr.cmp-group,.cmp tbody tr.cmp-group:nth-child(even){margin:.2rem 0 .8rem;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+  .cmp tr.cmp-group td{display:block;padding:.3rem .1rem;border-bottom:1px solid rgba(var(--gold-rgb),.45);font-family:var(--font-display);font-size:.75rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);white-space:normal}
+  .cmp td{display:grid;grid-template-columns:minmax(5.2rem,31%) 1fr;gap:.5rem;align-items:baseline;padding:.36rem .1rem;border-bottom:1px dashed rgba(var(--edge-rgb),.5);font-size:.9rem;line-height:1.45;color:var(--bone)}
+  .cmp td::before{content:'';font-family:var(--font-display);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);line-height:1.5}
+  .cmp td:nth-child(2)::before{content:'Context'}
+  .cmp td:nth-child(3)::before{content:'Parameters'}
+  .cmp td:nth-child(4)::before{content:'Active'}
+  .cmp td:nth-child(5)::before{content:'Speed'}
+  .cmp td:nth-child(6)::before{content:'Best at'}
+  .cmp tr td:last-child{border-bottom:0}
+  .cmp td.mname{display:block;margin:0 0 .35rem;padding:0 0 .45rem;border-bottom:1px solid rgba(var(--gold-rgb),.3);font-size:.95rem;letter-spacing:.06em;white-space:normal;color:var(--bone-bright)}
+  .cmp td.mname::before,.cmp tr.cmp-group td::before{content:none}
+}
+@media(max-width:860px){
+  .footer a{display:inline-flex;align-items:center;min-height:var(--tap-min);padding:0 .2rem}
+  .ledger p a{padding:.22rem 0}
+}
+</style>
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">THE MINDS</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="ledger">
+  <p class="eyebrow rv">The Grimoire of Minds</p>
+  <div class="page-eyebrow">THE MINDS · WHAT THINKS</div>
+  <h1 class="rv">The Minds Behind the Mask</h1>
+  <div class="page-rule">✦</div>
+  <p class="ledger-sub rv">Four minds can sit at your table — and behind them wait the voices and the brushes. Each DM is a different weight of thought, a different pace of speech; the narrators give the realm a voice, and the brushes give it faces. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek, StepFun &amp; Wan</b></p>
+
+  <!-- ═══════════════ hur det funkar ═══════════════ -->
+  <div class="sec rv fresh-frame">
+    <div class="sec-head">
+      <span class="sec-num">⚙</span>
+      <h2>How the Table Works</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <div class="m-role" style="border-top:none;padding-top:0"><span class="ico">🧙</span><span><b>The Dungeon Master</b> — the voice you hear. Every turn, your words go to the DM model, which narrates the world, plays the NPCs and drives the story. This is the model you choose at the model gate when you start a campaign — and you can change it at any time in the settings.</span></div>
+      <div class="m-role"><span class="ico">🦉</span><span><b>The Lorekeeper (Guardian)</b> — the quiet bookkeeper. After every exchange, a separate model reads the scene and updates the world state: HP, gold, items, XP, quests, locations. It works in the background, so you never have to track numbers yourself — the world simply remembers.</span></div>
+      <div class="m-role"><span class="ico">✎</span><span><b>The Extraction model</b> — the scribe that turns free-form actions into mechanics. When you write "I draw my sword and lunge", extraction decides what that means in dice terms, damage and consequence — keeping the 5e rules honest even when you don't use the exact phrasing.</span></div>
+      <div class="m-role"><span class="ico">⏱</span><span><b>Response time</b> — heavier minds think longer. A turn with the fast StepFun 3.7 Flash usually answers in a few seconds; Step 5 Preview may pause several seconds more because it reasons deeply before it speaks. The Lorekeeper and Extraction run in parallel after the DM replies, so they rarely add visible wait — but a long, action-heavy turn can take a little longer overall. Pick the fastest mind that still feels like your storyteller.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ stepfun ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>StepFun Step 5 Preview</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model hot">
+      <div class="model-head">
+        <span class="m-logo stepfun">SF</span>
+        <div>
+          <div class="m-title">StepFun Step 5 Preview</div>
+          <div class="m-maker">StepFun · preview release, September 2026</div>
+        </div>
+        <span class="m-tag dm">Unlock</span>
+      </div>
+      <p class="m-desc">StepFun's Step 5 Preview — part of the one-time 10€ unlock. A sparse mixture-of-experts model that reads text and images and reasons before it answers. It is a <b>preview</b> — pricing, routing and limits can still move before general availability.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">1M<small>~750,000 words</small></span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">~600B<small>sparse MoE, third-party measured</small></span></div>
+        <div class="spec"><span class="k">Active per token</span><span class="v">~27B<small>third-party measured</small></span></div>
+        <div class="spec"><span class="k">Output speed</span><span class="v">~100 tok/s<small>Artificial Analysis, measured</small></span></div>
+        <div class="spec"><span class="k">Reasoning</span><span class="v">Yes<small>extended thinking, high effort</small></span></div>
+        <div class="spec"><span class="k">Price</span><span class="v">$1.00 / $2.70<small>per 1M tokens in / out</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>A deep-thinking flagship — set it as the Dungeon Master with the 10€ unlock, at the model gate or in Settings.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ stepfun 3.7 ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>StepFun 3.7 Flash</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <div class="model-head">
+        <span class="m-logo stepfun">SF</span>
+        <div>
+          <div class="m-title">StepFun 3.7 Flash</div>
+          <div class="m-maker">StepFun · released May 29, 2026</div>
+        </div>
+        <span class="m-tag dm">Steadfast DM</span>
+      </div>
+      <p class="m-desc">The <b>steadfast Dungeon Master</b> — the default voice at every free table. Fast, dependable, and built for structured play: it runs the rules engine, the Guardian, and the extraction of every scene into the world state. A sparse mixture-of-experts model that wakes only a sliver of itself per token, it answers with a brisk, reliable cadence and offers <b>three selectable reasoning levels</b> (low, medium, high) so you can trade depth for speed.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">256K</span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">198B<small>sparse MoE</small></span></div>
+        <div class="spec"><span class="k">Active per token</span><span class="v">~11B</span></div>
+        <div class="spec"><span class="k">Prompt speed</span><span class="v">~425 tok/s<small>prompt processing, long context</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Runs your table by default — <b>free and Companion players</b> travel with this mind. Also the hidden hand that keeps the books: Guardian and extraction.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ qwen 3.8 flash ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>Qwen 3.8 Flash</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model hot">
+      <div class="model-head">
+        <span class="m-logo qwen">Q</span>
+        <div>
+          <div class="m-title">Qwen 3.8 Flash</div>
+          <div class="m-maker">Alibaba Qwen · open weights August 2026 (Flash-Next)</div>
+        </div>
+        <span class="m-tag dm">Swift DM</span>
+      </div>
+      <p class="m-desc">The <b>swift mind</b> — the newest Qwen flash generation, part of the one-time 10€ unlock. A sparse MoE that activates only <b>6B parameters</b> per token, built on the hybrid-attention architecture that previews Qwen4: it stays fast on long campaigns while reasoning visibly before it speaks. On the official API it holds a <b>1M-token context window</b>. Measured on our route it writes visible prose at <b>~80–100 tok/s</b> — the quickest hand among the storytellers.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">1M<small>official API, by default</small></span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">125B<small>sparse MoE, open weights</small></span></div>
+        <div class="spec"><span class="k">Active per token</span><span class="v">6B</span></div>
+        <div class="spec"><span class="k">Output speed</span><span class="v">~80–100 tok/s<small>measured on our route</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Part of the 10€ unlock — the recommended pick when you want Qwen storytelling. Set it at the model gate or in Settings.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ deepseek ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>DeepSeek V4.1 Flash</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <div class="model-head">
+        <span class="m-logo deepseek">DS</span>
+        <div>
+          <div class="m-title">DeepSeek V4.1 Flash</div>
+          <div class="m-maker">DeepSeek · open-weights reasoning model (MIT)</div>
+        </div>
+        <span class="m-tag dm">Swift DM</span>
+      </div>
+      <p class="m-desc">The <b>quick-thinking mind</b> — an open-weight sparse MoE reasoning model from DeepSeek with <b>16B active parameters</b> out of 552B total, released under the permissive MIT license. It reasons before it answers and reads the whole realm in its <b>1M-token context window</b>. The pragmatic pick: strong reasoning at a fraction of the weight, at a budget price.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">1M<small>1,000,000 tokens</small></span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">552B<small>sparse MoE, open weights</small></span></div>
+        <div class="spec"><span class="k">Active per token</span><span class="v">16B</span></div>
+        <div class="spec"><span class="k">Output speed</span><span class="v">~55&ndash;70 tok/s<small>measured on our route</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Available as a player-chosen Dungeon Master on paid paths — the fast-reasoning alternative that keeps pace with long, rules-heavy sessions.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ local ai ═══════════════ -->
+  <div class="sec rv" id="local-ai">
+    <div class="sec-head">
+      <span class="sec-num">🏮</span>
+      <h2>Bring Your Own Breath — Local AI</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <div class="model-head">
+        <span class="m-logo wan">🏮</span>
+        <div>
+          <div class="m-title">Ollama — Models on Your Own Machine</div>
+          <div class="m-maker">Runs where you run it · open source</div>
+        </div>
+        <span class="m-tag dm">Local DM</span>
+      </div>
+      <p class="m-desc">The Cauldron can now speak with a voice that lives on <b>your own hardware</b>. The server stays the brain — it builds every prompt and keeps the books: dice, HP, combat and the world state are rolled and owned server-side, exactly as before. Your machine becomes the mouth: the browser asks your local Ollama to narrate and hands the text back. No API key exists for Ollama, so there is nothing to store, nothing to leak, and <b>the DM step costs 0 turns</b> — it isn't our electricity anymore. It isn't our content policy either: the house minds (StepFun, Qwen, DeepSeek) are subject to their providers' policies, while a model on <b>your</b> hardware answers only to you. Any model your Ollama can run is fully playable as the DM — uncensored ones included. Images and voice remain house engines; this is about the DM's words.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Cost of the DM step</span><span class="v">0 turns<small>your hardware pays</small></span></div>
+        <div class="spec"><span class="k">Recommended model</span><span class="v">≥14B thinking<small>8B works, less is a gamble</small></span></div>
+        <div class="spec"><span class="k">Context (num_ctx)</span><span class="v">16k<small>Ollama's default 4k is too small</small></span></div>
+        <div class="spec"><span class="k">Daily play</span><span class="v">~100 / ~300 messages<small>any role on house / all roles local — see honest notes</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">①</span><span><b>Install Ollama</b> on the machine at your table — <span style="font-family:var(--font-mono);font-size:.85em">curl -fsSL https://ollama.com/install.sh | sh</span>, then <span style="font-family:var(--font-mono);font-size:.85em">ollama pull qwen3:8b</span> (or a bigger model you have VRAM for).</span></div>
+      <div class="m-role"><span class="ico">②</span><span><b>Open the picker.</b> Settings (⚙️) at the table shows a 🏮 group with the models it finds on your machine, a ⟳ refresh, and a context slider. If your Ollama listens somewhere unusual — another port, another box on the LAN — paste the base URL (e.g. <span style="font-family:var(--font-mono);font-size:.85em">http://192.168.1.40:11434</span>) in the settings field; it is saved in your browser only and never sent to us.</span></div>
+      <div class="m-role"><span class="ico">③</span><span><b>Play.</b> Pick a 🏮 model as your DM. Your browser streams the narration token by token from your own machine; everything else at the table behaves the same.</span></div>
+      <div class="m-role"><span class="ico">⚑</span><span><b>Requirements:</b> desktop Chrome or Firefox on the same machine as Ollama — loopback to your own box is what this is built for. From another machine (or your phone): Ollama on <span style="font-family:var(--font-mono);font-size:.85em">OLLAMA_HOST=0.0.0.0</span> with <span style="font-family:var(--font-mono);font-size:.85em">OLLAMA_ORIGINS=https://dnd.rostad.cc</span>, <em>and</em> TLS on its address — browsers refuse plain-HTTP LAN calls from an HTTPS page, so on a tailnet put <span style="font-family:var(--font-mono);font-size:.85em">tailscale serve</span> in front of it. If the page finds your Ollama but shows a yellow CORS dot, that origins line is the fix. The bookkeeping roles want a model that follows JSON-like instructions — a 14B+ thinking model does those steps happily, a tiny 3B one fumbles them.</span></div>
+      <div class="m-role"><span class="ico">④</span><span><b>Pick who carries the background — role by role.</b> The 🏮 group sits in three dropdowns: <b>Dungeon Master</b>, <b>Lorekeeper</b> (the Guardian: rules, dice checks, HP/XP/items bookkeeping) and <b>Background</b> (extraction: facts, journal, memory) — in the ⚙ settings and in the new-adventure setup alike, once you've opted in with <b>Use own Ollama</b>. There is no mode switch: you simply pick your own model for as many roles as you like, and roles you leave on house models keep running on the house exactly as before. When both the Lorekeeper and the Background run locally, the daily allowance rises to roughly <b>300 messages</b>, because the house then spends almost nothing per turn; it keeps the periodic summaries and the logbook either way.</span></div>
+      <div class="m-role"><span class="ico">◆</span><span><b>Your table, your rules.</b> House minds answer to their providers' content policies; a model on your own hardware answers to you. Whatever your Ollama can run is fully playable as the DM — the uncensored ones included — and the house doesn't get a vote in what it says. It does still keep the books: the server builds every prompt, and dice, HP and the Lorekeeper stay server-authoritative, so a local DM can be as frank as it likes without the numbers drifting. Run the Lorekeeper and the Background locally too and the whole Cauldron breathes on your machine. Portraits and voices are the exception — image generation and TTS stay on house engines.</span></div>
+      <p class="note" style="margin-top:1.1rem"><b>The honest limitations.</b> The daily allowance follows how many roles you run at home: while <b>any</b> background role still rides our models, local play is capped at roughly <b>100 local messages per account per day</b> — still about three times the free tier's play, for none of the DM-step cost. Pick 🏮 models for <b>both</b> the Lorekeeper and the Background and the cap lifts to roughly <b>300 messages a day</b> — which is simply because our API cost per turn drops to about zero there. One dependency, honestly stated: local background roles only take effect when the DM is local too — the relay lives on that path. Periodic summaries and the logbook stay on the house either way, and <b>voice narration and images are not local features</b> — they keep costing house turns as before. Narration quality is exactly as good as the model you picked and as fast as your hardware: an 8B model tells a serviceable tale, a sub-8B one will lose the plot of a long campaign, and a 14B+ thinking model on a real GPU is where this stops feeling like a trade-off — the bookkeeping roles ask even more instruction-following, since their steps come back as JSON-like tasks. The prompt your Ollama receives is the same prompt our DMs get — it is deliberately not a secret; you can inspect what your DM was actually asked. And a local campaign is your own hardware's child: dice, HP and combat remain server-authoritative, so nothing fabricated locally changes the books. The whole feature is opt-in — nothing is probed until you tick <b>Use own Ollama</b>. <a href="local-ai.html" style="color:var(--gold-bright)">🏮 Bring Your Own Breath — the full player guide</a> covers setup, the CORS trap behind the yellow dot, and the troubleshooting FAQ.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════ tts: voices ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">🗣</span>
+      <h2>The Voices — TTS Narrators</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+
+    <!-- StepFun TTS -->
+    <div class="model">
+      <div class="model-head">
+        <span class="m-logo stepfun">SF</span>
+        <div>
+          <div class="m-title">StepFun TTS</div>
+          <div class="m-maker">StepFun · stepaudio-2.5-tts</div>
+        </div>
+        <span class="m-tag dm">The Everyday Voice</span>
+      </div>
+      <p class="m-desc">The <b>voice that belongs to the table</b> — StepFun TTS reads your DM, characters and NPCs aloud with a brisk, reliable narration. It is the everyday narrator: fast, dependable, and there for every adventure. Part of the one-time 10€ unlock — each narration costs 1 turn.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Model</span><span class="v">stepaudio-2.5-tts</span></div>
+        <div class="spec"><span class="k">Unlocks</span><span class="v">Unlock<small>10€ one-time</small></span></div>
+        <div class="spec"><span class="k">Style</span><span class="v">Brisk, reliable</span></div>
+        <div class="spec"><span class="k">Purpose</span><span class="v">Narration on every path</span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>The dependable narrator — pick StepFun TTS whenever the realm should speak without fuss.</span></div>
+    </div>
+
+    <!-- Qwen TTS -->
+    <div class="model">
+      <div class="model-head">
+        <span class="m-logo qwen">Q</span>
+        <div>
+          <div class="m-title">Qwen TTS</div>
+          <div class="m-maker">Alibaba Qwen · qwen-audio-3.0-tts-plus</div>
+        </div>
+        <span class="m-tag flagship">The Rich Voice</span>
+      </div>
+      <p class="m-desc">The <b>richer narrator</b> — Qwen&rsquo;s audio mind reads the scene with more warmth and nuance, offering a male and a female narrator (longanlufeng and longanlingxin) and a softer, more expressive pacing. When the realm should linger on its words, this is the voice. Unlocks with the one-time <b>10€ unlock</b>.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Model</span><span class="v">qwen-audio-3.0-tts-plus</span></div>
+        <div class="spec"><span class="k">Unlocks</span><span class="v">Unlock<small>10€ one-time</small></span></div>
+        <div class="spec"><span class="k">Voices</span><span class="v">Male + female<small>longanlufeng · longanlingxin</small></span></div>
+        <div class="spec"><span class="k">Style</span><span class="v">Warm, expressive</span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>The storyteller&rsquo;s voice — pick Qwen TTS for richer, warmer narration with the 10€ unlock.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ image: brushes ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">🖌</span>
+      <h2>The Brushes — Image Generation</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+
+    <!-- Wan 2.7 Pro -->
+    <div class="model hot">
+      <div class="model-head">
+        <span class="m-logo wan">W</span>
+        <div>
+          <div class="m-title">Wan 2.7 Pro</div>
+          <div class="m-maker">Alibaba Wan · wan2.7-image</div>
+        </div>
+        <span class="m-tag flagship">The Master Brush</span>
+      </div>
+      <p class="m-desc">The <b>premium brush</b> — Wan 2.7 Pro renders <b>top-quality, realistic avatars</b>: lifelike faces, believable skin and light, in full <b>1080² resolution</b>, up to <b>10 portraits a day</b>. When a character deserves a portrait worth framing, this is the brush. Unlocks with the one-time <b>10€ unlock</b>.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Model</span><span class="v">wan2.7-image</span></div>
+        <div class="spec"><span class="k">Unlocks</span><span class="v">Unlock<small>10€ one-time</small></span></div>
+        <div class="spec"><span class="k">Resolution</span><span class="v">1080²</span></div>
+        <div class="spec"><span class="k">Daily</span><span class="v">10 portraits / day</span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Generate a face to keep — Wan produces top-quality, realistic portraits for the characters that matter most.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ compare ═══════════════ -->
+  <div class="sec rv fresh-frame">
+    <div class="sec-head">
+      <span class="sec-num">⚖</span>
+      <h2>Side by Side</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="cmp-wrap" tabindex="0" role="region" aria-label="Model comparison table — scrolls sideways">
+      <table class="cmp fresh-table">
+        <thead>
+          <tr>
+            <th>Mind</th>
+            <th>Context</th>
+            <th>Parameters</th>
+            <th>Active</th>
+            <th>Speed</th>
+            <th>Best at</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mname">StepFun Step 5 Preview</td>
+            <td>1M</td>
+            <td>~600B</td>
+            <td>~27B / token</td>
+            <td>~100 tok/s <span class="dim">(output)</span></td>
+            <td>Deep reasoning flagship — <b>Unlock</b></td>
+          </tr>
+          <tr>
+            <td class="mname">StepFun 3.7 Flash</td>
+            <td>256K</td>
+            <td>198B</td>
+            <td>~11B / token</td>
+            <td>~425 tok/s <span class="dim">(prompt)</span></td>
+            <td>Structured play, rules, Guardian — <b>default, Free</b></td>
+          </tr>
+                    <tr>
+            <td class="mname">Qwen 3.8 Flash</td>
+            <td>1M</td>
+            <td>125B</td>
+            <td>6B / token</td>
+            <td>~80–100 tok/s <span class="dim">(output)</span></td>
+            <td>Fastest Qwen storytelling — <b>Unlock</b></td>
+          </tr>
+                    <tr>
+            <td class="mname">DeepSeek V4.1 Flash</td>
+            <td>1M</td>
+            <td>552B</td>
+            <td>16B / token</td>
+            <td>~55–70 tok/s <span class="dim">(output)</span></td>
+            <td>Fast open-weight reasoning — <b>Unlock</b></td>
+          </tr>
+          <tr class="cmp-group"><td colspan="6">The Voices — TTS Narrators</td></tr>
+          <tr>
+            <td class="mname">StepFun TTS</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">fast</td>
+            <td>Everyday narration — <b>Unlock</b></td>
+          </tr>
+          <tr>
+            <td class="mname">Qwen TTS</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">fast</td>
+            <td>Rich male &amp; female narrators — <b>Unlock (10€)</b></td>
+          </tr>
+          <tr class="cmp-group"><td colspan="6">The Brushes — Image Generation</td></tr>
+          <tr>
+            <td class="mname">Wan 2.7 Pro <span class="dim">(image)</span></td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td>~3–5 s <span class="dim">per image</span></td>
+            <td>Realistic 1080² avatars — <b>Unlock (10€)</b></td>
+          </tr>
+          <tr>
+            <td class="mname">Qwen Image 3 Pro <span class="dim">(image)</span></td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td>~5–15 s <span class="dim">per image</span></td>
+            <td>Strong text &amp; detail — <b>Unlock (10€)</b></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cmp-hint" aria-hidden="true">swipe / scroll sideways →</p>
+    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index), the vendor&rsquo;s own prompt-processing figure, or measured on the Cauldron&rsquo;s own route — real speed at your table varies with load, context length and reasoning level. Free accounts play with <b>StepFun 3.7 Flash</b> — the only free mind — at 20 fresh turns every day. The one-time <b>10€ unlock</b> opens <b>Step 5 Preview, Qwen 3.8 Flash and DeepSeek V4.1 Flash</b>, plus the rotating OpenRouter free DMs — permanently, with +100 turns that never expire. <b>The voices:</b> StepFun TTS and Qwen TTS both open with the unlock (1 turn per narration). <b>The brushes:</b> <b>Wan 2.7 Pro</b> and <b>Qwen Image 3 Pro</b> both open with the unlock (1 turn per image).</p>
+  </div>
+
+  <div class="footer rv">
+    <b>The Lore Weaver's Cauldron</b> — an AI dungeon master with a memory.<br>
+    <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a> &middot; <a href="login.html" title="The Gate — sign up or log in">The Gate</a><br>
+    <span>v0.8 · The Minds, Voices &amp; Brushes · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
+  </div>
+</section>
+
+<script>
+  // reveal on scroll
+  (function(){
+    var els = document.querySelectorAll('.rv');
+    if(!('IntersectionObserver' in window)){ els.forEach(function(e){e.classList.add('in')}); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, {threshold:0.12});
+    els.forEach(function(e){ io.observe(e); });
+    setTimeout(function(){ els.forEach(function(e){ e.classList.add('in'); }); }, 2500);
+  })();
+</script>
+<script src="i18n.js?v=20261028a"></script>
+<script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20261006a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+# ── Secrets ──
+backend/.env
+*.env
+.env.stripe
+*.env.stripe
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ── OS / editor ──
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# ── Runtime data (LIVE PROD via bind-mount — git får ALDRIG röra detta) ──
+# Incident 2026-09-20: `git stash` revertade users.json/feedback.jsonl till
+# augusti-läget (125→57 konton, tom feedback-inbox). Hela backend/data/ är
+# runtime: konton, kampanjer, vaults, billing, visits, ip_geo, feedback,
+# avatarer, TTS-röster. Backups görs via server-backups (Proton), inte git.
+backend/data/
+*.zip
+
+# Self-host build: the operator's own env file (compose mounts it)
+backend/.env.selfhost
+
+# Env-backuper ska aldrig spåras
+*.env.bak
+
+# env-backupar får ALDRIG in i git (push-protection-flaggat 2026-09-22)
+.env.bak*
+backend/.env.bak*
+*.env.bak
+.env.bak-*
+
+# Agent/scratch reports — never part of the repo
+/tmp/

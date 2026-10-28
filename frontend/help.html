@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>How to Play — AI Dungeon Master D&D 5e | The Lore Weaver's Cauldron</title>
+<meta name="description" content="How to play the AI Dungeon Master: create an adventurer, roll the D20, explore a persistent world. Free text-based D&D 5e roleplaying in English or Swedish.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://dnd.rostad.cc/help.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Lore Weaver's Cauldron">
+<meta property="og:title" content="How to Play — AI Dungeon Master D&amp;D 5e | The Lore Weaver's Cauldron">
+<meta property="og:description" content="How to start playing in minutes: create an adventurer, roll the D20, talk to NPCs and explore a world the AI DM remembers. 20 free turns every day, in English or Swedish — no email, no credit card.">
+<meta property="og:url" content="https://dnd.rostad.cc/help.html">
+<meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How to Play — AI Dungeon Master D&amp;D 5e | The Lore Weaver's Cauldron">
+<meta name="twitter:description" content="How to start playing in minutes: create an adventurer, roll the D20, talk to NPCs and explore a world the AI DM remembers. 20 free turns every day, in English or Swedish — no email, no credit card.">
+<meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta name="theme-color" content="#09070B">
+<link rel="icon" href="/assets/logo-cauldron.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=Spectral:ital,wght@0,300;0,400;0,500;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Only the page-local font token — all colour tokens come from snes.css. */
+    --font-marginalia:'EB Garamond', Georgia, serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+  body{
+    color:var(--bone);min-height:100vh;
+    background:var(--ink);line-height:1.8;
+  }
+  .app{max-width:800px;margin:0 auto;padding:2rem 1.5rem 4rem}
+  h1{font-family:var(--font-display,'Grenze',serif);font-weight:700;font-size:var(--fs-h1);letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
+  h2{font-family:var(--font-display,'Grenze',serif);font-weight:700;font-size:var(--fs-h3);color:var(--gold);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.14em}
+  h2::before{content:'\00A7\00A0';color:var(--blood-bright);font-variant:small-caps}
+  p,li{font-size:var(--fs-base);color:var(--bone);margin-bottom:.6rem}
+  ul{padding-left:1.2rem;list-style:none}
+  li::before{content:'▸ ';color:var(--gold)}
+  .box{background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid rgba(var(--gold-rgb),.55);padding:1.2rem;margin:1rem 0;position:relative;box-shadow:inset 0 0 0 1px rgba(var(--gold-rgb),.12)}
+  .box::before{content:'';position:absolute;inset:3px;border:1px solid rgba(var(--gold-rgb),.28);pointer-events:none;opacity:.8}
+  .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:var(--fs-sm)}
+  .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:var(--fs-tiny);background:var(--stone-2)}
+  .divider{border:none;border-top:1px dashed var(--edge);margin:1.5rem 0}
+  .loop{display:grid;grid-template-columns:auto 1fr;gap:.4rem .8rem;font-size:var(--fs-sm)}
+  .loop .step{color:var(--gold);font-weight:700}
+  .loop .desc{color:var(--bone)}
+  /* ═══ "What happens when you type" — tre steg + ett kvitto (2026-10-27) ═══ */
+  .how3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem;margin:1rem 0 0}
+  .how3 .h3-card{border:1px solid var(--edge);border-radius:var(--emb-r);
+    background:linear-gradient(168deg,var(--stone-2),var(--stone));padding:.85rem .95rem}
+  .how3 .h3-n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;
+    border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);color:var(--gold-bright);
+    font-family:var(--font-display);font-size:var(--fs-tiny);margin-bottom:.45rem}
+  .how3 h3{font-size:var(--fs-sm);color:var(--bone-bright);font-weight:600;margin:0 0 .25rem}
+  .how3 p{margin:0;font-size:var(--fs-sm);color:var(--bone);font-weight:300;line-height:1.55}
+  .how-rc{margin-top:.7rem;display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .6rem;
+    border:1px solid color-mix(in srgb,var(--gold) 28%,transparent);border-radius:var(--emb-r-sm);
+    background:rgba(var(--bone-rgb),.028);padding:.6rem .75rem;
+    font-family:var(--font-display);font-size:.62rem;letter-spacing:.08em;color:var(--bone-dim)}
+  .how-rc b{color:var(--bone-bright);font-weight:600}
+  .how-rc .ok{color:var(--good);border:1px solid color-mix(in srgb,var(--good) 42%,transparent);
+    border-radius:4px;padding:.05rem .35rem;letter-spacing:.16em;text-transform:uppercase}
+  @media(max-width:820px){.how3{grid-template-columns:1fr}}
+  a{color:var(--arcane)}
+  /* Inline links in prose: 44px hit area without moving the line box (padding + matching negative margin). */
+  .app p a,.app li a{display:inline-block;padding-block:9px;margin-block:-9px}
+
+  /* ═══════════ Scroll reveal (aligned med login/features) ═══════════ */
+  .rv{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1)}
+  .rv.in{opacity:1;transform:none}
+  .rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}
+  @media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
+
+  /* Ledger / Guardian-sektioner — lite extra piff */
+  .ledger-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
+  .ledger-cell{background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid rgba(var(--gold-rgb),.55);padding:1rem 1.1rem;position:relative;box-shadow:inset 0 0 0 1px rgba(var(--gold-rgb),.12)}
+  .ledger-cell::before{content:'';position:absolute;inset:3px;border:1px solid rgba(var(--gold-rgb),.28);pointer-events:none;opacity:.8}
+  .ledger-cell .lc-tag{font-family:var(--font-accent,'Silkscreen',monospace);font-size:12px;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;display:block;margin-bottom:.5rem}
+  .ledger-cell .lc-title{font-family:var(--font-display,'Grenze',serif);font-weight:700;font-size:var(--fs-sm);color:var(--gold);margin-bottom:.4rem}
+  .ledger-cell p, .ledger-cell li{font-size:var(--fs-base)}
+  .ledger-cell .lc-ex{display:block;margin-top:.5rem;font-family:var(--font-marginalia,'EB Garamond',Georgia,serif);font-style:italic;font-size:var(--fs-sm);color:var(--bone);border-left:2px solid var(--gold);padding-left:.6rem}
+  .truth{color:var(--teal)}
+  .truth-bad{color:var(--blood-bright)}
+  .truth-fix{color:var(--ember)}
+
+  /* ═══════════ Mobile — touchscreen ═══════════ */
+  @media (max-width: 900px) {
+    html { -webkit-tap-highlight-color: transparent; }
+  }
+  @media (max-width: 640px) {
+    .app { padding: 1.25rem .75rem 3rem; }
+    h1 { font-size: var(--fs-h2); line-height: 1.4; }
+    h2 { margin: 1.6rem 0 .7rem; }
+    p, li { line-height: 1.9; }
+    .box { padding: .9rem .8rem; }
+    .cmd { word-break: break-word; display: inline-block; max-width: 100%; }
+    .loop { gap: .5rem .6rem; }
+    .ledger-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 400px) {
+    .app { padding: 1rem .5rem 2.5rem; }
+    h1 { font-size: var(--fs-h3); }
+    .box { padding: .75rem .6rem; }
+  }
+</style>
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<style>
+/* ═ DEN FÖRBJUDNA GRIMSBOKEN — gilt tick ornaments + candleflicker ═ */
+.box::after, .ledger-cell::after{content:'';position:absolute;left:8px;right:8px;top:4px;height:3px;pointer-events:none;opacity:.6;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.55) 0 1px,transparent 1px 10px)}
+@keyframes candleflicker{0%,100%{opacity:1}42%{opacity:.84}58%{opacity:.95}72%{opacity:.88}}
+@media (prefers-reduced-motion: no-preference){
+  .rr-sigil{animation:candleflicker 4.2s ease-in-out infinite}
+}
+</style>
+<script src="sprites.js?v=20260806b"></script>
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">HOW TO PLAY</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="app">
+
+  <h1 class="rv">How to Play</h1>
+  <p class="rv d1" style="color:var(--bone-dim)">A guide to the adventure — from the first step to the last dice. The short version: speak naturally, and let the world keep the numbers.</p>
+  <p class="rv d2" style="color:var(--arcane)">🧠 <b>Curious how it works under the hood?</b> — <a href="mechanics.html" style="color:var(--gold-bright)">The Machinery</a>: the DM prompt injections, the Lorekeeper's contracts, the dice engine, TTS caching and character weaving.</p>
+
+  <hr class="divider">
+
+  <h2 class="rv">What Happens When You Type</h2>
+  <p class="rv d1" style="color:var(--bone-dim);font-size:var(--fs-tiny)">Every AI game says its dice are honest. This is the order of operations — it is the whole design.</p>
+  <div class="how3 rv d1">
+    <div class="h3-card">
+      <span class="h3-n">1</span>
+      <h3>You write</h3>
+      <p>Plain words, or your own voice. No syntax, no menus, no commands to learn before the story starts.</p>
+    </div>
+    <div class="h3-card">
+      <span class="h3-n">2</span>
+      <h3>The engine rolls first</h3>
+      <p>Checks, saves and attacks are rolled on the server <b>before</b> the DM writes a word. The narrator is handed a finished number and may not overrule it — a miss stays a miss, however well it is described. If the server can't be reached, the roll is labelled <b>offline</b> instead of being quietly rolled in your browser.</p>
+    </div>
+    <div class="h3-card">
+      <span class="h3-n">3</span>
+      <h3>The world is written down</h3>
+      <p>HP, items, promises, grudges, the dead — stored as data, not as scrollback. That is why a campaign still knows itself a hundred turns and one season later.</p>
+    </div>
+  </div>
+  <div class="how-rc rv d2">
+    <span>Athletics · Strength check</span>
+    <span>d20 <b>14</b> + <b>3</b> STR + <b>2</b> proficiency = <b>19</b></span>
+    <span class="ok">Success</span>
+    <span>beat DC 15 by 4 · server roll</span>
+  </div>
+
+  <h2 class="rv">Core Loop</h2>
+  <div class="box rv d1">
+    <div class="loop">
+      <span class="step">1.</span><span class="desc"><b>The DM awakens</b> — asks 2-3 questions about your character and the world</span>
+      <span class="step">2.</span><span class="desc"><b>You answer</b> — the DM weaves your answers into the opening scene</span>
+      <span class="step">3.</span><span class="desc"><b>You act</b> — write what you do in plain words: fight, sneak, speak, explore. No syntax, no commands — intent is enough</span>
+      <span class="step">4.</span><span class="desc"><b>The DM responds</b> — describes consequences, plays the NPCs, opens new choices</span>
+      <span class="step">5.</span><span class="desc"><b>The Lorekeeper writes</b> — HP, gold, items, XP and quests update in the background, quietly</span>
+      <span class="step">6.</span><span class="desc"><b>Repeat</b> — the story is built from your choices, nothing is predetermined</span>
+    </div>
+  </div>
+
+  <h2 class="rv">Two Minds at the Table</h2>
+  <div class="box rv d1">
+    <ul>
+      <li><b>The Dungeon Master</b> narrates everything — the world, the NPCs, the drama. It thinks in stories, not spreadsheets</li>
+      <li><b>The Lorekeeper</b> is the quiet scribe behind the DM — it reads every reply and turns it into real mechanics: damage applied, treasure added, map updated, journal filled</li>
+      <li>While the DM answers you, the Lorekeeper works in parallel — you can see its progress live (<b>Lorekeeper reviewing the action… → DM weaving the tale… → Parsing mechanics… → Lorekeeper updating the world…</b>). The story never pauses for bookkeeping</li>
+      <li>Mechanical effects arrive as a <b>🦉 Lorekeeper Report</b> in the chat — that's your proof the numbers landed</li>
+    </ul>
+  </div>
+
+  <h2 class="rv">The Ledger — How the World Remembers</h2>
+  <p class="rv d1" style="color:var(--bone-dim);font-size:var(--fs-tiny)">Everything you do is written down twice: once as the story, once as the books. The story is what the DM tells you; the books are what actually happened.</p>
+  <div class="ledger-grid rv d2">
+    <div class="ledger-cell">
+      <span class="lc-tag">Story layer</span>
+      <span class="lc-title">The Transcript</span>
+      <p>Every turn is appended to an unchangeable record — the DM's narration, your words, the dice. It can be replayed, exported, and searched by memory. The past is never rewritten.</p>
+    </div>
+    <div class="ledger-cell">
+      <span class="lc-tag">Book layer</span>
+      <span class="lc-title">The Fact Register</span>
+      <p>After every reply, the extraction model reads the scene and pulls out the durable truths — NPCs, places, promises, relationships, world changes — into a structured register. Facts that matter stay near the top of the DM's memory; forgotten details quietly sink as they stop being relevant.</p>
+    </div>
+  </div>
+  <div class="box rv d1">
+    <ul>
+      <li>Each fact is <b>deduplicated and versioned</b> — if the world changes, the old truth is superseded, never silently edited</li>
+      <li>Facts are injected into the DM's context every turn as an <b>authoritative block</b>: <span class="cmd">FACT REGISTER (authoritative — never contradict)</span></li>
+      <li>NPCs carry their own dossier: a <b>relation</b> (allied, neutral, enemy or unknown) plus <b>notes</b> the Guardian keeps per person — what they know, what they remember about you — surfaced when you talk to them</li>
+      <li>The <b>📖 Codex → Facts</b> tab shows the full register with rank — how hot each memory is right now</li>
+    </ul>
+  </div>
+
+  <h2 class="rv">The Guardian — Keeping the Truth</h2>
+  <p class="rv d1" style="color:var(--bone-dim);font-size:var(--fs-tiny)">The DM is a storyteller, and storytellers make mistakes. The Guardian is the part of the engine that <b>owns the numbers</b> — so a wrong sentence in the tale never becomes a wrong fact in the world.</p>
+  <p class="rv d2" style="color:var(--bone-dim);font-size:var(--fs-tiny)"><span class="truth">The rule of the books:</span> the Guardian corrects the ledger <b>only when the Dungeon Master's own narration states it as truth in the world</b> — it never writes a fact the DM did not speak. Truth flows from the DM's books, mechanics flow from the Guardian. That split is what hardens the realm against AI drift: a wandering sentence can never quietly rewrite the state.</p>
+  <div class="ledger-grid rv d2">
+    <div class="ledger-cell">
+      <span class="lc-tag">Before the story</span>
+      <span class="lc-title">Guardian Check</span>
+      <p>When you act, the Guardian first decides <span class="truth">what the rules say</span> — is a roll needed? What DC? Advantage? The DM narrates within those bounds, and the dice are always rolled by real code, never invented.</p>
+    </div>
+    <div class="ledger-cell">
+      <span class="lc-tag">After the story</span>
+      <span class="lc-title">Guardian Extraction</span>
+      <p>It then reads the DM's reply and <span class="truth">commits the mechanics</span> to state: damage applied, gold moved, items added, quests advanced. The story can say anything; the books change only through the Guardian.</p>
+    </div>
+  </div>
+  <div class="box rv d1">
+    <ul>
+      <li><span class="truth-fix">If a drift happens</span> — the DM narrates something that contradicts the books (a dead NPC returns, an item you sold appears) — the authoritative fact block keeps the truth visible, and the Guardian's state wins</li>
+      <li><span class="truth-bad">Every contradiction is caught</span> by the "never contradict" rule in the DM's context plus the mechanical state the Guardian owns</li>
+      <li>You can correct the books directly: <span class="cmd">/guardian my HP should be 18</span> — the Guardian updates the ledger, no re-narration needed</li>
+      <li>Every 50 turns a <b>compaction pass</b> sweeps the fact register: stale, irrelevant details are down-ranked so the memory window stays focused on what matters now</li>
+    </ul>
+  </div>
+
+  <h2 class="rv">Getting Started</h2>
+  <ul class="rv d1">
+    <li>Sign in at the Gate — free account, <b>20 fresh turns every day</b>, no email needed. The one-time <b>10€ unlock</b> adds 100 turns that never expire and opens every Dungeon Master, voice and image engine</li>
+    <li>What costs a turn: every chat message is 1 turn. An image, a voice narration, character summoning or a memory search each cost 1 turn of their own — images, voice and the other Dungeon Masters need the one-time <b>10€ unlock</b> first. <b>Undo</b> needs a donation of any amount (1€ is enough) and stays available forever once unlocked; each use costs 1 turn. Everything else — the Guardian, the ledger, the map — is free</li>
+    <li>Choose how to begin: <b>Prepare Adventure</b> (describe a world and/or upload .md/.pdf files — Qwen extracts characters, locations, quests and lore) or <b>New Adventure</b> (the DM freestyles an opening on the spot)</li>
+    <li>Create your character: pick an archetype or describe your own, then <b>Summon Character</b> — the AI writes the full sheet</li>
+    <li>Pick your DM model and step to the table. The DM awakens and asks its first questions</li>
+  </ul>
+
+  <h2 class="rv">Dice — Roll or Write</h2>
+  <ul>
+    <li>When an outcome is uncertain, the DM calls for a roll and a <b>Roll or Write card</b> appears in the chat</li>
+    <li>Click the <b>🎲 dice</b> to roll — a short ceremony, flicker and glitter, then the verdict</li>
+    <li>Or click the <b>🖊️ pen</b> to describe your attempt in words instead — the chat unlocks and you narrate freely</li>
+    <li>The chat is locked while a roll is pending, so the dice stay fair and deliberate</li>
+    <li><b>Natural 20</b> = triumph, rendered in gold. <b>Natural 1</b> = catastrophe, rendered in blood</li>
+    <li>You never need to type dice notation anywhere — the DM and Lorekeeper handle the math</li>
+  </ul>
+
+  <h2 class="rv">Talking to NPCs</h2>
+  <div class="box rv d1">
+    <p>Type <span class="cmd">@Name</span> in the chat to address an NPC directly — e.g. <span class="cmd">@Lyra Vane</span> <i>"What are you doing here?"</i></p>
+    <p>The NPC answers in its own voice, with its own opinions and memory of you. The DM can step in with narration at any time.</p>
+    <p>Typing <span class="cmd">@</span> gives you autocomplete — every NPC you've met is listed. NPCs standing close to you join <b>The Party</b> panel in the sidebar.</p>
+  </div>
+
+  <h2 class="rv">The Codex — Everything in One Place</h2>
+  <div class="box rv d1">
+    <p>The <b>📖 Codex</b> is your tabbed view of the whole campaign — no page-hopping:</p>
+    <ul>
+      <li><b>Character</b> — full sheet: stats, HP, inventory, equipment, notes</li>
+      <li><b>NPCs</b> — every person you've met, with relation and lore</li>
+      <li><b>Map</b> — locations discovered so far</li>
+      <li><b>Journal</b> — the logbook of your adventure</li>
+      <li><b>Facts</b> — pinned truths about the world</li>
+      <li><b>Spells</b> — known spells and slots</li>
+    </ul>
+  </div>
+
+  <h2 class="rv">Voice, Sound &amp; Themes</h2>
+  <ul>
+    <li><b>Voice of the DM</b> — included with the one-time <b>10€ unlock</b>: a ▶ play button on every DM reply reads the narration aloud (1 turn per narration), and you pick a male or female storyteller voice above the input. Voices are generated on demand and cached</li>
+    <li><b>Theme switcher</b> in the top bar — five dark-fantasy palettes (Terminal, Blood, Arcane, Ember, Iron), remembered between visits</li>
+    <li>Typewriter reveal on messages, with pixel-particle bursts on every DM, Lorekeeper and player message</li>
+  </ul>
+
+  <h2 class="rv">Models</h2>
+  <div class="box rv d1">
+    <p>Three roles, each with its own model — all switchable mid-adventure from <b>Settings (⚙️)</b>:</p>
+    <ul>
+      <li><b>Dungeon Master</b> — the storyteller. Higher reasoning models think longer but write richer prose; watch the DM's reasoning bubble if you're curious what it's weighing</li>
+      <li><b>Lorekeeper</b> — the mechanic extracting numbers from the narration</li>
+      <li><b>Background (extraction)</b> — used for worldbuilding uploads and avatars</li>
+    </ul>
+    <p style="color:var(--bone-dim);font-size:var(--fs-tiny)">Open <b>About the Models</b> in Settings for what each model does and why thinking takes time. Your choices are saved per campaign. If the DM stops responding, switching models is the first thing to try.</p>
+  </div>
+
+  <h2 class="rv">Running the DM on Your Own Machine</h2>
+  <div class="box rv d1">
+    <p><b>How do I run the DM on my own machine?</b> Install <a href="https://ollama.com">Ollama</a>, pull a model, and pick it in Settings (⚙️) under the 🏮 group — e.g. <span class="cmd">ollama pull qwen3:8b</span>. The server still builds the prompts and keeps the books (dice, HP and combat stay server-side); your browser asks your own Ollama for the narration and hands it back. The DM step costs <b>0 turns</b>.</p>
+    <ul>
+      <li><b>Same machine</b> — works out of the box in desktop Chrome/Firefox at <span class="cmd">http://127.0.0.1:11434</span>. If the picker shows a yellow CORS dot, Ollama must be told the site may call it: <span class="cmd">OLLAMA_ORIGINS=https://dnd.rostad.cc ollama serve</span></li>
+      <li><b>Another box on your network</b> — run Ollama with <span class="cmd">OLLAMA_HOST=0.0.0.0</span> plus the same <span class="cmd">OLLAMA_ORIGINS</span> line and paste the address (any port) into the base-URL field in Settings; it lives only in your browser and is never sent to us. One honest caveat: this page is served over HTTPS, and browsers refuse plain-HTTP calls to a LAN address from an HTTPS page (loopback to your own machine is exempt). Reaching another box therefore needs TLS on that address — on a tailnet, <span class="cmd">tailscale serve</span> in front of Ollama does it in a minute.</li>
+      <li><b>Model size</b> — a ≥14B thinking model is the comfortable pick, 8B is the practical minimum, and anything smaller will struggle to hold a long campaign — and the full-local mode below asks even more of it: the bookkeeping steps come back as JSON-like instructions, which a tiny 3B model simply fumbles. Set the context to <b>16k</b> (the slider does this per request — Ollama's own default of 4k is too small)</li>
+      <li><b>What stays house-run</b> — the Lorekeeper and fact extraction still run on our models in the background, so local play is capped at ~100 messages per account per day; voice narration and images cost turns as before</li>
+      <li><b>Whole Cauldron local</b> — an opt-in per-campaign setting in the 🏮 row: your own Ollama also runs the Lorekeeper's roll-check, the fact extraction, the tag repair and the memory-search continuation — same prompts, your hardware (the house keeps the periodic summaries, logbook, voice and images). That mode asks for a model that follows JSON-like instructions: a 14B+ thinking model shines, a tiny 3B one fumbles the bookkeeping. Because the house pays almost nothing per turn there, the daily cap lifts from ~100 messages to ~300. Being switched on gradually</li>
+    </ul>
+    <p style="margin-top:.6rem"><a href="local-ai.html" style="color:var(--gold-bright)">Full troubleshooting guide →</a> — the CORS trap that keeps the dot yellow, status-dot meanings, verification commands and the FAQ.</p>
+  </div>
+
+  <h2 class="rv">Rules (D&amp;D 5e)</h2>
+  <div class="box rv d1">
+    <ul>
+      <li>The DM runs the table on the 5e ruleset: 1d20 + modifier vs DC, initiative and turn order in combat, advantage/disadvantage, rests, death saves</li>
+      <li>You don't need to know any of it — the DM applies the rules and explains them as they matter</li>
+      <li>Unsure about a rule? Ask the <b>DM directly</b> — argue your case, and the table will judge</li>
+      <li>The DM is still the final judge. The rules are a framework, not a prison</li>
+    </ul>
+  </div>
+
+  <h2 class="rv">Tips</h2>
+  <ul>
+    <li>Write freely — you can attempt anything (you may try, you may not always succeed)</li>
+    <li>Everything is remembered — grudges, favors, prophecies half-fulfilled. Leave for a season; the world keeps your place</li>
+    <li>Click any portrait to see it full-size — generate a new one from there (image generation is part of the 10€ unlock; 1 turn per image).</li>
+    <li><b>📊 Usage</b> in Settings shows exactly which models ran and what they cost in tokens — full transparency</li>
+    <li><b>📦 Export</b> in Settings downloads your entire campaign as a ZIP — included with the 10€ unlock, and unlocked forever by any donation (1€ is enough)</li>
+    <li><b>🚪 Leave</b> in Settings returns you to adventure select — your campaigns wait for you there</li>
+  </ul>
+
+  <h2 class="rv">If Something Goes Wrong</h2>
+  <div class="box rv d1">
+    <ul>
+      <li><b>The state looks wrong?</b> (missing item, wrong HP) — tell the Lorekeeper directly with <span class="cmd">/guardian my HP should be 18</span> and it corrects the books</li>
+      <li><b>No reply from the DM?</b> The chat shows the underlying error — an HTTP code like <span class="cmd">HTTP 429</span> (rate limit), <span class="cmd">HTTP 500</span> (server), or a network message</li>
+      <li><b>If the issue persists, change models in Settings (⚙️)</b> — a different model often routes around the problem</li>
+      <li><b>Connection dropped mid-reply?</b> The chat recovers the DM's answer from the transcript automatically</li>
+      <li>Check the <b>🛠️ Engine Room</b> in Settings for live debug logs if things look wrong; <span class="cmd">/help</span> in the chat lists the few remaining shortcuts</li>
+    </ul>
+  </div>
+
+  <hr class="divider">
+  <p style="text-align:center;color:var(--bone-dim);font-size:var(--fs-tiny)">
+    Powered by Qwen, DeepSeek &amp; StepFun · Your adventures are saved in the Cauldron
+  </p>
+  <p style="text-align:center;margin-top:1rem"><a href="login.html" class="btn-gold">Back to the Gate</a></p>
+</div>
+<script src="i18n.js?v=20261028a"></script>
+<script>
+/* ═══════════ Scroll reveal — samma mekanism som login/features ═══════════ */
+(function () {
+  const reveal = el => { el.classList.add('in'); io.unobserve(el); };
+  const io = new IntersectionObserver(entries => {
+    for (const e of entries) if (e.isIntersecting) reveal(e.target);
+  }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+  document.querySelectorAll('.rv:not(.in)').forEach(el => io.observe(el));
+  // Säkerhetsfallback: om IO av någon anledning inte triggar (headless,
+  // exotiska webbläsare), visa element som redan är i viewport efter en stund.
+  setTimeout(() => {
+    document.querySelectorAll('.rv:not(.in)').forEach(el => {
+      const r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight && r.bottom > 0) reveal(el);
+    });
+  }, 1500);
+})();
+</script>
+<script src="rail.js?v=20261006a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+</body>
+</html>

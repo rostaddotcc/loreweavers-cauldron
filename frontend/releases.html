@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>The Lore Weaver's Cauldron — Release Notes</title>
+<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v2.0 — the pocket table: every screen measured at 360×780 and rebuilt for a phone, one row of controls above the composer, Qwen 4 announced but not callable, prices under review, and a domain of the game's own. 2026-10-28.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://dnd.rostad.cc/releases.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Lore Weaver's Cauldron">
+<meta property="og:title" content="The Lore Weaver's Cauldron — Release Notes">
+<meta property="og:description" content="The changelog of the free AI dungeon master with a memory: v2.0 — the pocket table. Every screen measured at 360×780 and rebuilt for a phone, one row of controls above the composer, Qwen 4 announced but not callable, prices under review, and a domain of the game's own.">
+<meta property="og:url" content="https://dnd.rostad.cc/releases.html">
+<meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Lore Weaver's Cauldron — Release Notes">
+<meta name="twitter:description" content="The changelog of the free AI dungeon master with a memory: v2.0 — the pocket table. The phone is the table now: every screen measured at 360×780, one row of controls above the composer, and the realm's plans said out loud — Qwen 4 when it can be called, prices under review, and a domain of its own.">
+<meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta name="theme-color" content="#09070B">
+<link rel="icon" href="/assets/logo-cauldron.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════ tokens ═══════════════ */
+  :root{
+    /* Palette inherited from snes.css :root (Emberwatch) — no local colour copies */
+    --font-display:'Grenze',serif;
+    --font-body:'Spectral',Georgia,serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --font-accent:'Silkscreen',monospace;
+  --font-flavor:'EB Garamond',Georgia,serif;--rubric:#E4616F;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent;font-size:17px;line-height:1.65}
+
+  /* version chip-row — jump index (audit A2 §5 releases) */
+  .ver-chiprow{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:1.4rem 0 .4rem}
+  .ver-chiprow a{font-family:var(--font-display);font-size:.64rem;letter-spacing:.12em;
+    color:var(--bone-dim);border:1px solid var(--edge);background:var(--stone);padding:.42rem .8rem;text-decoration:none;transition:all .2s;min-height:var(--tap-min);display:inline-flex;align-items:center;justify-content:center}
+  .ver-chiprow a:hover{color:var(--gold-bright);border-color:var(--gold)}
+
+  /* ═══════════════ hero ═══════════════ */
+  .ledger{max-width:900px;margin:0 auto;padding:4rem 1.25rem 6rem}
+  .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.44em;
+    text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem;letter-spacing:.34em}
+  .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
+    text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
+    margin-bottom:1rem;text-shadow:2px 2px 0 #000;animation:gr-flicker 6s ease-in-out infinite}
+  .ledger-sub{max-width:620px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
+    font-size:var(--fs-base);line-height:1.65;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .ledger-sub b{color:var(--bone);font-weight:600}
+
+  /* current version chip */
+  .current-box{display:flex;align-items:center;justify-content:center;gap:.9rem;flex-wrap:wrap;
+    margin-bottom:3rem}
+  .ver-chip{display:inline-flex;align-items:center;gap:.55rem;
+    font-family:var(--font-display);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.55rem 1.1rem}
+  .ver-chip .ver-name{font-weight:900}
+  .ver-chip .ver-note{color:rgba(7,7,12,.72);letter-spacing:.1em;font-size:12px}
+  .ver-tag{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--bone-dim);border:1px solid var(--edge);padding:.4rem .8rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+
+  /* ═══════════════ sections ═══════════════ */
+  .sec{margin-bottom:3.4rem}
+  .sec-head{display:flex;align-items:baseline;gap:.9rem;margin-bottom:1.4rem;
+    border-bottom:1px solid var(--edge);padding-bottom:.7rem}
+  .sec-num{font-family:var(--font-display);font-weight:900;font-size:var(--fs-sm);color:var(--gold);opacity:.8}
+  .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:var(--fs-base);
+    letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
+  .sec-head .rule{height:1px;flex:1;background:var(--edge);align-self:center;height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.7) 15%,rgba(var(--gold-rgb),.7) 85%,transparent) center/100% 1px no-repeat}
+  .sec-head .ruler{height:3px;width:44px;background:var(--gold);align-self:center;flex:none}
+
+  /* stone tablet */
+  .tablet{position:relative;background:var(--stone);
+    border:1px solid var(--edge);padding:1.9rem 1.8rem 1.5rem;margin-bottom:1.6rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .tablet::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3;border-color:rgba(var(--gold-rgb),.45);opacity:.45}
+  .tablet-h{display:flex;align-items:center;gap:.8rem;margin-bottom:.9rem;flex-wrap:wrap}
+  .chip{font-family:var(--font-display);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.26rem .6rem}
+  .tablet-title{font-family:var(--font-display);font-weight:700;font-size:var(--fs-sm);letter-spacing:.14em;
+    text-transform:uppercase;color:var(--bone-bright);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.85rem}
+  .tablet-lead{color:var(--bone-dim);font-size:var(--fs-sm);line-height:1.6;margin-bottom:1.1rem;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .tablet-lead b{color:var(--bone);font-weight:600}
+
+  /* feature list */
+  .feat{list-style:none}
+  .feat li{padding:.55rem 0 .55rem 1.6rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.55}
+  .feat li::before{content:'◆';position:absolute;left:0;top:.62rem;color:var(--gold);font-size:.6rem}
+  .feat li b{color:var(--bone-bright);font-weight:600}
+  .feat li .dim{color:var(--bone-dim);font-family:var(--font-flavor);font-style:italic}
+  .feat li + li{border-top:1px dashed rgba(40,32,22,.5)}
+
+  /* inline tags */
+  .tag{display:inline-block;font-family:var(--font-display);font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase;padding:.14rem .5rem;margin-right:.35rem;vertical-align:middle}
+  .tag.feat{color:var(--poison);border:1px solid rgba(122,163,94,.5)}
+  .tag.fix{color:var(--rubric);border:1px solid rgba(212,58,77,.45)}
+  .tag.ux{color:var(--arcane);border:1px solid rgba(123,79,212,.5)}
+  .tag.ai{color:var(--gold);border:1px solid rgba(var(--gold-rgb),.5)}
+  .tag.snd{color:var(--gold);border:1px solid rgba(var(--ember-rgb),.5)}
+  .tag.pay{color:var(--teal);border:1px solid rgba(94,154,163,.5)}
+
+  /* two-column for tier grid */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+  @media(max-width:720px){.duo{grid-template-columns:1fr}}
+
+  /* tier mini-card */
+  .tier{background:var(--stone);
+    border:1px solid var(--edge);padding:1.6rem 1.5rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .tier.hot{border-color:var(--gold)}
+  .tier-name{font-family:var(--font-display);font-weight:700;font-size:var(--fs-tiny);letter-spacing:.24em;
+    text-transform:uppercase;color:var(--bone-bright);margin-bottom:.3rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .tier-flag{font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold-bright);margin-bottom:.5rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .tier-price{font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:var(--gold-bright);margin-bottom:.5rem}
+  .tier-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
+  .tier ul{list-style:none}
+  .tier li{padding:.3rem 0 .3rem 1.3rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.5}
+  .tier li::before{content:'◆';position:absolute;left:0;top:.38rem;color:var(--gold);font-size:.55rem}
+  .tier li b{color:var(--bone-bright);font-weight:600}
+
+  /* historical versions */
+  .hist-toggle{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;
+    font-family:var(--font-display);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;
+    padding:.85rem 1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:var(--tap-min)}
+  .hist-toggle .caret{color:var(--gold);transition:transform .25s;display:inline-block}
+  .hist-toggle.open .caret{transform:rotate(90deg)}
+  .hist-body{max-height:0;overflow:hidden;transition:max-height .5s ease}
+  .hist-body.open{max-height:4000px}
+  .hist-inner{padding-top:1.6rem}
+  .hist-ver{display:flex;align-items:baseline;gap:.8rem;margin:1.6rem 0 .7rem;padding-top:1.2rem;
+    border-top:1px dashed rgba(40,32,22,.5);border-top:1px dashed rgba(var(--gold-rgb),.35)}
+  .hist-ver:first-child{margin-top:0;padding-top:0;border-top:none}
+  .hist-ver .vchip{font-family:var(--font-display);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);flex:none}
+  .hist-ver h3{font-family:var(--font-display);font-weight:700;font-size:var(--fs-tiny);letter-spacing:.12em;
+    text-transform:uppercase;color:var(--bone-bright)}
+  .hist-ver .muted{font-family:var(--font-body);font-size:var(--fs-tiny);color:var(--bone-dim);letter-spacing:0;text-transform:none}
+  .hist-ver ul{list-style:none;margin-top:.4rem}
+  .hist-ver li{padding:.32rem 0 .32rem 1.4rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.55}
+  .hist-ver li::before{content:'▸';position:absolute;left:0;color:var(--gold);font-size:.7rem}
+
+  .footer{margin-top:4rem;text-align:center;color:var(--bone-dim);font-size:var(--fs-tiny);line-height:1.7;
+    border-top:1px solid var(--edge);padding-top:2rem}
+  .footer b{color:var(--bone)}
+  .feat a{color:var(--gold-bright);text-decoration-color:var(--gold)}   /* audit #1: UA-blå 1.96:1 */
+  .footer a{color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;min-height:44px;margin-block:-12px}
+  .hist-ver li a,.tablet li a,.tablet-lead a{display:inline-block;padding-block:11px;margin-block:-11px}
+  .footer a:hover{color:var(--gold-bright)}
+
+  /* reveal */
+  .rv{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+  .rv.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){
+    .rv{opacity:1;transform:none;transition:none}
+  }
+  @media(max-width:900px){
+    .duo{grid-template-columns:1fr}
+    .tablet{padding:1.6rem 1.3rem 1.4rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+    .hist-ver{flex-wrap:wrap;border-top:1px dashed rgba(var(--gold-rgb),.35)}
+    .hist-toggle{min-height:var(--tap-min)}
+  }
+  @media(max-width:640px){
+    .ledger{padding-top:3rem}
+    .tablet{padding:1.5rem 1.2rem 1.3rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+    .sec-head h2{font-size:var(--fs-sm);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
+  }
+</style>
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<noscript><style>.rv{opacity:1;transform:none}/* v5-fresh: mobile touch targets */
+@media(max-width:900px){.ver-chiprow a{min-height:var(--tap-min);display:inline-flex;align-items:center;min-height:var(--tap-min);display:inline-flex;align-items:center;justify-content:center}.hist-toggle{min-height:var(--tap-min);min-height:var(--tap-min)}}
+</style></noscript>
+<style id="grimoire-leaf">
+/* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
+.ledger h1::first-letter{font-family:var(--font-display,'Grenze',serif);font-style:normal;font-weight:700;font-size:1.06em;line-height:1;vertical-align:0;margin-right:0;color:var(--gold);text-shadow:0 0 12px rgba(var(--gold-rgb),.3)}
+.tablet::after,.tier::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/svg%3E") left top/24px 24px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg transform='rotate(180 16 16)'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/g%3E%3C/svg%3E") right bottom/24px 24px no-repeat;opacity:.9}
+@keyframes gr-flicker{0%,100%{text-shadow:0 0 20px rgba(var(--gold-bright-rgb),.28),0 2px 0 #000}43%{text-shadow:0 0 26px rgba(var(--gold-bright-rgb),.42),0 2px 0 #000}47%{text-shadow:0 0 12px rgba(var(--gold-bright-rgb),.16),0 2px 0 #000}76%{text-shadow:0 0 22px rgba(var(--gold-bright-rgb),.3),0 2px 0 #000}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.ledger h1{animation:none!important;text-shadow:0 2px 0 #000}}
+</style>
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">RELEASE NOTES</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="ledger">
+<div class="page-eyebrow">THE SCRIBE · WHAT IS NEW</div>
+  <h1 class="rv">Release Notes</h1>
+  <div class="page-rule">✦</div>
+   <p class="eyebrow rv">The Ledger of the Realm</p>
+  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the table in a hand: every screen measured at 360×780 before it was touched, the narration row cut down to a single line, and three things said out loud — Qwen 4 is announced and not here, the prices are being adjusted, and the cauldron is getting an address of its own.<br><b>v1.9 → v2.0</b> · 2026-10-28</p>
+
+  <div class="current-box rv fresh-frame">
+    <span class="ver-chip"><span class="ver-name">v2.0</span><span class="ver-note">The Pocket Table</span></span>
+    <span class="ver-tag">Every screen measured at 360×780</span>
+    <span class="ver-tag">One row of controls above the composer</span>
+    <span class="ver-tag">Qwen 4: announced, not callable</span>
+    <span class="ver-tag">Prices: what you bought stays yours</span>
+  </div>
+
+  <div class="ver-chiprow rv" aria-label="Jump to a version">
+    <a href="#s20">v2.0</a>
+    <a href="#s19">v1.9</a>
+    <a href="#s18">v1.8</a>
+    <a href="#s17">v1.7</a>
+    <a href="#s16">v1.6</a>
+    <a href="#s15">v1.5</a>
+    <a href="#s14">v1.4</a>
+    <a href="#s13">v1.3</a>
+    <a href="#s12">v1.2</a>
+    <a href="#s11">v1.1</a>
+    <a href="#s10">v1.0</a>
+    <a href="#s010">v0.10</a>
+    <a href="#s09">v0.9</a>
+    <a href="#s08">v0.8</a>
+  </div>
+
+  <!-- ═══════════════ 2.0 headline ═══════════════ -->
+  <div class="sec rv" id="s20">
+    <div class="sec-head">
+      <span class="sec-num">2.0</span>
+      <h2>The Pocket Table</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">MOBILE</span>
+        <span class="tablet-title">The table fits in a hand · 2026-10-27 → 2026-10-28</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Measured</span> <b>Measured before it was touched</b> — 45 of the last 83 visits came from a phone, and the most common screen was <b>360×780</b>. Every page was measured at that size first; the fixes started after the numbers, not before them.</li>
+        <li><span class="tag ux">Fixed</span> <b>The story got the screen back</b> — on the chat page the composer, the starter chips and the narration row were squeezed (117 → 62, 153 → 47, 97 → 44 px). The narration column went from <b>299 to 446 px</b> on a 360×780 phone: 38% of the screen became 57%.</li>
+        <li><span class="tag ux">Fixed</span> <b>One row of controls</b> — the narration player used to carry a sentence, "[♪] latest narration — press ▶". It is gone: the play button opens the latest narration and says so on hover, and the sentence only ate the row it sat in. Play, the combat log and the voice picker now share a <b>single line</b> above the composer at every width — measured at 360, 390, 768, 1024 and 1280, where the row is 60 → 30 px and the story column gained 30 px.</li>
+        <li><span class="tag ux">Fixed</span> <b>Thumbs, not cursors</b> — every control on a phone is at least <b>44 × 44 px</b>, text fields sit at <b>16 px</b> so iOS stops zooming when you touch them, the header rail sits at the top of the page on all 22 pages, drawers close on the backdrop and on Esc, and the toast no longer covers the composer.</li>
+        <li><span class="tag ux">Fixed</span> <b>The login form came first</b> — on a phone it started at y 1864, three screens below a banner. It starts at <b>y 635</b> now, with the news line static above it.</li>
+        <li><span class="tag ux">Note</span> <b>Still open, said plainly</b> — on the narrowest screens the narration progress line has no room inside the terminal-style pill, so a playing narration shows the button state but not the bar. And a table is a card or a step-list on a phone, not a table: the models and mechanics pages were rebuilt rather than shrunk.</li>
+      </ul>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MINDS</span>
+        <span class="tablet-title">Qwen 4 — announced, not here · 2026-10-28</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">Not yet</span> <b>What is actually true today</b> — Alibaba confirmed the Qwen 4 family at the Apsara conference on 22 September and said "very soon"; the names were previewed on stage. It is <b>in training</b>: no weights, no API listing at our provider (the token plan's list still ends at Qwen 3.8), no date, and no benchmark we are willing to repeat. Checked again today.</li>
+        <li><span class="tag ai">Promise</span> <b>A teaser is a promise about behaviour, never a date</b> — this ledger does not badge a model that cannot be called. The day Qwen 4 is callable it comes to the table: <b>played through our own campaigns before it is offered to yours</b>, at whatever the provider charges. Nothing is claimed about speed, quality or price — those are measurements, and there are none yet.</li>
+        <li><span class="tag ai">Today</span> <b>The roster is unchanged</b> — <b>step-3.7-flash</b> is free for everyone, every day. <b>Qwen 3.8 Flash</b>, <b>DeepSeek V4.1 Flash</b> and <b>Step 5 Preview</b> sit behind the one-time 10€ unlock, as they did yesterday.</li>
+      </ul>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip pay">PRICING</span>
+        <span class="tablet-title">Prices are being adjusted — nothing under your feet · 2026-10-28</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag pay">Stays</span> <b>The free table stays free</b> — <b>20 fresh turns every day</b>, no card, no email, no trial clock. That is the floor of the whole thing, not a promotion, and it is not part of the adjustment.</li>
+        <li><span class="tag pay">Changes</span> <b>What is under review is the paid side</b> — the numbers are being reworked now. The new prices land on the <b>pricing page before they take effect</b> and are announced in this ledger first; nothing changes under anyone's feet in the middle of a campaign. No date yet — said plainly rather than dressed up.</li>
+        <li><span class="tag pay">Yours</span> <b>What you already bought is yours</b> — the 10€ unlock is <b>one-time and permanent</b> (every Dungeon Master, voice narration, image generation), purchased and donated turns <b>never expire</b>, and no plan renews itself. Nothing will be retro-priced.</li>
+      </ul>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">THE REALM</span>
+        <span class="tablet-title">A domain of its own, and support that continues · 2026-10-28</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">Planned</span> <b>The cauldron gets an address of its own</b> — it has lived at <b>dnd.rostad.cc</b>, a borrowed corner of someone else's domain, for longer than it was meant to. It is getting its own. The move will be announced here <b>before</b> it happens, and campaigns live on the server, not in the address — nothing is tied to the URL you typed today.</li>
+        <li><span class="tag feat">Ongoing</span> <b>Support continues</b> — this is not a project winding down. Fixes ship in this ledger together with the reason they were needed, failures are written down instead of quietly dropped, and the open list stays visible: a fallen enemy still keeps its last hit points in the combat state, a second press of the die still spends a turn, and Hunter's Mark's extra die waits on concentration tracking the engine does not carry yet.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 1.9 headline ═══════════════ -->
+  <div class="sec rv" id="s19">
+    <div class="sec-head">
+      <span class="sec-num">1.9</span>
+      <h2>The Numbers Hold</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">DICE</span>
+        <span class="tablet-title">The dice the engine keeps · 2026-10-23</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">Fixed</span> <b>Your attack is rolled before the Dungeon Master speaks</b> — a player wrote in after two hundred turns: hits that never landed, damage that read like a guess, a character dead without knowing what had happened in the fight. He was right about the cause. The engine now settles the attack before the reply is written — the roll you send back is compared to the target's AC as arithmetic, the damage is rolled from the weapon you actually carry, and the Dungeon Master narrates an outcome that already exists instead of inventing one. Two presses of the die can no longer turn an 18 into a miss, and a hit can no longer be lost because the prose happened not to mention a number.</li>
+        <li><span class="tag fix">Fixed</span> <b>Sharpshooter pays what it promised</b> — the feat has charged its -5 to hit on every call since the day it reached the sheet, and its +10 damage was never applied, not once. The engine adds it now whenever the feature is on the sheet and the shot is called as Sharpshooter.</li>
+        <li><span class="tag fix">Fixed</span> <b>A silent Lorekeeper is no longer a lost turn</b> — when the bookkeeping model timed out, the turn's damage, XP and effects were dropped with nothing in the log and a narration that had already promised them. In one afternoon that ate twelve turns without a trace. A failed call now retries against the house model before anything is lost.</li>
+        <li><span class="tag fix">Fixed</span> <b>Rangers and paladins keep their spell slots</b> — the slot table knew the full casters and the warlock, not the half-casters, so a ranger who reached level 2 held zero slots while the Dungeon Master narrated one of two. Both classes are in the table now, and the slot line can no longer vanish from the Dungeon Master's view when it reads zero: a wrong sheet is shown, not hidden. Sheets already broken were corrected by hand.</li>
+        <li><span class="tag fix">Fixed</span> <b>The round counter moves</b> — in one fifty-two-turn fight it never left Round 1. The engine advances the round when the Dungeon Master names the number, and nothing had ever asked it to. The rules ask now.</li>
+        <li><span class="tag ux">Note</span> <b>Still open, said plainly</b> — a fallen enemy currently keeps its last hit points in the combat state, and a second press of the die still spends a turn. Both are next in the ledger; neither is fixed here.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 1.8 headline ═══════════════ -->
+  <div class="sec rv" id="s18">
+    <div class="sec-head">
+      <span class="sec-num">1.8</span>
+      <h2>The Corrected Ledger</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">SKIN</span>
+        <span class="tablet-title">The Emberwatch skin — one palette, from one file · 2026-10-22</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>The whole site wears the console's colours</b> — the admin dashboard's palette (cold ash surfaces, ember accent, warm bone text) used to live in its own stylesheet. It is the game's palette now, read from one place, and the twenty pages that had each been carrying their own copy of the old one no longer carry anything.</li>
+        <li><span class="tag feat">New</span> <b>Autumn on the threshold</b> — the login cover and the adventure screen share one new night: a rune-carved cauldron glowing behind the sigil, a carved pumpkin, a hanging lantern, fog over wet flagstones. Two crops of the same scene, and the darkness where the text sits is measured rather than eyeballed.</li>
+        <li><span class="tag ux">Note</span> <b>Softer edges, redder hovers</b> — buttons, fields, cards, chips and rows are rounded now, and every control answers the pointer in ember: a wash on rows, a border on chips and buttons, a one-pixel lift on cards, and red on anything destructive.</li>
+        <li><span class="tag fix">Fixed</span> <b>Text that was too faint to read</b> — a sweep of every page found the log console, the DM footer and the placeholder text sitting under 4.5:1. They clear it now, and a field carries a visible boundary instead of a hairline measured at 1.3:1.</li>
+        <li><span class="tag fix">Fixed</span> <b>Three things that had quietly broken</b> — the model and language pickers on Cooked Souls rendered as white native selects; the new-character page overflowed sideways on a phone; and the rules page's section titles were red instead of gold.</li>
+      </ul>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MINDS</span>
+        <span class="tablet-title">The free minds that still answer · 2026-10-22</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">Fixed</span> <b>Stale free models, swept out</b> — the free corner of the model picker had been carrying voices that no longer exist as free: one left the free tier behind a price, one answers 404 from its provider, two more are only reachable through OpenRouter's own agent path and refuse a plain call. Every entry was called live before it was written down, and the ones that failed are gone rather than left to break a turn mid-scene.</li>
+        <li><span class="tag ai">New</span> <b>A free voice no longer has to be text-only</b> — anything that accepts text and answers in text, for nothing, is welcome at the table now, even if it also takes images, audio or video. The game only ever sends words, so the extra senses hurt nobody. <b>MiniMax M3.1 Flash</b>, with a million-token context, is the first of the batch and sits at the top of the list.</li>
+        <li><span class="tag fix">Fixed</span> <b>The five-seat limit is gone</b> — the free group used to hold exactly five names no matter how many free models existed. Today OpenRouter offers fourteen that can act as a Dungeon Master; all fourteen are in the picker, the hand-picked ones pinned first and the rest newest-first.</li>
+        <li><span class="tag fix">Fixed</span> <b>A choice that was silently swapped back</b> — a model that arrived through the newest-first fill could be picked, and then quietly replaced by StepFun 3.7 Flash on the next turn, because the server's allow-list only knew the hand-picked names. The allow-list now follows exactly the list the picker shows, so what you choose is what answers.</li>
+        <li><span class="tag ux">Note</span> <b>Rate limits are not dead models</b> — the free voices share one key's quota, so a busy hour arrives as a rate-limit error. Those entries stay; they are slow, not broken. Entries that cannot answer at all are the ones removed.</li>
+      </ul>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">SHEET</span>
+        <span class="tablet-title">The character sheet can be corrected — and the rules still hold · 2026-10-21</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">Fixed</span> <b>"The DM says it is updated, the page never changes"</b> — a player wrote in that the codex had assumed spells and a feat he never picked, and that both the Dungeon Master and the Lorekeeper logged the change while the sheet stood exactly where character creation left it. He was right, and the cause was ours: the mechanism that was supposed to apply character choices only ever wrote a diary entry. It writes to the sheet now — spells learned and unlearned, feats added and dropped, and the fighting style you actually chose.</li>
+        <li><span class="tag feat">New</span> <b>The codex is editable where it matters</b> — open Spells, drop the spell you never wanted, add the one you should have had. Open Features and swap a feat for another. Every change lands in Character Growth, so the log and the sheet finally tell the same story.</li>
+        <li><span class="tag fix">Fixed</span> <b>Fighting Style stopped asking and started answering</b> — the class feature used to read "Choose a fighting style" forever, because the choice had nowhere to be stored. Pick one and the sheet shows "Fighting Style (Archery)" with its rule attached; changing it replaces the old line instead of stacking a second one beside it.</li>
+        <li><span class="tag ux">Note</span> <b>What stays locked</b> — abilities, hit points, armour class, XP, level and spell slots are still owned by the engine. The codex corrects choices; it does not hand out power.</li>
+      </ul>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">RULES</span>
+        <span class="tablet-title">Five limits you can read, in the corner of the spellbook · 2026-10-21</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">New</span> <b>Your limits, written down</b> — above the spellbook sit four quiet chips: your class and level, the highest spell level you can hold, cantrips known, spells known. Each carries a small <b>?</b> that says where the number comes from and when the next one unlocks.</li>
+        <li><span class="tag feat">New</span> <b>Spell levels out of reach say so</b> — the level picker offers only what your class can actually cast; the rest are greyed with the level that would open them ("Level 5 — unlocks at level 17"). No silent refusals, no guessing why.</li>
+        <li><span class="tag feat">New</span> <b>One feat for one feat</b> — features are swapped, not stacked: drop the one you never picked, add the one you meant, and the count never grows past what your class and level justify.</li>
+        <li><span class="tag ux">New</span> <b>The sheet locks mid-fight</b> — spells, feats and fighting styles wait between scenes; in combat the codex says so plainly instead of quietly refusing. Your notes stay open.</li>
+        <li><span class="tag fix">Fixed</span> <b>A correction cannot become a loophole</b> — the allowances remember what your sheet already carried, so a sheet character creation got wrong can always be repaired, while nothing can be inflated on top of it.</li>
+      </ul>
+    </div>
+
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MINDS</span>
+        <span class="tablet-title">What is coming — Qwen 4, and the next DeepSeek · 2026-10-21</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">Watching</span> <b>Qwen 4 is not released</b> — no weights, no API listing, no date. We read the model lists and the Qwen channels rather than repeating rumours, and this ledger will not carry a "coming soon" badge for a model that cannot be called. The day it is real at the token plan, it comes to the table.</li>
+        <li><span class="tag ai">Watching</span> <b>The next DeepSeek, likewise</b> — DeepSeek V4.1 Flash (build 1017) is the patron's Dungeon Master today and the sharpest storyteller in the roster; the build after it is not out. When it lands it will be played through our own campaigns before it is offered to yours.</li>
+        <li><span class="tag feat">Honest note</span> <b>No promises, no invented numbers</b> — no dates, no benchmark claims, no model cards for things that do not exist. The ledger says what is true on the day it is written, and says plainly when the answer is "not yet".</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 1.7 headline ═══════════════ -->
+  <div class="sec rv" id="s17">
+    <div class="sec-head">
+      <span class="sec-num">1.7</span>
+      <h2>Six Voices at the Table</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">LANGUAGE</span>
+        <span class="tablet-title">German, French, Spanish and Italian join the table · 2026-10-06</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>Four new campaign languages</b> — choose <b>Deutsch, Français, Español or Italiano</b> when you begin an adventure and the Dungeon Master narrates every scene, every NPC, every whisper in it. English and Swedish stay exactly as they were.</li>
+        <li><span class="tag feat">New</span> <b>The character sheet follows the campaign</b> — backstory, personality, appearance, starting gear with its lore, even the languages your hero speaks: the sheet is now woven in your campaign language, while class and race names stay exact, because they are machine keys the rules engine reads.</li>
+        <li><span class="tag feat">New</span> <b>The whole engine speaks along</b> — battle reports, the logbook chronicle, quests, the memory archive and travel times ("3 Tage", "3 jours", "3 días", "3 giorni") all run in the tongue you picked.</li>
+        <li><span class="tag ai">Honest note</span> <b>Voice narration got an accent</b> — the spoken DM is now told to read German, French, Spanish and Italian with native pronunciation. <b>Voice input stays English-only</b> for now — the speech-to-text engine we use only understands English (and Chinese), and we say so plainly rather than pretend.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">UI</span>
+        <span class="tablet-title">One accordion, two per row — the dark paths go quiet · 2026-10-06</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Changed</span> <b>Every archetype is now a small expandable card</b> — a colour dot, a name, a chevron; click to fold out its lore and tags, click again to fold it back. Twenty-seven fate lines sit two per row on desktop and stack to one on phones, so choosing a fate is browsing, not scrolling a wall of tiles.</li>
+        <li><span class="tag ux">Changed</span> <b>The mature archetypes moved in from the cold</b> — the separate "dark paths" dropdown is gone; the six darkest fates now stand in the same list as the rest, without emoji name tags or a section of their own. They were always part of the table.</li>
+        <li><span class="tag fix">Fixed</span> <b>Illuminated initials stop breaking words</b> — the decorated first letter used to float out of its own word ("C&nbsp;&nbsp;&nbsp;auldron", "HOOSE YOUR FATE"). It now sits enlarged and gilded <i>inside</i> the word on all eight page banners; the drop-caps at the start of real paragraphs were left alone, since there the float is correct.</li>
+        <li><span class="tag ux">Changed</span> <b>The hovering cauldron sigil retires</b> — the floating logo above the realm's gate is replaced by a quiet news line carrying the latest ledger entry, with a ✕ whenever you have read it.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">LEAKAGE</span>
+        <span class="tablet-title">Swedish retreats to where it belongs · 2026-10-06</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">Fixed</span> <b>The language gate got a spine</b> — thirty-odd places in the engine asked "is this English? if not, Swedish". That made every non-English campaign quietly Swedish inside. The gate now asks "is this Swedish?" and everything else falls back to the campaign's own tongue — one rule, from the combat block to the chronicle prompt.</li>
+        <li><span class="tag fix">Fixed</span> <b>The vault stopped flattening your language</b> — summoning an adventurer in German used to collapse to English on the way in. Supported codes are honoured end to end; only unknown ones fall back.</li>
+        <li><span class="tag fix">Fixed</span> <b>English chrome everywhere</b> — picking German, French, Spanish or Italian no longer flips menus, buttons and tooltips to Swedish on the way in; the interface stays English while the story speaks your language.</li>
+        <li><span class="tag ux">Unchanged</span> <b>The dice protocol stays Swedish underneath</b> — the internal tags the parser reads are untouched on purpose; you never see them, and what you do see is a language reminder at the top and bottom of every prompt, so a long transcript in one tongue cannot drag the DM into another.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MINDS</span>
+        <span class="tablet-title">The house DMs keep their manners · 2026-10-06</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">Note</span> <b>No new models, no new prices</b> — the six house Dungeon Masters are the same roster as before, and the free table still refreshes <b>30 turns a day</b>; the <b>10€ unlock</b> still opens every voice, image engine and DM permanently. What is new is only what those minds are allowed to say, and in which language.</li>
+        <li><span class="tag feat">New</span> <b>Guardian and Lorekeeper localise their notes too</b> — the bookkeeping agents that write daily entries, NPC notes and item lore now receive instructions in the campaign language, so the journal in your vault reads in one tongue from cover to cover.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 1.6 headline ═══════════════ -->
+  <div class="sec rv" id="s16">
+    <div class="sec-head">
+      <span class="sec-num">1.6</span>
+      <h2>The Supporter's Coin</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">PRICING</span>
+        <span class="tablet-title">Any donation opens the rewind and the archive · 2026-10-01</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Change</span> <b>Undo is now part of the supporter unlock</b> — the rewind of your last turn stays exactly as it was: one turn, one level deep, no refund. What changed is the door: it opens with <b>any donation</b>, one euro included, and it stays open. A locked attempt costs nothing — nothing is rewound, no turn is spent, and the snapshot waits for you.</li>
+        <li><span class="tag ux">Change</span> <b>Campaign export moved to the donation</b> — your story as a zip (character sheet, inventory, journal, world, transcript, images) used to ride on the <b>10€ unlock</b>. It now opens with any donation as well.</li>
+        <li><span class="tag ux">Same</span> <b>The 10€ unlock kept everything else</b> — every Dungeon Master, both voice engines, all image engines, uploaded avatars, and 100 turns that never expire. One payment, permanently open.</li>
+        <li><span class="tag feat">Honest note</span> <b>Nobody who has paid loses anything</b> — donors, 10€ buyers, legacy Support/Patron accounts and lifetime tables all pass, whatever the calendar says about old benefit windows. And a donation still pays exactly as before: <b>1€ = 100 turns</b>, spent only after the day's free turns.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MIND</span>
+        <span class="tablet-title">🏮 Your own models, role by role · 2026-10-01</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>Local models for the Lorekeeper and the Background too</b> — the 🏮 group now sits in three dropdowns: <b>Dungeon Master</b>, <b>Lorekeeper</b> (rules, dice checks, HP/XP/items bookkeeping) and <b>Background</b> (facts, journal, memory) — both in the in-game ⚙ settings and in the new-adventure setup, once you've opted in with <b>Use own Ollama</b>. Pick your own Ollama model per role; roles you leave on house models keep running on the house exactly as before.</li>
+        <li><span class="tag fix">Removed</span> <b>The old "Runs locally: Story only / Story + rules" switch is gone</b> — there is no mode left to flip, just the three dropdowns. Campaigns that were set to "Story + rules" keep behaving the same: both roles stay carved out and run on the DM's local model.</li>
+        <li><span class="tag ai">Honest note</span> <b>The daily allowance follows how many roles you run at home</b> — roughly <b>100 local messages a day</b> while any background role still rides the house models; roughly <b>300</b> when both the Lorekeeper and the Background are local, because the house then spends almost nothing per turn. The house keeps the periodic summaries and the logbook either way, and TTS and images still cost house turns as before.</li>
+        <li><span class="tag ux">Good to know</span> <b>Local background roles need a local DM</b> — the relay only exists on the local-DM path, so the 🏮 picks for Lorekeeper and Background take effect once the DM is local too. And bookkeeping asks instruction-following: a 14B+ thinking model handles the JSON-like steps happily, a tiny 3B one fumbles them.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 1.5 headline ═══════════════ -->
+  <div class="sec rv" id="s15">
+    <div class="sec-head">
+      <span class="sec-num">1.5</span>
+      <h2>Your Own Breath</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MIND</span>
+        <span class="tablet-title">🏮 Local AI — the Cauldron can now drink from your own well · 2026-09-29</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>The DM runs on your machine</b> — install Ollama, pull a model (<span style="font-family:var(--font-mono);font-size:.85em">ollama pull qwen3:8b</span> works, a ≥14B thinking model is better), and pick the 🏮 model in Settings. The server still builds every prompt; your browser asks your own hardware for the narration. Nothing to sign up for, no key to store.</li>
+        <li><span class="tag feat">New</span> <b>The DM step costs 0 turns</b> — your electricity, not ours. The house only pays for the background steps, so local tables get a generous daily allowance (~100 local messages — about three times a free day's play) before the cap asks you to rest.</li>
+        <li><span class="tag ai">Honest note</span> <b>The background stays house-run — unless you opt in</b> — in v1 the Lorekeeper and fact extraction use our models; v2 adds the optional <b>Whole Cauldron local</b> mode, where the Lorekeeper's roll-check, the fact extraction and the memory search run on your hardware too (~300 local messages a day instead of ~100, since our cost per turn drops to about zero). Voice narration and images still cost house turns as before. Dice, HP and combat remain server-authoritative: the local DM narrates, the engine keeps the books.</li>
+        <li><span class="tag ux">Setup</span> <b>Desktop Chrome/Firefox on the same machine works out of the box.</b> From another device, run Ollama with <span style="font-family:var(--font-mono);font-size:.85em">OLLAMA_HOST=0.0.0.0 OLLAMA_ORIGINS=https://dnd.rostad.cc</span> and paste the base URL (any port) in Settings — stored in your browser only, never sent to the server. One caveat: browsers refuse plain-HTTP LAN addresses from an HTTPS page (loopback is exempt), so another box needs TLS in front of Ollama — on a tailnet, tailscale serve does it in a minute. 16k context recommended.</li>
+        <li><span class="tag ux">Link</span> <b>Full details:</b> <a href="models.html#local-ai">Bring your own breath</a> under The Minds · <a href="help.html">How to Play</a> has the setup walkthrough.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 1.4 headline ═══════════════ -->
+  <div class="sec rv" id="s14">
+    <div class="sec-head">
+      <span class="sec-num">1.4</span>
+      <h2>The Open Cauldron</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">PRICING</span>
+        <span class="tablet-title">One unlock opens everything · 2026-09-27</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Change</span> <b>New pricing — one door, fully open</b> — the 30€ Patron pack has retired. The one-time <b>10€ unlock</b> now carries everything it used to, permanently: every Dungeon Master (Qwen 3.8 Flash, DeepSeek V4.1 Flash, Step 5 Preview + the OpenRouter community minds), voice narration (Qwen &amp; StepFun), image generation (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro), voice input and export. No 30-day window, no renewal — one payment, every door open, forever.</li>
+        <li><span class="tag ux">Change</span> <b>30 free turns every day</b> — the free table refreshes 30 turns daily with <b>step-3.7-flash</b> (was 50 with a wider roster). Voice narration, images and every other action draw from the same balance: one chat message, one narration or one image = 1 turn each.</li>
+        <li><span class="tag ux">New</span> <b>+100 turns that never expire</b> — the 10€ unlock adds 100 turns to your cauldron, and donations still pay exactly: every € adds 100 turns. Purchased turns sit in the cauldron and are spent <b>only after</b> the day's free turns run out — they never replace them.</li>
+        <li><span class="tag ai">Change</span> <b>The roster, pruned</b> — Qwen 3.8 Max and Qwen 3.7 Plus have left the table. Deep reasoning stays: Step 5 Preview thinks long and hard before it speaks, and Qwen 3.8 Flash narrates with speed and warmth.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 1.3 headline ═══════════════ -->
+  <div class="sec rv" id="s13">
+    <div class="sec-head">
+      <span class="sec-num">1.3</span>
+      <h2>The Rewoven Thread</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MIND</span>
+        <span class="tablet-title">DeepSeek V4.1 Flash joins the Patron path · 2026-09-21</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">New</span> <b>DeepSeek V4.1 Flash — Patron-tier Dungeon Master</b> — DeepSeek's open-weights reasoning model (552B total, 16B active, 1M-token context, MIT license) joins the Patron tier. It replaces DeepSeek V4 Flash 0731 in every picker.</li>
+        <li><span class="tag ai">Change</span> <b>The local minds have left the table</b> — the experimental local models (ollama) are no longer offered. The table now travels with the hosted minds only.</li>
+        <li><span class="tag ai">Docs</span> <b>The Grimoire of Minds, refreshed</b> — the models page now covers all seven Dungeon Masters you can choose from, free and Patron, with measured specs for each.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MIND</span>
+        <span class="tablet-title">Meet Step 5 Preview — new in the free tier · 2026-09-20</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">Try it</span> <b>Step 5 Preview joins the free tier</b> — StepFun's Step 5 Preview is now free for every account. Set it as your Dungeon Master in Settings, or pick it when you start a new adventure.</li>
+        <li><span class="tag ai">Try it</span> <b>Qwen 3.8 Flash — free for every account</b> — set it as your Dungeon Master in Settings, or pick it when you start a new adventure.</li>
+        <li><span class="tag fix">Fixed</span> <b>Combat that keeps its own count</b> — battle rounds now turn over by themselves once you and every living enemy have acted, enemies that share a name can no longer share one action flag, and each round closes with a single honest health snapshot instead of a stream of stale numbers.</li>
+        <li><span class="tag ux">New</span> <b>Give your composer room</b> — the divider between the DM's log and your own words drags to resize (double-click resets it), and the text box is generous on desktop and mobile. The CLI prompt dropped its @location prefix: "user %" is enough.</li>
+        <li><span class="tag fix">Fixed</span> <b>Lighter portraits, honest voices</b> — party and avatar tiles now load server-scaled thumbnails instead of full-size images, and free players see only the voices they can actually use in the voice picker.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">TABLE</span>
+        <span class="tablet-title">Take back the last word</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">New</span> <b>Undo your last turn</b> — a mistyped line, a misread scene, a decision made too fast: the last message, the Dungeon Master's reply and every change the Lorekeeper recorded from it are rewound together. Inventory, gold, HP, quests, the journal and the memory return to where they stood. It costs one turn, and only the most recent turn can be rewound.</li>
+        <li><span class="tag ai">New</span> <b>Qwen 3.8 Flash joins the free table</b> — a fast mind with real reasoning, free for every account. Pick it in Settings, or when you start a new adventure.</li>
+        <li><span class="tag fix">Fixed</span> <b>The party portrait blends again</b> — the character card had gone opaque and left the portrait as a small square beside it; the image now sits behind the name, class and health bars the way it used to.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 1.2 headline ═══════════════ -->
+  <div class="sec rv" id="s12">
+    <div class="sec-head">
+      <span class="sec-num">1.2</span>
+      <h2>The Honest Dice</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">COMBAT</span>
+        <span class="tablet-title">The engine rolls every blade</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>Your weapon damage is now rolled, not narrated</b> — a hit tumbles your wielded weapon's damage dice through the server's own dice engine; a critical hit doubles them. No story number decides your damage any more.</li>
+        <li><span class="tag fix">Fixed</span> <b>The war council wakes up</b> — enemy attacks rolled by code now update HP bars, initiative and the combat log every turn; they used to go silent between rounds.</li>
+        <li><span class="tag fix">Fixed</span> <b>One law per combatant</b> — the Dungeon Master now narrates intent and impression only; the engine reports the outcome, and the story weaves it in next turn. Prose and numbers can no longer disagree.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">RULES</span>
+        <span class="tablet-title">Conditions live, rests true, levels real</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>Prone, restrained, stunned, poisoned — they bite now</b> — a knocked-down foe is easier to hit and its own blows falter; stunned combatants lose their turn; venom burns between rounds.</li>
+        <li><span class="tag feat">New</span> <b>Level-ups grant everything you are owed</b> — hit-dice health, class features, spell slots and a rising proficiency bonus, whichever road the experience arrives by. A fifth-level character finally rolls +3.</li>
+        <li><span class="tag fix">Fixed</span> <b>Armour changes your armour class</b> — swapping into the chain you picked up moves your AC; it used to freeze at whatever the forge wrote on day one.</li>
+        <li><span class="tag fix">Fixed</span> <b>Long rests give back half your hit dice</b>, as the table intends, and every rest refills spell slots and dulls exhaustion.</li>
+        <li><span class="tag fix">Fixed</span> <b>Quests pay what they promise</b> — completion grants its stored XP and gold on every path, once, never twice.</li>
+        <li><span class="tag fix">Fixed</span> <b>Your purse can no longer be quietly destroyed</b> — spending more than you carry is refused, not rounded to zero; the coins stay.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip pay">TRUTH</span>
+        <span class="tablet-title">A rulebook that matches the machine</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Improved</span> <b>The mechanics page was audited line by line against the code</b> and rewritten where it lied — spell slots, rests and the dice contract are documented at last, and nothing on the page promises an engine that does not run.</li>
+        <li><span class="tag fix">Fixed</span> <b>Rolls you take while offline are marked honest</b> — if the server cannot be reached, the dice fall locally and the chat says so.</li>
+        <li><span class="tag fix">Fixed</span> <b>Dying reads as dying</b> — at 0 HP the chronicle shows the death-save tracker, and the Dungeon Master knows you are down instead of asking you to stroll.</li>
+        <li><span class="tag fix">Fixed</span> <b>Signup promises retired cleanly</b> — the old welcome-turns text is gone from every page and search snippet; the free road is 50 fresh turns daily, one turn per message. <i>(2026-09-27: the free road now refreshes 30 turns daily.)</i></li>
+        <li><span class="tag ux">Improved</span> <b>The realm speaks one tongue per toggle</b> — quota warnings, the day-cap modal and idle whispers are now translated both ways, and the legacy welcome-bonus line in your profile says exactly what it is.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip snd">CRAFT</span>
+        <span class="tablet-title">One gold, one ledger, less noise</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Improved</span> <b>A single palette across the realm</b> — three competing golds became one; every page now draws from the same tokens so the torchlight finally matches.</li>
+        <li><span class="tag ux">Improved</span> <b>Carried weight counts your coins</b> — the sheet, the Dungeon Master and the Guardian now agree on how heavy your pack is.</li>
+        <li><span class="tag fix">Fixed</span> <b>Returning heroes skip the tutorial</b> — the onboarding steps fold away once you have an adventure; one line invites a new one.</li>
+        <li><span class="tag fix">Fixed</span> <b>A silent-turn plague cured</b> — malformed numbers from the story-tellers no longer drop a whole turn's XP, gold and items on the floor; they are repaired or refused.</li>
+      </ul>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════ 1.1 headline ═══════════════ -->
+  <div class="sec rv" id="s11">
+    <div class="sec-head">
+      <span class="sec-num">1.1</span>
+      <h2>The Open Road</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MODELS</span>
+        <span class="tablet-title">Five free minds, always at the table</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">AI</span><b>OpenRouter's newest free models, always available</b> — the five latest free community DMs now sit in every picker — Dungeon Master, Guardian, Extraction and character creation — for every path, no upgrade needed. StepFun 3.7 Flash stays the steadfast default; the free minds are the open road beside it, refreshed as OpenRouter ships new ones.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip snd">VOICE</span>
+        <span class="tablet-title">The realm speaks to everyone</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag snd">SND</span><b>StepFun narration is free</b> — the DM, characters and NPCs answer aloud for every path; the free road was always meant to be heard.</li>
+        <li><span class="tag snd">SND</span><b>Voice input is free</b> — tap the microphone and speak your action; StepFun speech-to-text transcribes it for you to edit and send. No top-up needed to be heard.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">FACES</span>
+        <span class="tablet-title">Image generation for everyone</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>StepFun image generation is free</b> — generate your adventurer, the Dungeon Master and every NPC you meet, free-prompt or from the sheet, on the free road.</li>
+        <li><span class="tag feat">FEAT</span><b>Qwen Image 3 Pro joins the premium brushes</b> — the new engine from the Token Plan stands beside Wan 2.7 Pro in the Patron palette, up to <b>10 premium image generations a day</b> between them.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip pay">PATHS</span>
+        <span class="tablet-title">One path to everything</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag pay">PATHS</span><b>The 3€ Support pack is retired</b> — the fork in the road is gone. The one-time Patron top-up (30€) now carries every benefit: premium DMs (Qwen, DeepSeek), Qwen narrators, export, uploads and the premium brushes.</li>
+        <li><span class="tag pay">PATHS</span><b>Existing Support benefits are honored</b> — anyone with an active Support window keeps their perks until it runs out; purchased turns never expire, as always.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 1.0 headline ═══════════════ -->
+  <div class="sec rv" id="s10">
+    <div class="sec-head">
+      <span class="sec-num">1.0</span>
+      <h2>The Complete Table</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip snd">VOICE</span>
+        <span class="tablet-title">Speak to the realm</span>
+      </div>
+      <p class="tablet-lead">Voice now runs the whole way around the table — speak your action, hear the realm answer. English, end to end.</p>
+      <ul class="feat">
+        <li><span class="tag snd">SND</span><b>Player voice input</b> — tap the microphone, speak your action in English, and StepFun speech-to-text (stepaudio-2.5-asr) turns it into a transcript you can edit before sending. No typing for the urgent parts.</li>
+        <li><span class="tag snd">SND</span><b>StepFun narrators</b> — the DM, characters and NPCs answer aloud with stepaudio-2.5-tts: natural language instructions instead of canned voice labels, with long replies split into seamless clips.</li>
+        <li><span class="tag snd">SND</span><b>Qwen narrators</b> — the premium storytellers (Patron tier) give the realm a different grain of voice — pick StepFun or Qwen for your campaign.</li>
+        <li><span class="tag ux">UX</span><b>Free to speak</b> — voice input costs no turn: the transcript is yours to edit before it counts. Speech and narration follow the tier gates (Support for StepFun, Patron for Qwen).</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MODELS</span>
+        <span class="tablet-title">Heavier minds at the table</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">AI</span><b>Qwen 3.8 Max as Dungeon Master</b> — Alibaba's flagship: deep reasoning and a million-token memory, so the realm keeps the whole campaign in mind, not just the last hour. <i>(2026-09-27: Qwen 3.8 Max has left the roster — deep reasoning now rides Step 5 Preview.)</i></li>
+        <li><span class="tag ai">AI</span><b>DeepSeek V4 line</b> — DeepSeek sits alongside the Qwen line in every picker, so each tier gets a mind that matches the table's budget. <i>(2026-09-21: the line is now DeepSeek V4.1 Flash on the Patron path.)</i></li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">MECHANICS</span>
+        <span class="tablet-title">The whole 5e table, in play</span>
+      </div>
+      <p class="tablet-lead">The rules are no longer a suggestion the Dungeon Master reads from memory — they are a contract the realm enforces. Every major mechanic a table needs now lives in the game, verified by tests, and applied by the Lorekeeper after every turn.</p>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Skills and proficiency</b> — the right tool for the right task: skill checks carry proficiency and ability modifiers, and the DM knows when the party is pushing its luck.</li>
+        <li><span class="tag feat">FEAT</span><b>Spell slots spend</b> — casting a spell consumes the slot, and the spellbook tracks what is left. No more infinite fireballs.</li>
+        <li><span class="tag feat">FEAT</span><b>Inspiration and class features</b> — the spark of a nat-20 is banked as inspiration, and class features arrive as real rules instead of flavor text.</li>
+        <li><span class="tag feat">FEAT</span><b>Conditions that tick</b> — blinded, grappled, restrained and the rest apply their effects and expire on schedule.</li>
+        <li><span class="tag feat">FEAT</span><b>Resistance and vulnerability</b> — fireball into a creature that shrugs fire halves the pain; a vampire still fears the sun's light twice as much.</li>
+        <li><span class="tag feat">FEAT</span><b>Encumbrance, exhaustion, cover, darkvision</b> — carry too much and movement suffers; push too hard and exhaustion stacks; half cover means half the hits land; darkvision decides what you see in the dark.</li>
+        <li><span class="tag feat">FEAT</span><b>Grapple, shove, movement, downtime training</b> — the physical tools of the table: lock a foe in a grapple, shove them off a ledge, move with the terrain, and spend downtime learning a tool or language.</li>
+        <li><span class="tag ai">AI</span><b>Battle AI for enemies</b> — when enemies are alive, the Guardian decides their moves and the code rolls the dice — no enemy ever hits or misses by LLM fiat.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">DICE</span>
+        <span class="tablet-title">Dice the realm can trust</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">FIX</span><b>Server-authoritative dice</b> — every player roll now travels to the realm's own dice engine (secrets, not a client-side random) before the result lands in the chat. Advantage rolls two d20s server-side, then picks the best.</li>
+        <li><span class="tag feat">FEAT</span><b>The DM dice ceremony</b> — when the Dungeon Master rolls for an enemy or an ally, the dice tumble visibly in the chat: a flicker, a roll, and the result — no more placeholder boxes.</li>
+        <li><span class="tag fix">FIX</span><b>No double damage</b> — a player or ally attack that already dealt its damage can no longer strike the same enemy twice through the mechanics layer.</li>
+        <li><span class="tag fix">FIX</span><b>Dead enemies stay dead</b> — a slain creature's last rolls no longer re-render on every new reply.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MEMORY</span>
+        <span class="tablet-title">A memory that holds</span>
+      </div>
+      <p class="tablet-lead">The realm's memory was rebuilt from the inside: a moving window of facts, ranked fresh before every single turn, backed by a semantic index that is actually reachable from the cauldron.</p>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Fact register — the moving window</b> — every turn's events are distilled into durable facts (people, places, promises, grudges). Before each reply, the top <b>8 facts</b> are scored against your message — keyword overlap, recency, mentions, confidence — and only the winners enter the prompt.</li>
+        <li><span class="tag ai">AI</span><b>Semantic recall, fixed</b> — the Qdrant index (transcript, lore, summaries) was unreachable from inside the container; the connection now works, and the <b>top 4 semantic chunks</b> join the fact window every turn. RAG is no longer a checkbox — it fires on every DM call.</li>
+        <li><span class="tag feat">FEAT</span><b>Nothing is deleted, everything competes</b> — facts fall out of the window but never out of the register: compaction every 50 turns marks stale facts, superseded facts are retired, and player-pinned facts (the <b>/pin</b> command) can never be evicted.</li>
+        <li><span class="tag fix">FIX</span><b>Transparent recall</b> — the Engine Room now shows exactly what the DM saw: <b>8 facts + 4 RAG chunks</b> per call, so you can watch the realm remember.</li>
+        <li><span class="tag fix">FIX</span><b>Campaign language held</b> — scene, chapter and arc summaries now follow the campaign's language instead of hardcoded Swedish; NPC keys survive apostrophes and parentheses.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">TURNS</span>
+        <span class="tablet-title">A turn ledger that spends honestly</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>One turn per message, nothing hidden</b> — your chat message costs exactly 1 turn. The guardian, threads, summaries, day-entries and battle AI run free inside it — the internal machinery is never billed against you.</li>
+        <li><span class="tag feat">FEAT</span><b>TTS counts once, cache hits free</b> — a synthesized voice costs 1 turn the first time; replaying a cached clip costs nothing.</li>
+        <li><span class="tag feat">FEAT</span><b>Image turns</b> — AI-generated portraits charge a single turn, with the price shown before you generate.</li>
+        <li><span class="tag ux">UX</span><b>Quota you can read</b> — hover the turn pill for the honest breakdown, see the big refresh timer, and open the full profile modal from the top bar: turns, tier, and subscription in one place.</li>
+        <li><span class="tag ux">UX</span><b>Free models, everywhere</b> — OpenRouter free models now sit in the regular DM, Guardian and Extraction pickers (and character creation) — no separate experiment row — with backend validation for every tier.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip snd">MOBILE</span>
+        <span class="tablet-title">The table fits in your hand</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">UX</span><b>Composer trimmed ~50%</b> — the Act button lives inside the field, the input is a compact single row, and the quick-scroll controls shrank — more story, less chrome on a phone.</li>
+        <li><span class="tag ux">UX</span><b>TTS controls as chips</b> — the voice boxes became chip-sized (26px), the media player a minimal pill, and the combat button is icon-only in the bar — the whole stack is radically shorter.</li>
+        <li><span class="tag fix">FIX</span><b>Bottom nav that stays put</b> — the nav is now flow-based instead of fixed-position, so Firefox Android no longer hides it behind the URL bar.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">FACES</span>
+        <span class="tablet-title">Faces worth seeing</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">UX</span><b>Chat avatars ~3× larger</b> — the DM and player portraits now stand at 120px (84px on mobile), stacked above their messages instead of squeezed beside them.</li>
+        <li><span class="tag fix">FIX</span><b>Player avatar above the bubble</b> — the portrait sits above your message, matching the DM's side.</li>
+        <li><span class="tag fix">FIX</span><b>Soft rounded frames</b> — avatar frames follow the table's soft design language (10–12px radius) instead of sharp corners.</li>
+        <li><span class="tag fix">FIX</span><b>Refresh actually refreshes</b> — generating a new DM or player portrait now updates the chat in place; wrong selectors no longer keep the old face.</li>
+        <li><span class="tag feat">FEAT</span><b>Avatar gallery arrows</b> — flip through your generated faces with arrows, and inactive portraits are purged after 30 days.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">CLEANING</span>
+        <span class="tablet-title">A lighter engine room</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">FIX</span><b>Dead code pass</b> — the legacy REST combat path and unused code are gone; the engine room is smaller and the turn path shorter.</li>
+        <li><span class="tag feat">FEAT</span><b>Unique visitors per country</b> — the admin ledger now counts real people (deduplicated) by country with time filters (1h/12h/24h/7d/30d), plus top referrers and unique daily visitors.</li>
+        <li><span class="tag fix">FIX</span><b>Book of Souls cleans after itself</b> — only existing campaigns and the currently selected card appear; deleted cards leave no showcase ghosts behind.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 0.10 headline ═══════════════ -->
+  <div class="sec rv" id="s010">
+    <div class="sec-head">
+      <span class="sec-num">0.10</span>
+      <h2>The Soft Table</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">FACES</span>
+        <span class="tablet-title">Faces you can look in the eye</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Portrait previews</b> — tap your adventurer's portrait in the summoning circle and it opens large, with <b>Re-roll portrait</b> that generates a fresh face without touching your stats.</li>
+        <li><span class="tag feat">FEAT</span><b>Your account profile</b> — click your portrait in the top bar and the mirror opens: stats, tier, and one <b>Generate your account profile avatar</b> button with the engine dropdown, exactly like your adventurer's card.</li>
+        <li><span class="tag feat">FEAT</span><b>Known faces first</b> — NPCs with AI-generated portraits rise to the top of the Known NPCs list, so the faces you care about are always in view.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip snd">VOICE</span>
+        <span class="tablet-title">A voice you can steer</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag snd">SOUND</span><b>TTS player bar</b> — a slim bar above the voice settings shows playback progress with play/pause, so the narrator is always under your thumb.</li>
+        <li><span class="tag snd">SOUND</span><b>Autoplay speaks once</b> — each Dungeon Master reply is read aloud exactly one time. Switching voice or provider stops the old voice first — no more echoes.</li>
+        <li><span class="tag snd">SOUND</span><b>Narrator test retired</b> — test your voice on the Dungeon Master instead.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">TABLE</span>
+        <span class="tablet-title">A table that reads true</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">UX</span><b>Softer edges everywhere</b> — the release notes, how-to-play, Codex cards, trait chips and the combat button all carry the same rounded, glowing hand as the rest of the table.</li>
+        <li><span class="tag ux">UX</span><b>Codex tabs you can read</b> — the tab rows are larger and clearer, both on the big table and the small screen.</li>
+        <li><span class="tag ux">UX</span><b>Lorekeeper has its own voice</b> — the report is now a teal bubble of its own, and Dungeon Master gold stands apart from player violet.</li>
+        <li><span class="tag ux">UX</span><b>Engine Room moved to the top bar</b> — the debug icon sits beside the gear; one click opens it, the next closes it.</li>
+        <li><span class="tag ux">UX</span><b>Coin icons in the purse</b> — the left overview shows each metal you carry: platinum, gold, silver and copper as their own coins.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">KEEPING</span>
+        <span class="tablet-title">The realm answers plainly</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">FIX</span><b>Swedish names welcomed</b> — å, ä and ö are accepted in new adventurer names, and the ledger now says exactly what the cauldron needs when a name is refused.</li>
+        <li><span class="tag fix">FIX</span><b>Donations fill the purse</b> — every euro donated also tops up 100 turns (no expiry), and the pricelist says so plainly.</li>
+        <li><span class="tag fix">FIX</span><b>Lorekeeper arrives on time</b> — the post-turn report appears after the Dungeon Master answers, without needing to refresh the table.</li>
+        <li><span class="tag fix">FIX</span><b>The Engine Room speaks English</b> — every debug line is now in the common tongue.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">NEXT</span>
+        <span class="tablet-title">What we are still working on</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">NEXT</span><b>See the game</b> — real screenshots and footage of the cauldron at work are being gathered, and the gallery will be rebuilt around them.</li>
+        <li><span class="tag feat">NEXT</span><b>Faster free turns</b> — the free tier's Dungeon Master requests will run more at once, shortening the wait between your words and the world's answer.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 0.9 headline ═══════════════ -->
+  <div class="sec rv" id="s09">
+    <div class="sec-head">
+      <span class="sec-num">0.9</span>
+      <h2>The Full Mind</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">DEEPSEEK &amp; QWEN</span>
+        <span class="tablet-title">The Dungeon Masters arrive in full force</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>DeepSeek and Qwen take the chair</b> — the premium Dungeon Masters are here. The full reasoning power of <b>Qwen</b> and <b>DeepSeek</b> sits behind your adventure: massive storylines, quests that hold together, and a DM that thinks before it speaks — without breaking immersion.</li>
+        <li><span class="tag feat">FEAT</span><b>Wan 2.7 image generation</b> — the premium image engine generates your adventurer, the DM and every face you meet in sharp, high-resolution portraits.</li>
+        <li><span class="tag snd">SOUND</span><b>Qwen 3.0 TTS narration</b> — a premium narrator's voice joins the Patron path, reading the Dungeon Master's words aloud in full voice.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip pay">PATHS</span>
+        <span class="tablet-title">A month of fire — one-time, stackable</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Support and Patron packs unlock 30 days of benefits</b> — one-time purchases, no subscription, no renewal. Buy again to <b>stack</b> more time (+30 days per pack).</li>
+        <li><span class="tag feat">FEAT</span><b>Your purchased turns are yours forever</b> — when the 30 days pass, the premium doors close but your turns stay on the account, unspent and waiting.</li>
+        <li><span class="tag feat">FEAT</span><b>Priority API</b> — Support and Patron words reach the Dungeon Master first, even when the cauldron is busy.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">CLEARING</span>
+        <span class="tablet-title">The table reads better</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">FIX</span><b>Preparing spells is clearer</b> — the spellbook shows what is equipped and what is available, and the incantations sit where you actually look for them.</li>
+        <li><span class="tag ux">UX</span><b>Launch promotions read clearly</b> — the 300 turns on signup are now what they are: a limited-time welcome with a countdown on the gate, so nobody misses the fire while it is hot.</li>
+        <li><span class="tag ux">UX</span><b>Turn order that makes sense</b> — your welcome turns are spent first, then the daily 50, and your purchased turns are saved for last, when you need them most.</li>
+        <li><span class="tag fix">FIX</span><b>One adventurer per fire</b> — a single account per network, so the free road stays fair for everyone.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">FORGE</span>
+        <span class="tablet-title">Faces you keep</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Download your portraits</b> — every generated face in Cooked Souls can be saved to your own keep, even long after the benefits that generated it have passed.</li>
+        <li><span class="tag feat">FEAT</span><b>Export carries the images</b> — campaign exports and Forge exports now bundle every portrait, so your adventure leaves with its faces.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">NEXT</span>
+        <span class="tablet-title">What we are still working on</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">NEXT</span><b>Faster free turns</b> — the free tier's Dungeon Master requests will run more at once, shortening the wait between your words and the world's answer.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 0.8 headline ═══════════════ -->
+  <div class="sec rv" id="s08">
+    <div class="sec-head">
+      <span class="sec-num">0.8</span>
+      <h2>The Portrait, the Path</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">WAN 2.7</span>
+        <span class="tablet-title">The premium brush arrives</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Wan 2.7 image generation — Patron tier (30€)</b> — the premium image engine now generates your adventurer, the DM and every NPC in sharp high-resolution portraits, in seconds. Gated honestly on every page: login, pricing and the model hall all carry the path.</li>
+        <li><span class="tag ai">AI</span><b>Choose the engine</b> — a new engine picker sits in the avatar hall: <b>StepFun (Support, 3€)</b> or <b>Wan 2.7 (Patron, 30€)</b>. The same choice follows you into the Vault, so a Patron can generate Wan portraits everywhere a face can be generated.</li>
+        <li><span class="tag feat">FEAT</span><b>StepFun image generation unlocks with the Support top-up (3€)</b> — the free-prompt option costs nothing extra on any paid path, so your adventurer, the DM and the faces you meet can all be generated with StepFun.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">PROFILE</span>
+        <span class="tablet-title">Your face, your adventurer</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Your profile portrait is separate from your adventurer's</b> — the pill in the header is <i>your</i> face at the table (generated with StepFun, Support feature 3€), while the party card and character sheet keep your adventurer's portrait. Generate one without touching the other.</li>
+        <li><span class="tag ux">UX</span><b>Click the portrait to generate a new one</b> — the header pill opens the profile easel; any card in the realm opens its own.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">SMALL FIXES</span>
+        <span class="tablet-title">The table sits right</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">FIX</span><b>Themes that actually stick</b> — the palette you choose now survives reloads, works even in browsers that block local storage, and follows you across devices via your account.</li>
+        <li><span class="tag fix">FIX</span><b>Narrator settings follow the campaign</b> — voice, provider, style and your own custom narrator prompt are remembered per campaign, not per browser, so the story reads the same on any device.</li>
+        <li><span class="tag ux">UX</span><b>A softer table</b> — rounded buttons, gentler edges and calmer shadows across the top bar, the Codex and the composer; the header no longer squeezes the campaign name or the turn counter out of view.</li>
+        <li><span class="tag ux">UX</span><b>The Codex reads in two rows</b> — character, NPCs, map, journal and facts above; spells, equipment, treasury and notes below, living with the same buttons as the rest of the realm.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ KNOWN ISSUES ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">⚠</span>
+      <h2>Known Issues</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">KNOWN</span>
+        <span class="tablet-title">What we are still working on</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">NEXT</span><b>Multiplayer campaigns — after 2.0</b> — play with your friends at the same table, in the same world. Still the next milestone, still not built: there is no multiplayer code in the repo.</li>
+        <li><span class="tag fix">OPEN</span><b>A fallen enemy keeps its last hit points</b> — morale and fleeing are handled (a routing enemy keeps its HP on purpose), but a dead one is only cleared by the cleanup pass, so the combat state can hold a corpse with 2/11 HP.</li>
+        <li><span class="tag fix">OPEN</span><b>A second press of the die spends a turn</b> — every message is exactly one turn and there is no refund path, so a double tap on the roll button costs two.</li>
+        <li><span class="tag feat">NEXT</span><b>Hunter's Mark's extra die</b> — the +1d6 is not rolled by the engine yet; it needs concentration and target tracking that the combat state does not carry.</li>
+        <li><span class="tag fix">OPEN</span><b>The narration progress bar on the narrowest screens</b> — inside the terminal-style pill at 360 px there is no room left for the track, so it shows the button state only.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 0.7 headline ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">0.7</span>
+      <h2>Cooked Souls, Earning</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip pay">PAY</span>
+        <span class="tablet-title">The Cauldron takes a payment</span>
+      </div>
+      <p class="tablet-lead">The realm now carries its own keep. After a season of free tables, the forge accepts coin — and with it, the fire burns steadier. Every path is real, wired end-to-end through Stripe, and every adventurer keeps a free road forever.</p>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Founding offer — two free months</b> — for the first seven days, subscribe for one month and get <b>2 months free</b> on Companion. And <b>Lifetime for 50€</b> — half price, one-time. The countdown lives on the login page and the table.</li>
+        <li><span class="tag feat">FEAT</span><b>Four paths into the realm</b> — Wanderer (free), Companion, Adventurer, and Lifetime. Each a real tier: free stays free, the paid paths unlock the deeper models and the twin voices.</li>
+        <li><span class="tag feat">FEAT</span><b>Stripe checkout, live</b> — the pricing page is wired to a real Stripe account: products, prices, and a webhook that records payment. No more mock buttons.</li>
+        <li><span class="tag feat">FEAT</span><b>Webhook idempotency</b> — a delivered payment event is recorded exactly once, even if Stripe retries it. The ledger never double-counts a coin.</li>
+        <li><span class="tag feat">FEAT</span><b>Lifetime is truly forever</b> — a Lifetime purchase never expires (holds until the end of time, not a date). Granting a tier writes a line into the player's transcript.</li>
+        <li><span class="tag ai">AI</span><b>Model gating by tier</b> — free players travel with the steadfast <b>step-3.7-flash</b>; paid paths unlock the deeper minds as their Dungeon Master. Locked models are visibly grayed out, never silently ignored. <i>(2026-09-27: the roster behind the 10€ unlock is the Qwen 3.8, DeepSeek V4.1 and Step 5 Preview minds.)</i></li>
+        <li><span class="tag ux">UX</span><b>Your tier is visible</b> — the profile card in the gear menu shows your path, and the pricing page marks your current subscription with a lit sigil.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ paths ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Paths</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <p class="tablet-lead rv">Updated 2026-09-27 — one unlock opens everything. The old monthly paths (Companion / Adventurer) have retired; existing subscribers keep their benefits until their window closes.</p>
+    <div class="duo">
+      <div class="tier">
+        <div class="tier-name">Free</div>
+        <div class="tier-price">Free<small> · no card</small></div>
+        <ul>
+          <li><b>30 turns</b> every day, refreshed at midnight</li>
+          <li>The steadfast Dungeon Master (<b>step-3.7-flash</b>)</li>
+          <li>Persistent world, memory, and the Codex</li>
+          <li>The dice ritual</li>
+        </ul>
+      </div>
+      <div class="tier hot">
+        <div class="tier-flag">Everything</div>
+        <div class="tier-name">Unlock</div>
+        <div class="tier-price">10€<small> · once</small></div>
+        <ul>
+          <li><b>+100 turns</b> — never expire, spent after your daily 30</li>
+          <li><b>All other Dungeon Masters</b> — Qwen 3.8 Flash, DeepSeek V4.1 Flash, Step 5 Preview</li>
+          <li><b>Both narrator voices</b> — Qwen and StepFun TTS (1 turn per narration)</li>
+          <li><b>Image generation</b> — Wan 2.7 Pro, Qwen Image 3 Pro (1 turn per image)</li>
+          <li><b>Permanent</b> — no window, no renewal</li>
+        </ul>
+      </div>
+      <div class="tier">
+        <div class="tier-name">Any</div>
+        <div class="tier-price">Your pick<small> · 1€ = 100 turns</small></div>
+        <ul>
+          <li><b>Every € adds exactly 100 turns</b> — no expiry</li>
+          <li>Turns are spent only after your daily free turns run out</li>
+          <li>Pure support — no feature unlock, no subscription</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ free tier ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Free Road</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip">FREE</span>
+        <span class="tablet-title">A fair ration, honestly counted</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Turn counter in the header</b> — turn, day, free turns left, and the reset date, all visible at a glance. On mobile it tucks into the menu so the top bar stays clean.</li>
+        <li><span class="tag feat">FEAT</span><b>Daily renewal</b> — your 30 turns refresh each day at midnight, whether you were here or not. A cron keeps the dates in step, and the count rolls over lazily even if the cron sleeps.</li>
+        <li><span class="tag ux">UX</span><b>An honest cap modal</b> — when the free turns run out, the game tells you plainly: new turns on the reset date, or top up (every € adds exactly 100 turns that never expire). No dead buttons, no tricks.</li>
+        <li><span class="tag pay">PAY</span><b>Admin top-ups</b> — the realm-keeper can grant bonus turns (consumed before the cap) or reset a player's count, without touching the monthly ceiling.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ narrator & voice ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Two Voices</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip snd">SOUND</span>
+        <span class="tablet-title">A narrator you can give a mood</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>StepFun TTS</b> — the narrator's voice reads the story aloud. <i>(2026-09-27: voice narration is part of the one-time 10€ unlock; each narration costs 1 turn.)</i></li>
+        <li><span class="tag snd">SOUND</span><b>Custom narrator voice</b> — pick a style for the one who reads your story: <b>happy, calm, scary</b>, or a custom description of your own. Part of the 10€ unlock, and gated honestly in the UI.</li>
+        <li><span class="tag snd">SOUND</span><b>Qwen English voices</b> — the Qwen narrator gained English voices alongside the original set. Qwen TTS is part of the 10€ unlock.</li>
+        <li><span class="tag snd">SOUND</span><b>Faster loading</b> — a TTS cache with a time-to-live keeps repeated lines from re-rendering, and a speed button lets you set the read's pace.</li>
+        <li><span class="tag fix">FIX</span><b>Guardian day-correction</b> — the day counter no longer drifts when the Guardian reconciles the world state.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ avatars ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>Cooked Souls &amp; Avatars</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip">FORGE</span>
+        <span class="tablet-title">Faces you can actually shape</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Clean free prompt</b> — avatar prompts are now a blank page (`new` mode), so you describe the face you want without a template already deciding it.</li>
+        <li><span class="tag ux">UX</span><b>Update from sheet</b> — one button rebuilds your avatar straight from the character sheet state, so the picture follows the story. No more "keeps face" magic that quietly made things worse.</li>
+        <li><span class="tag ux">UX</span><b>Companion avatars</b> — AI faces for your adventurer and the NPCs you meet, granted to the Companion path and above.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ codex & navigation ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Codex &amp; Navigation</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">UX</span>
+        <span class="tablet-title">A calmer table</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">UX</span><b>Codex NPC list, easier to navigate</b> — the dossier is now quick to scan; the mobile Character tab stepped aside so the flow stays at the table.</li>
+        <li><span class="tag fix">FIX</span><b>Party drawer fixed on mobile</b> — the slide-in now sits above the right layer (z-index), and the bottom nav reads <b>Party | Codex | Tools</b>.</li>
+        <li><span class="tag ux">UX</span><b>Sidebar polish</b> — a journey entry, a quest flag, smoother NPC scrolling, and a jump into the Codex from the side panel.</li>
+        <li><span class="tag ux">UX</span><b>Settings menu tooltips</b> — the hint lines in the gear became hover tooltips, so the menu stays quiet until you need it.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DM & engine ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Dungeon Master</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">AI</span>
+        <span class="tablet-title">Sharper instincts, cleaner room</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">AI</span><b>Terrain rules in the DM's head</b> — the prompt now carries the realm's terrain and travel-times, so the DM stops guessing how long a road takes.</li>
+        <li><span class="tag ai">AI</span><b>Onboarding model choice</b> — at the start you pick which Dungeon Master will guide you; the campaign wakes itself on load.</li>
+        <li><span class="tag ux">UX</span><b>Engine Room buttons moved</b> — combat and engine-room controls now sit on the TTS row, out of the way of the players' words.</li>
+        <li><span class="tag ai">AI</span><b>Terminal theme v33</b> — the CLI/DOS look refined again, with avatar-prompt fixes riding along.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ accounts & fixes ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>Accounts &amp; Fixes</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">FIX</span>
+        <span class="tablet-title">The ledger stays straight</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Email-based password reset</b> — a one-time token link lets you back into the realm without a remembered password.</li>
+        <li><span class="tag ux">UX</span><b>Your own stats in the gear</b> — players see their own turn usage and path in the profile card.</li>
+        <li><span class="tag pay">PAY</span><b>Admin billing dashboard</b> — MRR, transactions, and total revenue at a glance; per-player revenue split; a quick grant of premium straight from the table row, with a selectable length.</li>
+        <li><span class="tag ux">UX</span><b>Admin dashboard grows up</b> — a <b>New Users by Day</b> chart and a <b>Revenue chart</b> (MRR/ARR with day/week/month views) joined the donuts; the player table sorts by <b>Last Active</b> by default, its hidden columns are now reachable, and the whole view is easier on the eyes.</li>
+        <li><span class="tag ux">UX</span><b>Pricing on the login page</b> — a path into the realm's ways, plus a profile link that no longer hides inside the gear.</li>
+        <li><span class="tag fix">FIX</span><b>Login fields</b> — autofill no longer fights the styling; the inputs look proper.</li>
+        <li><span class="tag fix">FIX</span><b>Admin vault adventurers restored</b> — Ysrian and the others, returned after an accidental deletion in an earlier build.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ historical ═══════════════ -->
+  <div class="sec rv">
+    <button class="hist-toggle btn-ghost" id="hist-toggle" onclick="toggleHist()" title="Show or hide the older v0.6.x entries" aria-expanded="false" aria-controls="hist-body">
+      <span class="caret">▸</span> Older entries
+    </button>
+    <div class="hist-body" id="hist-body">
+      <div class="hist-inner fresh-frame">
+
+        <div class="hist-ver">
+          <span class="vchip">v0.6.3</span>
+          <h3>Cooked Souls Release <span class="muted">— no more adventurer-twins</span></h3>
+          <ul>
+            <li><b>Export your adventurer to Cooked Souls</b> — from the Codex character sheet, save the adventurer you've lived to the Vault: level, gear, story and all. Then start a brand-new campaign with the same adventurer.</li>
+            <li><b>No more adventurer-twins</b> — exporting an adventurer whose name already rests in your Vault asks first: overwrite the old copy, or keep both.</li>
+          </ul>
+        </div>
+
+        <div class="hist-ver">
+          <span class="vchip">v0.6.2</span>
+          <h3>The UX Update <span class="muted">— a quieter table</span></h3>
+          <ul>
+            <li><b>Music removed</b> — the ambient soundtrack is retired; sound effects and the narrator's voice remain.</li>
+            <li><b>Theme switching on every screen</b> — the five palettes now live in the mobile topbar menu too.</li>
+            <li><b>A 50-turn welcome</b> — fresh accounts begin with a 50-turn allowance.</li>
+            <li><b>Cooked Souls, sharpened</b> — no double-save on a stray double-click; name conflicts ask before creating a twin.</li>
+          </ul>
+        </div>
+
+        <div class="hist-ver">
+          <span class="vchip">v0.6.0</span>
+          <h3>The Production Readiness Update <span class="muted">— themes, transparency, polish</span></h3>
+          <ul>
+            <li><b>Theme switcher</b> — five dark-fantasy palettes (Terminal / Blood / Arcane / Ember / Iron), remembered across visits.</li>
+            <li><b>This release page</b> — every update now comes with notes.</li>
+            <li><b>Model transparency</b> — a guide to the Dungeon Master models, and why "high reasoning" means a slightly longer wait for a richer reply.</li>
+            <li><b>Dead code purge</b> — about 1,600 lines of orphaned CSS/JS removed; a hidden Escape-key crash fixed.</li>
+            <li><b>Combat v26</b> — the DM narrates everything; the Lorekeeper extracts the mechanics; turn engine, initiative order, and inline combat UI.</li>
+            <li><b>The D20 ceremony</b> — a 3-second dice ritual with flicker, glitter, and nat-20/nat-1 spectacle.</li>
+            <li><b>The Codex</b> — one tabbed modal for Character, NPCs, Map, Journal and Facts.</li>
+            <li><b>Voice of the DM</b> — Qwen TTS with play button, male/female voices, autoplay toggle, and cache.</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="footer rv">
+    <b>The Lore Weaver's Cauldron</b> — an AI dungeon master with a memory.<br>
+    <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a><br>
+    <span>v2.0 · 2026-10-28 · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
+  </div>
+</section>
+
+<script>
+  // reveal on scroll
+  (function(){
+    var els = document.querySelectorAll('.rv');
+    if(!('IntersectionObserver' in window)){ els.forEach(function(e){e.classList.add('in')}); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, {threshold:0.12});
+    els.forEach(function(e){ io.observe(e); });
+    setTimeout(function(){ els.forEach(function(e){ e.classList.add('in'); }); }, 2500);
+  })();
+
+  // historical toggle
+  window.toggleHist = function(){
+    var btn = document.getElementById('hist-toggle');
+    var body = document.getElementById('hist-body');
+    var open = btn.classList.toggle('open');
+    body.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+</script>
+<script src="i18n.js?v=20261028a"></script>
+<script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20261006a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+</body>
+</html>

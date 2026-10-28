@@ -1,0 +1,306 @@
+"""TIERS 2026-09-27 (ny prissättning): ALL TTS + bildgenerering bakom 10€-unlåset.
+
+- /api/tts: free/tier1 → 403 feature_locked (ingen tyst fallback, ingen gratis TTS).
+  tier2/lifetime/admin → 200 (båda providers). Varje ny syntes = 1 turn.
+- /api/me/avatar/generate: provider 'wan'|'qwen' — båda låsta för
+  free/tier1 (403 feature_locked); tier2 → 200 + provider i svaret.
+  (StepFun step-image-edit-2 pensionerad 2026-10-10 → legacy/okänt = wan.)
+
+autouse-fixtures: users.json + kampanjdata pekas mot tmp — skyddar riktig data
+(users.json-incidenten 2026-08-04). Ingen riktig data rörs.
+"""
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+import pytest  # noqa: E402
+
+import auth  # noqa: E402
+import main  # noqa: E402
+import state_manager as sm  # noqa: E402
+from auth import hash_password  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def users_file(tmp_path, monkeypatch):
+    f = tmp_path / "users.json"
+    monkeypatch.setattr(auth, "USERS_FILE", f)
+    return f
+
+
+@pytest.fixture(autouse=True)
+def campaigns_dir(tmp_path, monkeypatch):
+    d = tmp_path / "campaigns"
+    monkeypatch.setattr(sm, "CAMPAIGNS_DIR", d)
+    monkeypatch.setattr(main, "CAMPAIGNS_DIR", d)
+    return d
+
+
+@pytest.fixture
+def client(users_file, campaigns_dir):
+    from fastapi.testclient import TestClient
+    with TestClient(main.app) as c:
+        yield c
+
+
+def _in_days(days: int) -> str:
+    return (datetime.now(timezone.utc).date() + timedelta(days=days)).isoformat()
+
+
+def _seed(username="alice", tier="free", turn_cap=50):
+    """free | tier1 (features.export) | tier2 (features.all_models) | lifetime."""
+    features = {}
+    if tier == "tier1":
+        features = {"export": True}
+    elif tier == "tier2":
+        features = {"export": True, "all_models": True, "wan1080": True}
+    main.save_users({
+        username: {"password_hash": hash_password("secret123"), "role": "player",
+                   "turn_cap": turn_cap, "turns_used": 0, "turn_bonus": 0,
+                   "reset_date": _in_days(0),
+                   "subscription_status": tier,
+                   "subscription_until": _in_days(30) if tier != "free" else None,
+                   "features": features,
+                   "models_until": _in_days(30) if tier == "tier2" else None,
+                   "start_bonus_granted": True,
+                   "wan_used_today": 0, "wan_reset_date": _in_days(0)},
+    })
+
+
+def _login(client, username="alice"):
+    r = client.post("/api/login", json={"username": username, "password": "secret123"})
+    assert r.status_code == 200
+    return r
+
+
+# ── httpx-mockar (samma mönster som test_tiers.py) ────────────────────────
+
+# Wan 2.7-svar (DashScope-shape) + nerladdning av bild-URL:en
+class _WanResp:
+    status_code = 200
+
+    def json(self):
+        return {"output": {"choices": [{"message": {"content": [{"type": "image", "image": "http://fake.example/avatar.png"}]}}]}}
+
+    def raise_for_status(self):
+        return None
+
+
+class _WanClient:
+    def __init__(self, *a, **k):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
+    async def post(self, *a, **k):
+        return _WanResp()
+
+    async def get(self, url, **k):
+        class _DL:
+            status_code = 200
+            content = b"fake-png-bytes"
+
+            def raise_for_status(self):
+                pass
+
+        return _DL()
+
+
+# ── /api/tts: ALLT bakom 10€-unlåset (2026-09-27) ────────────────────────
+
+def test_tts_stepfun_free_403(client, monkeypatch):
+    """2026-09-27: free + stepfun → 403 feature_locked (ALL TTS bakom unlock)."""
+    _seed("alice", tier="free")
+    _login(client)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
+    r = client.post("/api/tts", json={"text": "Hej från free", "voice": "male", "provider": "stepfun"})
+    assert r.status_code == 403, r.text
+    detail = r.json()["detail"]
+    assert detail["feature_locked"] == "tts"
+    assert "10€ unlock" in detail["message"]
+
+
+def test_tts_qwen_free_403(client, monkeypatch):
+    """free + qwen → 403 feature_locked, ingen tyst fallback till stepfun."""
+    _seed("alice", tier="free")
+    _login(client)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
+    monkeypatch.setattr(main, "_synth_qwen_tts_retry", lambda voice, text, style="": b"RIFFqwenfake")
+    r = client.post("/api/tts", json={"text": "Hej qwen free", "voice": "male", "provider": "qwen"})
+    assert r.status_code == 403
+    assert r.json()["detail"]["feature_locked"] == "tts"
+
+
+def test_tts_stepfun_tier1_403(client, monkeypatch):
+    """2026-09-27: legacy Support (tier1) räcker INTE för TTS — 403."""
+    _seed("alice", tier="tier1")
+    _login(client)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
+    r = client.post("/api/tts", json={"text": "Hej från support", "voice": "male", "provider": "stepfun"})
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"]["feature_locked"] == "tts"
+
+
+def test_tts_qwen_tier1_403(client, monkeypatch):
+    """Support (tier1) räcker INTE för qwen — 403 feature_locked."""
+    _seed("alice", tier="tier1")
+    _login(client)
+    monkeypatch.setattr(main, "_synth_qwen_tts_retry", lambda voice, text, style="": b"RIFFqwenfake")
+    r = client.post("/api/tts", json={"text": "Hej qwen tier1", "voice": "male", "provider": "qwen"})
+    assert r.status_code == 403
+    assert r.json()["detail"]["feature_locked"] == "tts"
+
+
+def test_tts_consumes_turn_cache_hit_unlocked(client, monkeypatch):
+    """2026-08-08 (strikt per-anrops-modell): varje NY TTS-syntes = 1 turn;
+    cache-träff (samma text igen) är gratis — inget externt anrop.
+    2026-09-27: kräver 10€-unlås (tier2) — free/tier1 stoppas av gate:n."""
+    _seed("alice", tier="tier2")
+    _login(client)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
+    # Första anropet — cache miss → 1 turn + ledger-post action=tts
+    r1 = client.post("/api/tts", json={"text": "Turn kostar", "voice": "male", "provider": "stepfun"})
+    assert r1.status_code == 200, r1.text
+    assert main.load_users()["alice"]["turns_used"] == 1
+    led = main._read_turn_ledger("alice")
+    assert led and led[-1]["action"] == "tts"
+    assert led[-1]["model"]  # tts-modellen bokförs
+    # Andra anropet — samma text → cache hit → ingen ny turn
+    r2 = client.post("/api/tts", json={"text": "Turn kostar", "voice": "male", "provider": "stepfun"})
+    assert r2.status_code == 200, r2.text
+    assert main.load_users()["alice"]["turns_used"] == 1
+
+
+def test_tts_403_when_turns_exhausted(client, monkeypatch):
+    """TTS med 0 turns kvar → 403 cap_reached (innan något syntes-anrop)."""
+    _seed("alice", tier="tier2", turn_cap=1)
+    users = main.load_users()
+    users["alice"]["turns_used"] = 1  # cap 1, förbrukad → 0 kvar
+    users["alice"]["reset_date"] = _in_days(1)  # imorgon — ingen rollover mitt i testet
+    main.save_users(users)
+    _login(client)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
+    r = client.post("/api/tts", json={"text": "Inga turns kvar", "voice": "male", "provider": "stepfun"})
+    assert r.status_code == 403
+    detail = r.json()["detail"]
+    assert detail.get("cap_reached") is True
+
+
+def test_tts_qwen_tier2_ok(client, monkeypatch):
+    """Patron (tier2) + qwen → 200 (premium-röst)."""
+    _seed("alice", tier="tier2")
+    _login(client)
+    monkeypatch.setattr(main, "_synth_qwen_tts_retry", lambda voice, text, style="": b"RIFFqwenfake")
+    r = client.post("/api/tts", json={"text": "Hej från patron", "voice": "male", "provider": "qwen"})
+    assert r.status_code == 200, r.text
+    assert r.content == b"RIFFqwenfake"
+
+
+# ── /api/me/avatar/generate: provider wan|qwen ────────────────────────────
+
+def test_me_avatar_legacy_stepfun_normalizes_to_wan_free_403(client, monkeypatch):
+    """2026-10-10: 'stepfun' (pensionerad bildmotor) normaliseras till wan —
+    free får fortfarande 403 feature_locked, aldrig ett steganrop."""
+    _seed("alice", tier="free")
+    _login(client)
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage", "provider": "stepfun"})
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"]["feature_locked"] == "image"
+
+
+def test_me_avatar_legacy_stepfun_tier1_403(client, monkeypatch):
+    """2026-10-10: legacy Support (tier1) räcker INTE för bildgenerering."""
+    _seed("alice", tier="tier1")
+    _login(client)
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage", "provider": "stepfun"})
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"]["feature_locked"] == "image"
+
+
+def test_me_avatar_wan_tier1_403(client, monkeypatch):
+    """Support (tier1) räcker INTE för Wan 2.7 — 403 feature_locked."""
+    _seed("alice", tier="tier1")
+    _login(client)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "wan"})
+    assert r.status_code == 403
+    assert r.json()["detail"]["feature_locked"] == "image"
+
+
+def test_me_avatar_qwen_free_403(client, monkeypatch):
+    """free räcker INTE för Qwen Image 3 Pro — 403 feature_locked."""
+    _seed("alice", tier="free")
+    _login(client)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "qwen"})
+    assert r.status_code == 403
+    assert r.json()["detail"]["feature_locked"] == "image"
+
+
+def test_me_avatar_qwen_tier2_ok(client, monkeypatch):
+    """Patron (tier2) målar profilavataren med Qwen Image 3 Pro → 200 + model."""
+    _seed("alice", tier="tier2")
+    _login(client)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    seen = {}
+
+    class _CapturingWan(_WanClient):
+        async def post(self, *a, **k):
+            seen["json"] = k.get("json")
+            return _WanResp()
+
+    monkeypatch.setattr(main.httpx, "AsyncClient", _CapturingWan)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "qwen"})
+    assert r.status_code == 200, r.text
+    assert r.json()["provider"] == "qwen"
+    assert len((main._load_user_avatar_gallery("alice").get("gallery") or [])) == 1
+    # Qwen Image 3 Pro → samma Token Plan-endpoint, 1024²
+    assert seen["json"]["model"] == "qwen-image-3.0-pro"
+    assert seen["json"]["parameters"]["size"] == "1024*1024"
+
+
+def test_me_avatar_wan_tier2_ok(client, monkeypatch):
+    """Patron (tier2) målar profilavataren med Wan 2.7 Pro → 200 + provider."""
+    _seed("alice", tier="tier2")
+    _login(client)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    seen = {}
+
+    class _CapturingWan(_WanClient):
+        async def post(self, *a, **k):
+            seen["json"] = k.get("json")
+            return _WanResp()
+
+    monkeypatch.setattr(main.httpx, "AsyncClient", _CapturingWan)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "wan"})
+    assert r.status_code == 200, r.text
+    assert r.json()["provider"] == "wan"
+    assert len((main._load_user_avatar_gallery("alice").get("gallery") or [])) == 1
+    # Patron med features.wan1080 → Wan 2.7 Pro 2048² (samma mönster som vault)
+    assert seen["json"]["model"] == "wan2.7-image-pro"
+    assert seen["json"]["parameters"]["size"] == "2048*2048"
+
+
+def test_me_avatar_unknown_provider_defaults_wan(client, monkeypatch):
+    """Okänd/legacy provider (t.ex. 'flux', 'stepfun') → wan (inte 400),
+    svaret bär provider. 2026-09-27: kräver 10€-unlås (tier2) — gate:n
+    kommer först. (StepFun-bildmotorn pensionerad 2026-10-10.)"""
+    _seed("alice", tier="tier2")
+    _login(client)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "x", "provider": "flux"})
+    assert r.status_code == 200, r.text
+    assert r.json()["provider"] == "wan"

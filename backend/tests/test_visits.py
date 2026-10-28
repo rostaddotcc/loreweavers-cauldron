@@ -1,0 +1,263 @@
+"""2026-08-05: besöksräkning (admin-vyn).
+
+Rostad: "Antal besök, besök per land och så?" — middleware räknar sidvisningar
+(HTML-sidor, ej API) → iplog.record_visit → data/visits.json. Admin-stats
+exponerar `visits`: {total, today, last_7, by_day, by_country, by_referrer}.
+by_country = unika besökare per land (2026-08-09); by_referrer = varifrån
+besökarna klickade in (Google/Reddit/Direct …).
+
+Ingen riktig data rörs: users.json, ip_geo.json och visits.json pekas om till
+tmp; geo-cachen seedas så inget nätverksanrop görs.
+"""
+
+import sys
+import time
+from pathlib import Path
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+import pytest  # noqa: E402
+
+import auth  # noqa: E402
+import main  # noqa: E402
+import iplog  # noqa: E402
+from auth import create_token, hash_password  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def users_file(tmp_path, monkeypatch):
+    f = tmp_path / "users.json"
+    monkeypatch.setattr(auth, "USERS_FILE", f)
+    return f
+
+
+@pytest.fixture(autouse=True)
+def campaigns_dir(tmp_path, monkeypatch):
+    import state_manager as sm
+    d = tmp_path / "campaigns"
+    monkeypatch.setattr(sm, "CAMPAIGNS_DIR", d)
+    monkeypatch.setattr(main, "CAMPAIGNS_DIR", d)
+    return d
+
+
+@pytest.fixture(autouse=True)
+def visits_file(tmp_path, monkeypatch):
+    f = tmp_path / "visits.json"
+    monkeypatch.setattr(iplog, "VISITS_FILE", f)
+    monkeypatch.setattr(iplog, "_visits_loaded", False)
+    monkeypatch.setattr(iplog, "_visit_store", {"total": 0, "by_day": {}, "by_ip": {}, "by_referrer": {}, "by_day_unique": {}})
+    return f
+
+
+@pytest.fixture(autouse=True)
+def ip_store(tmp_path, monkeypatch):
+    f = tmp_path / "ip_geo.json"
+    monkeypatch.setattr(iplog, "IP_GEO_FILE", f)
+    monkeypatch.setattr(iplog, "_loaded", False)
+    monkeypatch.setattr(iplog, "_ip_store", {})
+    return f
+
+
+@pytest.fixture
+def client(users_file, campaigns_dir, visits_file, ip_store):
+    from fastapi.testclient import TestClient
+    with TestClient(main.app) as c:
+        yield c
+
+
+# ── record_visit ─────────────────────────────────────────────────────────
+
+def test_record_visit_increments(visits_file):
+    iplog.record_visit("1.2.3.4")
+    iplog.record_visit("1.2.3.4")
+    iplog.record_visit("9.9.9.9")
+    today = time.strftime("%Y-%m-%d")
+    assert iplog._visit_store["total"] == 3
+    assert iplog._visit_store["by_day"][today] == 3
+    assert iplog._visit_store["by_ip"]["1.2.3.4"]["count"] == 2
+    assert iplog._visit_store["by_ip"]["9.9.9.9"]["count"] == 1
+    # Persistens: ladda om från disk
+    iplog._visits_loaded = False
+    iplog._visit_store = {"total": 0, "by_day": {}, "by_ip": {}}
+    iplog.record_visit("1.2.3.4")
+    assert iplog._visit_store["total"] == 4
+
+
+def test_legacy_int_ip_format_migrated(visits_file):
+    iplog._visit_store["by_ip"]["1.2.3.4"] = 5  # gammalt format (int)
+    iplog.record_visit("1.2.3.4")
+    assert iplog._visit_store["by_ip"]["1.2.3.4"]["count"] == 6
+
+
+def test_by_day_pruned_to_32_days(visits_file):
+    now = time.time()
+    for i in range(40):
+        d = time.strftime("%Y-%m-%d", time.localtime(now - i * 86400))
+        iplog._visit_store["by_day"][d] = 1
+    iplog.record_visit("1.2.3.4")  # triggar trim
+    assert len(iplog._visit_store["by_day"]) <= 32
+
+
+# ── visits_summary ───────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_visits_summary_country_aggregation(visits_file):
+    iplog.record_visit("1.2.3.4")   # SE
+    iplog.record_visit("1.2.3.4")   # SE (samma IP — fortfarande 1 unik)
+    iplog.record_visit("9.9.9.9")   # DE
+    iplog.record_visit("192.168.1.5")  # LOCAL
+    # Seed geo-cache så ingen nätverksuppslagning sker
+    now = time.time()
+    iplog._geo_cache["1.2.3.4"] = {"country": "Sweden", "countryCode": "SE", "ts": now}
+    iplog._geo_cache["9.9.9.9"] = {"country": "Germany", "countryCode": "DE", "ts": now}
+    s = await iplog.visits_summary()
+    assert s["total"] == 4
+    # 2026-08-09: unika besökare per land (varje IP räknas en gång)
+    assert s["by_country"]["SE"] == 1
+    assert s["by_country"]["DE"] == 1
+    assert s["by_country"]["LOCAL"] == 1
+    assert s["last_7"] >= 4
+    assert s["today"] >= 4
+    # Unique-besök: 3 distinkta IP:er (1.2.3.4, 9.9.9.9, 192.168.1.5)
+    assert s["unique_total"] == 3
+    assert s["unique_today"] == 3
+    assert s["unique_7d"] == 3
+
+
+# ── Referrer-spårning (2026-08-09, rostad) ───────────────────────────────
+
+def test_referrer_classification():
+    assert iplog._referrer_source("") == "Direct"
+    assert iplog._referrer_source("https://www.google.com/search?q=dnd") == "Google"
+    assert iplog._referrer_source("https://google.se/") == "Google"
+    assert iplog._referrer_source("https://www.reddit.com/r/rpg/") == "Reddit"
+    assert iplog._referrer_source("https://t.me/rostad") == "Telegram"
+    assert iplog._referrer_source("https://example.com/") == "example.com"
+    # Intern navigering (egen domän) → Direct
+    assert iplog._referrer_source("https://morkretsrike.se/chat.html", "morkretsrike.se") == "Direct"
+    assert iplog._referrer_source("https://morkretsrike.se:8000/login.html", "morkretsrike.se:8000") == "Direct"
+    # Relativ URL (samma sida) → Direct
+    assert iplog._referrer_source("/login.html", "morkretsrike.se") == "Direct"
+
+
+def test_record_visit_counts_unique_referrers(visits_file):
+    """2026-08-09: by_referrer = unika besökare per källa (distinkta IP:er)."""
+    iplog.record_visit("1.2.3.4", "https://www.google.com/", "morkretsrike.se")
+    iplog.record_visit("1.2.3.4", "https://www.google.com/", "morkretsrike.se")  # samma IP → 1 unik
+    iplog.record_visit("5.6.7.8", "https://www.google.com/", "morkretsrike.se")  # ny IP → 2 unika
+    iplog.record_visit("1.2.3.4", "https://www.reddit.com/", "morkretsrike.se")
+    iplog.record_visit("1.2.3.4", "https://morkretsrike.se/login.html", "morkretsrike.se")  # intern → Direct
+    iplog.record_visit("1.2.3.4", "", "morkretsrike.se")  # direct
+    assert set(iplog._visit_store["by_referrer"]["Google"]) == {"1.2.3.4", "5.6.7.8"}  # 2 unika IP:er
+    assert len(iplog._visit_store["by_referrer"]["Google"]) == 2
+    assert len(iplog._visit_store["by_referrer"]["Reddit"]) == 1
+    assert len(iplog._visit_store["by_referrer"]["Direct"]) == 1  # intern + tom referrer, samma IP
+
+
+def test_by_day_unique_counts_distinct_ips(visits_file):
+    iplog.record_visit("1.2.3.4")
+    iplog.record_visit("1.2.3.4")   # samma IP → fortfarande 1 unik idag
+    iplog.record_visit("9.9.9.9")
+    today = time.strftime("%Y-%m-%d")
+    assert set(iplog._visit_store["by_day_unique"][today]) == {"1.2.3.4", "9.9.9.9"}
+    assert len(iplog._visit_store["by_day_unique"][today]) == 2
+
+
+@pytest.mark.asyncio
+async def test_visits_summary_returns_unique_daily_and_referrers(visits_file):
+    iplog.record_visit("1.2.3.4", "https://www.google.com/", "morkretsrike.se")
+    iplog.record_visit("1.2.3.4", "https://www.google.com/", "morkretsrike.se")  # samma IP + källa
+    iplog.record_visit("9.9.9.9", "https://www.reddit.com/", "morkretsrike.se")
+    today = time.strftime("%Y-%m-%d")
+    s = await iplog.visits_summary()
+    assert s["by_day_unique"][today] == 2       # 2 distinkta IP:er idag
+    assert s["by_referrer"]["Google"] == 1      # 1 unik IP från Google
+    assert s["by_referrer"]["Reddit"] == 1
+    assert s["unique_today"] == 2
+
+
+@pytest.mark.asyncio
+async def test_visits_summary_country_range_filter(visits_file):
+    """2026-08-09: land-grafens tidsfilter (1h/12h/24h/7d/30d) på last_seen."""
+    now = time.time()
+    iplog._visit_store["by_ip"] = {
+        "1.2.3.4": {"count": 1, "last_seen": now},              # aktiv nu
+        "5.6.7.8": {"count": 1, "last_seen": now - 2 * 3600},   # 2 h sedan
+        "9.9.9.9": {"count": 1, "last_seen": now - 10 * 86400},  # 10 dagar sedan
+    }
+    iplog._geo_cache["1.2.3.4"] = {"country": "Sweden", "countryCode": "SE", "ts": now}
+    iplog._geo_cache["5.6.7.8"] = {"country": "Germany", "countryCode": "DE", "ts": now}
+    iplog._geo_cache["9.9.9.9"] = {"country": "France", "countryCode": "FR", "ts": now}
+    s1h = await iplog.visits_summary(country_range="1h")
+    assert s1h["by_country"] == {"SE": 1}
+    s12h = await iplog.visits_summary(country_range="12h")
+    assert s12h["by_country"] == {"SE": 1, "DE": 1}
+    s24h = await iplog.visits_summary(country_range="24h")
+    assert s24h["by_country"] == {"SE": 1, "DE": 1}
+    s7d = await iplog.visits_summary(country_range="7d")
+    assert s7d["by_country"] == {"SE": 1, "DE": 1}
+    s30d = await iplog.visits_summary(country_range="30d")
+    assert s30d["by_country"] == {"SE": 1, "DE": 1, "FR": 1}
+    sall = await iplog.visits_summary()
+    assert sall["by_country"] == {"SE": 1, "DE": 1, "FR": 1}
+
+
+# ── Admin-stats ──────────────────────────────────────────────────────────
+
+def test_admin_stats_includes_visits(client, visits_file):
+    main.save_users({
+        "the_admin": {"password_hash": hash_password("pw123456"), "role": "admin", "turn_cap": 0},
+    })
+    iplog.record_visit("1.2.3.4")
+    iplog.record_visit("1.2.3.4")
+    now = time.time()
+    iplog._geo_cache["1.2.3.4"] = {"country": "Sweden", "countryCode": "SE", "ts": now}
+    atok = create_token("the_admin", "admin")
+    r = client.get("/api/admin/stats", cookies={"morkrets_token": atok})
+    assert r.status_code == 200, r.text
+    visits = r.json()["visits"]
+    assert visits["total"] == 2
+    assert visits["by_country"]["SE"] == 1  # unika: 1 IP trots 2 sidvisningar
+    assert visits["today"] >= 2
+    assert visits["unique_total"] == 1
+
+
+def test_admin_visits_country_endpoint(client, visits_file):
+    """2026-08-09: /api/admin/visits_country?window=… → filtrerad by_country."""
+    main.save_users({
+        "the_admin": {"password_hash": hash_password("pw123456"), "role": "admin", "turn_cap": 0},
+    })
+    now = time.time()
+    iplog._visit_store["by_ip"] = {
+        "1.2.3.4": {"count": 1, "last_seen": now},
+        "5.6.7.8": {"count": 1, "last_seen": now - 2 * 3600},
+    }
+    iplog._geo_cache["1.2.3.4"] = {"country": "Sweden", "countryCode": "SE", "ts": now}
+    iplog._geo_cache["5.6.7.8"] = {"country": "Germany", "countryCode": "DE", "ts": now}
+    atok = create_token("the_admin", "admin")
+    r1h = client.get("/api/admin/visits_country?window=1h", cookies={"morkrets_token": atok})
+    assert r1h.status_code == 200, r1h.text
+    assert r1h.json()["by_country"] == {"SE": 1}
+    rall = client.get("/api/admin/visits_country", cookies={"morkrets_token": atok})
+    assert rall.status_code == 200
+    assert rall.json()["by_country"] == {"SE": 1, "DE": 1}
+    # Icke-admin → 403
+    main.save_users({
+        "p1": {"password_hash": hash_password("pw123456"), "role": "player", "turn_cap": 0},
+    })
+    ptok = create_token("p1", "player")
+    r403 = client.get("/api/admin/visits_country?window=1h", cookies={"morkrets_token": ptok})
+    assert r403.status_code == 403
+
+
+def test_middleware_counts_page_views(client, visits_file):
+    """HTML-sidor räknas som besök; API-anrop gör det inte."""
+    r = client.get("/login.html")
+    assert r.status_code == 200
+    r2 = client.get("/pricing.html")
+    assert r2.status_code == 200
+    r3 = client.get("/api/me")  # ej inloggad → 401, men ska INTE räknas
+    assert r3.status_code == 401
+    assert iplog._visit_store["total"] == 2

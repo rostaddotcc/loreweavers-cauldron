@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>Pricing — Free AI Dungeon Master: 20 Turns Every Day | The Lore Weaver's Cauldron</title>
+<meta name="description" content="The best free AI D&D roleplaying game — 20 fresh turns every day, forever, no card and no email. The one-time 10€ unlock adds 100 turns that never expire, plus every Dungeon Master, voice narration and image engine. Or donate any amount from 1€ — it permanently unlocks turn undo and campaign export, and every € adds 100 turns.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://dnd.rostad.cc/pricing.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Lore Weaver's Cauldron">
+<meta property="og:title" content="Pricing — Free AI Dungeon Master: 20 Turns Every Day | The Lore Weaver's Cauldron">
+<meta property="og:description" content="Always free: 20 fresh turns every day — no subscription, no credit card. One-time 10€ unlock: +100 turns that never expire, every Dungeon Master, voice &amp; image generation. Or donate any amount from 1€: permanently unlocks turn undo &amp; campaign export, plus 100 turns per €.">
+<meta property="og:url" content="https://dnd.rostad.cc/pricing.html">
+<meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pricing — Free AI Dungeon Master: 20 Turns Every Day | The Lore Weaver's Cauldron">
+<meta name="twitter:description" content="Always free: 20 fresh turns every day — no subscription, no credit card. One-time 10€ unlock: +100 turns that never expire, every Dungeon Master, voice &amp; image generation. Or donate any amount from 1€: permanently unlocks turn undo &amp; campaign export, plus 100 turns per €.">
+<meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta name="theme-color" content="#09070B">
+<link rel="icon" href="/assets/logo-cauldron.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════ tokens ═══════════════ */
+  :root{
+    /* Palette tokens are NOT declared here — snes.css :root (Emberwatch, 2026-10-22) is the single source. */
+    --font-display:'Grenze',serif;
+    --font-body:'Spectral',Georgia,serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --font-accent:'Silkscreen',monospace;
+  --font-flavor:'EB Garamond',Georgia,serif;--rubric:#E4616F;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent;font-size:17px;line-height:1.65}
+
+  /* ═══════════════ pricing hero ═══════════════ */
+  .pricing{max-width:1080px;margin:0 auto;padding:4.5rem 1.25rem 5rem}
+  .eyebrow{font-family:var(--font-display);letter-spacing:.44em;
+    text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem;letter-spacing:.34em}
+  .pricing h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
+    text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
+    margin-bottom:1rem;text-shadow:2px 2px 0 #000;animation:gr-flicker 6s ease-in-out infinite}
+  .pricing-sub{max-width:600px;margin:0 auto 3rem;text-align:center;color:var(--bone-dim);line-height:1.65;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .pricing-sub b{color:var(--bone);font-weight:600}
+
+  /* ═══════════════ tier cards ═══════════════ */
+  .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.4rem;align-items:stretch}
+  .tier{position:relative;background:var(--stone);
+    border:1px solid var(--edge);padding:2.2rem 1.8rem 1.8rem;
+    display:flex;flex-direction:column;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .tier::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3;border-color:rgba(var(--gold-rgb),.45);opacity:.45}
+  .tier:hover{border-color:var(--edge-hi)}
+  .tier.hot{border-color:var(--gold);border-color:rgba(var(--gold-bright-rgb),.6)}
+  .tier-name{font-family:var(--font-display);font-weight:700;letter-spacing:.3em;
+    text-transform:uppercase;color:var(--bone-bright);margin-bottom:.4rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .tier-flag{position:absolute;top:-12px;right:14px;font-family:var(--font-display);
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);
+    background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.28rem .7rem}
+  .tier-price .strike{font-size:var(--fs-base);font-weight:400;color:var(--bone-dim);
+    text-decoration:line-through;text-decoration-thickness:2px;margin-left:.35rem;letter-spacing:.04em;vertical-align:.35em}
+  .tier-price{font-family:var(--font-display);font-weight:900;font-size:2.1rem;color:var(--gold-bright);
+    margin:.3rem 0 .2rem}
+  .tier-price small{font-size:var(--fs-tiny);font-weight:400;color:var(--bone-dim);letter-spacing:.06em}
+  .tier-desc{color:var(--bone-dim);line-height:1.6;margin-bottom:1.4rem;min-height:2.6em;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .tier ul{list-style:none;margin-bottom:1.8rem;flex:1}
+  .tier li{padding:.5rem 0 .5rem 1.5rem;position:relative;color:var(--bone);font-size:.95rem;line-height:1.5}
+  .tier li::before{content:'◆';position:absolute;left:0;top:.5rem;color:var(--gold);font-size:.6rem}
+  .tier li b{color:var(--bone-bright);font-weight:600}
+  .tier li.dim{color:var(--bone-dim)}
+  .tier li.dim::before{color:var(--edge-hi)}
+  .tier-fine{color:var(--bone-dim);font-size:var(--fs-tiny);line-height:1.6;font-style:italic;
+    letter-spacing:.02em;margin:-1rem 0 1.2rem;font-family:var(--font-flavor);font-style:italic}
+  .tier-btn{display:block;text-align:center;font-family:var(--font-display);font-size:var(--fs-tiny);
+    letter-spacing:.22em;text-transform:uppercase;text-decoration:none;padding:.85rem 1rem;
+    border:1px solid var(--edge);min-height:var(--tap-min);display:flex;align-items:center;justify-content:center}
+  .tier-btn.go{color:var(--ink);background:var(--gold);border-color:var(--gold-bright)}
+  .tier-btn.go:hover{background:var(--gold-bright);color:var(--ink)}
+  .tier-btn.current{color:var(--bone-bright);background:var(--stone-3);
+    border:1px solid var(--gold);cursor:default;pointer-events:none}
+  /* Ember CTA (D4): ember takes the action, gold keeps the ornament. The free path stays ghost. */
+  .tier-btn.go[data-tier="unlock10"],.tier-btn.go[data-tier="donation"]{
+    background:var(--accent)!important;color:var(--accent-ink)!important;border-color:var(--accent)!important}
+  .tier-btn.go[data-tier="free"]{
+    background:transparent!important;color:var(--bone)!important;border:1px solid var(--edge-hi)!important}
+  @media (hover:hover){
+    .tier-btn.go[data-tier="unlock10"]:hover,.tier-btn.go[data-tier="donation"]:hover{
+      background:var(--accent-hi)!important;border-color:var(--accent-hi)!important;color:var(--accent-ink)!important}
+    .tier-btn.go[data-tier="free"]:hover{border-color:var(--accent)!important;color:var(--bone-bright)!important}
+  }
+
+  /* ═══════════════ EUR/SEK-konvertering ═══════════════ */
+  .currency-toggle{
+    display:flex;align-items:center;justify-content:center;gap:.5rem;
+    margin:0 auto 1.8rem;width:fit-content;cursor:pointer;
+    font-family:var(--font-display);font-size:max(12px,var(--fs-micro));letter-spacing:.18em;
+    text-transform:uppercase;color:var(--bone-dim);
+    border:1px solid var(--edge);padding:.5rem 1rem;
+    background:var(--stone);
+    -webkit-tap-highlight-color:transparent;user-select:none;min-height:var(--tap-min)}
+  .currency-toggle:hover{border-color:var(--gold);color:var(--bone)}
+  .currency-toggle b{color:var(--gold-bright);font-weight:700}
+  .currency-toggle .cur-arrow{color:var(--gold);font-size:var(--fs-tiny)}
+  .currency-toggle .cur-note{font-size:12px;color:var(--bone-dim);letter-spacing:.06em}
+
+  /* ═══════════════ fine print ═══════════════ */
+  .fine{max-width:620px;margin:3rem auto 0;text-align:center;color:var(--bone-dim);line-height:1.7;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .fine b{color:var(--bone)}
+  .back{display:block;margin-top:2.2rem;text-align:center;font-family:var(--font-display);
+    font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);
+    text-decoration:none;min-height:var(--tap-min);display:flex;align-items:center;justify-content:center}
+  .back:hover{color:var(--gold-bright)}
+  .creator-link{margin-top:1.6rem;text-align:center;font-size:var(--fs-tiny);color:var(--bone-dim);opacity:.75}
+  .creator-link a{color:var(--bone-dim);text-decoration:none;border-bottom:1px dotted rgba(119,119,140,.4);
+    display:inline-block;min-height:44px;line-height:1.5;
+    padding-bottom:.1rem;transition:color .2s,border-color .2s}
+  .creator-link a:hover{color:var(--gold);border-color:var(--gold)}
+
+  /* ═══════════════ plan detail modal ═══════════════ */
+  .plan-overlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;
+    padding:1.25rem;background:rgba(3,2,7,.78)}
+  .plan-overlay.show{display:flex}
+  .plan-modal{position:relative;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;
+    background:var(--stone);
+    border:1px solid var(--gold);
+    padding:2rem 1.8rem 1.7rem;animation:plan-in .28s cubic-bezier(.22,1,.36,1);position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .plan-modal::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3;border-color:rgba(var(--gold-rgb),.45);opacity:.45}
+  @keyframes plan-in{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .plan-close{position:absolute;top:.7rem;right:.9rem;background:none;border:none;color:var(--bone-dim);font-size:var(--fs-chat);cursor:pointer;line-height:1;padding:.3rem;transition:color .2s;min-height:var(--tap-min)}
+  .plan-close:hover{color:var(--rubric)}
+  .plan-eyebrow{font-family:var(--font-display);font-size:.6rem;letter-spacing:.34em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:.7rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .plan-name{font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:var(--bone-bright);
+    letter-spacing:.06em;margin-bottom:.4rem}
+  .plan-price{font-family:var(--font-display);font-weight:900;font-size:var(--fs-h1);color:var(--gold-bright);margin-bottom:.35rem}
+  .plan-price small{font-size:var(--fs-tiny);font-weight:400;color:var(--bone-dim);letter-spacing:.06em}
+  .plan-price .strike{font-size:var(--fs-chat);font-weight:400;color:var(--bone-dim);text-decoration:line-through;
+    text-decoration-thickness:2px;margin-left:.4rem;vertical-align:.3em}
+  .plan-promo{display:inline-block;font-family:var(--font-display);font-size:12px;letter-spacing:.08em;line-height:1.5;
+    text-transform:uppercase;color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.26rem .55rem;margin-bottom:.9rem}
+  .plan-desc{color:var(--bone-dim);font-style:italic;font-size:.95rem;line-height:1.6;margin-bottom:1.2rem;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .plan-list{list-style:none;margin-bottom:1.6rem}
+  .plan-list li{padding:.5rem 0 .5rem 1.5rem;position:relative;color:var(--bone);font-size:.96rem;line-height:1.5}
+  .plan-list li::before{content:'◆';position:absolute;left:0;top:.5rem;color:var(--gold);font-size:.6rem}
+  .plan-list li b{color:var(--bone-bright);font-weight:600}
+  .plan-list li.dim{color:var(--bone-dim)}
+  .plan-list li.dim::before{color:var(--edge-hi)}
+  .plan-cta{display:block;text-align:center;font-family:var(--font-display);font-size:var(--fs-tiny);
+    letter-spacing:.22em;text-transform:uppercase;padding:.9rem 1rem;cursor:pointer;width:100%;min-height:var(--tap-min)}
+  .plan-cta.busy{opacity:.55;pointer-events:none;cursor:wait}
+  .plan-login-hint{margin-top:.8rem;text-align:center;font-size:var(--fs-tiny);color:var(--bone-dim);line-height:1.5}
+  .plan-login-hint a{color:var(--gold-bright);text-decoration:none;border-bottom:1px solid rgba(var(--gold-rgb),.4)}
+  .plan-login-hint a:hover{color:var(--gold)}
+  .plan-grant{margin-top:.9rem;text-align:center;font-size:var(--fs-tiny);color:var(--bone-dim);line-height:1.5}
+  .plan-grant b{color:var(--gold-bright);font-weight:700;letter-spacing:.04em}
+  .plan-email{margin-top:1rem;padding:1.1rem;border:1px solid var(--edge-hi);background:var(--stone-3);text-align:left}
+  .plan-email .pe-title{font-family:var(--font-display);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.35rem}
+  .plan-email .pe-label{font-size:var(--fs-sm);color:var(--bone);line-height:1.55;margin-bottom:.9rem}
+  .plan-email .pe-row{display:flex;flex-direction:column;gap:.65rem}
+  .plan-email .pe-row input{width:100%;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
+    background:var(--stone);border:1px solid var(--edge);padding:.85rem 1rem;outline:none}
+  .plan-email .pe-row input::placeholder{color:var(--bone-dim);opacity:.75}
+  .plan-email .pe-row input:focus{border-color:var(--gold)}
+  .plan-email .pe-row .plan-cta{margin-top:0;padding:.85rem 1rem;white-space:nowrap;font-size:var(--fs-tiny)}
+  .plan-email .pe-err{margin-top:.6rem;font-size:var(--fs-tiny);color:var(--rubric);font-style:italic;min-height:1em}
+  .plan-note{margin-top:.9rem;text-align:center;font-size:var(--fs-tiny);color:var(--bone-dim);line-height:1.55}
+
+  /* Donationsraden på kortet */
+  .donate-row{display:flex;gap:.5rem;margin-top:1.1rem}
+  .donate-input{flex:1;min-width:0;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
+    background:var(--stone);border:1px solid var(--edge);padding:.7rem .8rem;outline:none}
+  .donate-input:focus{border-color:var(--gold)}
+  .donate-row .tier-btn{margin-top:0;flex-shrink:0}
+
+  @media(max-width:900px){
+    .tiers{grid-template-columns:1fr;gap:1.2rem}
+    .tier{padding:1.9rem 1.4rem 1.5rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+    .donate-row{flex-direction:column;align-items:stretch}
+    .donate-row .donate-input{width:100%}
+    .tier-btn,.plan-cta{min-height:var(--tap-lg);display:flex;align-items:center;justify-content:center}
+    .currency-toggle{min-height:var(--tap-min)}
+  
+  .back,.currency-toggle{min-height:var(--tap-min);display:flex;align-items:center;justify-content:center}
+  input{font-size:16px}
+}
+  @media(max-width:640px){
+    .pricing{padding-top:3rem}
+  }
+  /* Reduced motion — smooth scroll off (global animation block lives in snes.css) */
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<style id="grimoire-leaf">
+/* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
+.pricing h1::first-letter{font-family:var(--font-display,'Grenze',serif);font-style:normal;font-weight:700;font-size:1.06em;line-height:1;vertical-align:0;margin-right:0;color:var(--gold);text-shadow:0 0 12px rgba(var(--gold-rgb),.3)}
+.tier::after,.plan-modal::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/svg%3E") left top/24px 24px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg transform='rotate(180 16 16)'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/g%3E%3C/svg%3E") right bottom/24px 24px no-repeat;opacity:.9}
+@keyframes gr-flicker{0%,100%{text-shadow:0 0 20px rgba(var(--gold-bright-rgb),.28),0 2px 0 #000}43%{text-shadow:0 0 26px rgba(var(--gold-bright-rgb),.42),0 2px 0 #000}47%{text-shadow:0 0 12px rgba(var(--gold-bright-rgb),.16),0 2px 0 #000}76%{text-shadow:0 0 22px rgba(var(--gold-bright-rgb),.3),0 2px 0 #000}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.pricing h1{animation:none!important;text-shadow:0 2px 0 #000}}
+</style>
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">PATHS</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="pricing">
+<div class="page-eyebrow">THE LEDGER · PATHS & OFFERINGS</div>
+  <h1>Every day, free. No lock-in.</h1>
+  <div class="page-rule">✦</div>
+   <p class="eyebrow">Free to play · No subscription</p>
+  <p class="pricing-sub">The best free AI D&amp;D roleplaying game refreshes your account with <b>20 turns every day</b> — forever, no card, no email. Want more? The one-time <b>10€ unlock</b> adds <b>100 turns</b> that never expire and opens every Dungeon Master, voice narration and image engine. Or give <b>any amount</b> — every € adds 100 turns.</p>
+
+  <div class="currency-toggle" id="currency-toggle" onclick="toggleCurrency()" title="Toggle EUR / SEK">
+    <span>Prices in</span>
+    <b id="cur-label">EUR</b>
+    <span class="cur-arrow">⇄</span>
+    <span class="cur-note" id="cur-note">SEK ≈ ×11.7</span>
+  </div>
+
+  <div class="tiers fresh-frame">
+    <!-- Free -->
+    <div class="tier">
+      <div class="tier-name">Free</div>
+      <div class="tier-price">0€</div>
+      <div class="tier-desc">The realm, at your own pace — no card, no email needed.</div>
+      <ul>
+        <li><b>20 turns</b> refresh <b>every day</b> — forever</li>
+        <li>One chat message = one turn</li>
+        <li>One Dungeon Master &mdash; <b>step-3.7-flash</b> ⭐</li>
+        <li>Persistent world, memory, and Codex</li>
+        <li class="dim">Voice narration &amp; image generation — behind the 10€ unlock</li>
+        <li class="dim">Other Dungeon Masters — behind the 10€ unlock</li>
+      </ul>
+      <a class="tier-btn go btn-gold" href="login.html" data-tier="free">Begin your adventure</a>
+    </div>
+
+    <!-- Unlock 10€ -->
+    <div class="tier hot">
+      <div class="tier-flag">Everything</div>
+      <div class="tier-name">Unlock</div>
+      <div class="tier-price"><span class="cur-price" data-eur="10" data-sek="117">10€</span><small> once</small></div>
+      <div class="tier-desc">One payment, every door open — forever.</div>
+      <ul>
+        <li><b>+100 turns</b> — they never expire, and they are spent <b>only after</b> your 20 free daily turns run out</li>
+                <li><b>All other Dungeon Masters</b> — Qwen 3.8 Flash, DeepSeek V4.1 Flash, Step 5 Preview + the OpenRouter community minds</li>
+        <li><b>Voice narration (TTS)</b> — Qwen 3.0 &amp; StepFun voices; your DM, characters and NPCs speak aloud. <b>Each narration costs 1 turn</b></li>
+        <li><b>Image generation</b> — Wan 2.7 Pro &amp; Qwen Image 3 Pro, up to 10 premium images/day. <b>Each image costs 1 turn</b></li>
+        <li><b>Voice input</b> — speak to your DM instead of typing</li>
+        <li><b>Export &amp; uploaded avatars</b> — your story as a zip, your own images — included</li>
+        <li><b>Permanent</b> — no 30-day window, no renewal, ever</li>
+      </ul>
+      <p class="tier-fine">Everything draws from the same turn balance: one chat message, one narration or one image = 1 turn each.</p>
+      <a class="tier-btn go btn-gold" href="#" data-tier="unlock10" onclick="openPlan(event,'unlock10')">Unlock everything</a>
+    </div>
+
+    <!-- Any (donation) -->
+    <div class="tier" id="tier-donation">
+      <div class="tier-name">Any</div>
+      <div class="tier-price"><span id="donation-price">Your pick</span></div>
+      <div class="tier-desc">Pure turns, pure support — pick any amount from 1€ up.</div>
+      <ul>
+        <li><b>1€ = +100 turns</b> — mechanically exact: every euro adds exactly 100 turns, instantly, with <b>no expiry</b></li>
+        <li>Turns are spent <b>only after</b> your daily free turns run out — they never replace them</li>
+        <li>A 5€ gift adds <b>500 turns</b> to your cauldron; a 1€ gift adds <b>100</b></li>
+        <li><b>Unlocks ↶ Undo last turn + campaign export</b> — any amount, 1€ included, permanent</li>
+      </ul>
+      <div class="donate-row">
+        <input type="number" id="donate-amount" min="1" max="1000" step="1" placeholder="5" class="donate-input" aria-label="Donation amount in euros" />
+        <a class="tier-btn go btn-gold" href="#" data-tier="donation" onclick="openPlan(event,'donation')">Donate</a>
+      </div>
+    </div>
+  </div>
+
+  <p class="fine">
+    <b>How turns work — mechanically, precisely.</b> Every account refreshes to <b>20 free turns each day</b> (at midnight UTC), whether you played or not. <b>One chat message = exactly one turn.</b> Voice narrations, image generations, character summoning and memory searches each cost <b>one turn</b> as well — they draw from the same balance. Purchased and donated turns <b>never expire</b>: they sit in your cauldron and are consumed <b>only after</b> the day's 20 free turns are spent. The <b>10€ unlock</b> is one-time and permanent — it opens every Dungeon Master, both voice engines and all image engines, and adds 100 turns that never expire — the <b>daily refresh stays at 20 turns</b>. Any donation from 1€ up permanently unlocks <b>undo last turn</b> and <b>campaign export</b>, and every € adds exactly 100 turns on top. No subscription, no renewal, no lock-in.
+    Payments are processed securely by Stripe.
+  </p>
+  <a class="back btn-ghost" href="adventure.html">← Return to the realm</a>
+  <p class="creator-link"><a href="login.html?about=1">About the game creator — vibed, self-funded, running on one small mini-PC in Stockholm</a></p>
+</section>
+
+<!-- ═══════════════ plan detail modal ═══════════════ -->
+<div class="plan-overlay" id="plan-overlay" onclick="if(event.target===this)closePlan()">
+  <div class="plan-modal fresh-frame" role="dialog" aria-modal="true" aria-labelledby="plan-name">
+    <button class="plan-close" onclick="closePlan()" title="Close">✕</button>
+    <div class="plan-eyebrow" id="plan-eyebrow">The Path</div>
+    <div class="plan-name" id="plan-name">Unlock</div>
+    <div class="plan-price" id="plan-price"><span id="plan-price-main">10€</span><small id="plan-price-per"> once</small><span class="strike" id="plan-price-strike" style="display:none"></span></div>
+    <div class="plan-promo" id="plan-promo" style="display:none"></div>
+    <div class="plan-desc" id="plan-desc"></div>
+    <ul class="plan-list" id="plan-list"></ul>
+    <button class="plan-cta go-btn btn-gold" id="plan-cta" onclick="planCta()">Continue to checkout</button>
+    <div class="plan-login-hint" id="plan-login-hint" style="display:none">Not signed in — <a href="login.html?next=pricing.html">sign in to continue</a></div>
+    <div class="plan-grant" id="plan-grant" style="display:none">✦ Purchase will be applied to <b id="plan-grant-user">you</b></div>
+    <div class="plan-email" id="plan-email" style="display:none">
+      <div class="pe-title">✉ Add your email</div>
+      <div class="pe-label">Your account has no email yet — we need one to send receipts and reset links before you purchase.</div>
+      <div class="pe-row">
+        <input type="email" id="plan-email-input" placeholder="you@example.com" autocomplete="email" aria-label="Your email address" />
+        <button type="button" class="plan-cta go-btn btn-gold" id="plan-email-btn" onclick="planSaveEmail()">Save email &amp; continue</button>
+      </div>
+      <div class="pe-err" id="plan-email-err"></div>
+    </div>
+    <div class="plan-note" id="plan-note">Payments are processed securely by Stripe.</div>
+  </div>
+</div>
+
+<script>
+  // EUR ↔ SEK-konvertering (fast kurs ≈ 11.7, utan API-anrop)
+  var CUR_SEK = false;
+  function fmtPrice(eur, sek) {
+    if (CUR_SEK) return sek + ' kr';
+    return (Number.isInteger(eur) ? eur : eur.toFixed(2)) + '€';
+  }
+  function toggleCurrency() {
+    CUR_SEK = !CUR_SEK;
+    var label = document.getElementById('cur-label');
+    var note = document.getElementById('cur-note');
+    label.textContent = CUR_SEK ? 'SEK' : 'EUR';
+    note.textContent = CUR_SEK ? 'EUR ≈ ÷11.7' : 'SEK ≈ ×11.7';
+    document.querySelectorAll('.cur-price').forEach(function (el) {
+      var eur = parseFloat(el.getAttribute('data-eur'));
+      var sek = parseInt(el.getAttribute('data-sek'), 10);
+      el.textContent = fmtPrice(eur, sek);
+    });
+    if (PLAN_OPEN) renderPlan(PLAN_OPEN);
+  }
+
+  // ── Plan-data (detaljerad vy per kort) — one-time-modellen (2026-08-15) ──
+  var PLAN_OPEN = null;
+  var PLAN_DATA = {
+    unlock10: {
+      name: 'Unlock',
+      price: { eur: 10, sek: 117, per: ' once' },
+      desc: 'One payment, every door open — forever.',
+      promo: 'Everything draws from the same turn balance: one chat message, one narration or one image = 1 turn each. The +100 turns never expire and are spent only after your 20 free daily turns run out.',
+      features: [
+        '<b>+100 turns</b> — no expiry, spent only after your daily free turns run out',
+        '<b>The daily refresh stays at 20</b> — a purchase buys turns, not a bigger day',
+        '<b>All other Dungeon Masters</b> — Qwen 3.8 Flash, DeepSeek V4.1 Flash, Step 5 Preview + the OpenRouter community minds',
+        '<b>Voice narration (TTS)</b> — Qwen 3.0 &amp; StepFun voices (1 turn per narration)',
+        '<b>Image generation</b> — Wan 2.7 Pro &amp; Qwen Image 3 Pro, up to 10 premium images/day (1 turn per image)',
+        '<b>Voice input</b> — speak to your DM instead of typing',
+        '<b>Export &amp; uploaded avatars</b> — your story as a zip, your own images — included',
+        '<b>Permanent</b> — no 30-day window, no renewal, no lock-in',
+      ],
+    },
+    donation: {
+      name: 'Any',
+      price: { eur: 0, sek: 0, per: '' },
+      desc: 'Pure turns, pure support — every € adds exactly 100 turns.',
+      features: [
+        '<b>1€ = +100 turns</b> — mechanically exact, instantly, with no expiry',
+        'Turns are spent <b>only after</b> your daily free turns run out — they never replace them',
+        'A 5€ gift adds <b>500 turns</b>; a 1€ gift adds <b>100</b>',
+        '<b>Unlocks ↶ Undo last turn + campaign export</b> — any amount, 1€ included, permanent',
+      ],
+    },
+  };
+
+  // ── Modal: visa planen (mer detaljerad) ──
+  function openPlan(ev, tier) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    PLAN_OPEN = tier;
+    if (tier === 'donation') {
+      var amt = (document.getElementById('donate-amount') || {}).value;
+      if (amt) {
+        var eur = parseFloat(amt);
+        if (eur >= 1 && eur <= 1000) {
+          PLAN_DATA.donation.price = { eur: eur, sek: Math.round(eur * 11.7), per: ' once' };
+        }
+      }
+    }
+    renderPlan(tier);
+    document.getElementById('plan-overlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePlan() {
+    PLAN_OPEN = null;
+    document.getElementById('plan-overlay').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && PLAN_OPEN) closePlan();
+  });
+
+  function renderPlan(tier) {
+    var p = PLAN_DATA[tier];
+    if (!p) return;
+    document.getElementById('plan-eyebrow').textContent = 'The Path';
+    document.getElementById('plan-name').textContent = p.name;
+    var priceEl = document.getElementById('plan-price-main');
+    var perEl = document.getElementById('plan-price-per');
+    var strikeEl = document.getElementById('plan-price-strike');
+    priceEl.textContent = fmtPrice(p.price.eur, p.price.sek);
+    perEl.textContent = p.price.per;
+    strikeEl.style.display = 'none';
+    var promoEl = document.getElementById('plan-promo');
+    if (p.promo) {
+      promoEl.innerHTML = '“' + p.promo + '”';
+      promoEl.style.display = '';
+    } else {
+      promoEl.style.display = 'none';
+      promoEl.innerHTML = '';
+    }
+    document.getElementById('plan-desc').textContent = p.desc;
+    document.getElementById('plan-list').innerHTML = p.features.map(function (f) {
+      return '<li>' + f + '</li>';
+    }).join('');
+    var hint = document.getElementById('plan-login-hint');
+    var grant = document.getElementById('plan-grant');
+    if (LOGGED_IN) {
+      hint.style.display = 'none';
+      if (grant) {
+        grant.style.display = '';
+        var gu = document.getElementById('plan-grant-user');
+        if (gu) gu.textContent = LOGGED_IN_USER;
+      }
+      var cta = document.getElementById('plan-cta');
+      cta.textContent = 'Continue to checkout';
+      cta.classList.remove('ghost');
+      cta.classList.add('go-btn');
+    } else {
+      hint.style.display = '';
+      if (grant) grant.style.display = 'none';
+      var cta = document.getElementById('plan-cta');
+      cta.textContent = 'Sign in to continue';
+      cta.classList.add('ghost');
+      cta.classList.remove('go-btn');
+    }
+  }
+
+  // ── CTA i modalen: inloggad → checkout; ej inloggad → login ──
+  // 2026-08-04: e-post krävs före köp — om /api/billing/checkout svarar
+  // {detail:{email_required:true}} visas e-postformuläret i modalen.
+  // Donation skickar med beloppet (amount i EUR).
+  function planCta() {
+    if (!LOGGED_IN || !PLAN_OPEN) {
+      location.href = 'login.html?next=' + encodeURIComponent('pricing.html' + location.search);
+      return;
+    }
+    var btn = document.getElementById('plan-cta');
+    btn.classList.add('busy');
+    btn.textContent = 'Forging sigil…';
+    var body = { tier: PLAN_OPEN };
+    if (PLAN_OPEN === 'donation') {
+      body.amount = PLAN_DATA.donation.price.eur || null;
+    }
+    fetch('/api/billing/checkout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      if (res.status === 401) {
+        location.href = 'login.html?next=' + encodeURIComponent('pricing.html' + location.search);
+        return null;
+      }
+      return res.json().then(function (data) {
+        if (!res.ok) {
+          // E-post saknas → visa formuläret i stället för ett generiskt fel
+          if (data && data.detail && data.detail.email_required) {
+            showPlanEmail();
+            return null;
+          }
+          throw new Error((data && data.detail && data.detail.message) || data.detail || ('HTTP ' + res.status));
+        }
+        return data;
+      });
+    }).then(function (data) {
+      if (data && data.url) location.href = data.url;
+    }).catch(function (e) {
+      btn.classList.remove('busy');
+      btn.textContent = 'Continue to checkout';
+      alert('The sigil could not be forged: ' + e.message);
+    });
+  }
+
+  // Visa e-postformuläret i modalen (checkout kräver e-post på kontot).
+  function showPlanEmail() {
+    var btn = document.getElementById('plan-cta');
+    btn.classList.remove('busy');
+    btn.textContent = 'Continue to checkout';
+    document.getElementById('plan-email').style.display = '';
+    var inp = document.getElementById('plan-email-input');
+    if (inp) { inp.focus(); }
+  }
+
+  function planSaveEmail() {
+    var inp = document.getElementById('plan-email-input');
+    var err = document.getElementById('plan-email-err');
+    var btn = document.getElementById('plan-email-btn');
+    var email = (inp && inp.value || '').trim();
+    if (!email || !/@/.test(email) || !/\.[^.]+$/.test(email.split('@')[1] || '')) {
+      if (err) err.textContent = 'That email does not look right.';
+      return;
+    }
+    if (err) err.textContent = '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    fetch('/api/me/email', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) throw new Error((data && data.detail) || ('HTTP ' + res.status));
+        return data;
+      });
+    }).then(function () {
+      // E-post sparat → dölj formuläret och försök checkout igen
+      document.getElementById('plan-email').style.display = 'none';
+      if (btn) { btn.disabled = false; btn.textContent = 'Save & continue'; }
+      planCta();
+    }).catch(function (e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save & continue'; }
+      if (err) err.textContent = e.message || 'Could not save the email. Try again shortly.';
+    });
+  }
+
+  var LOGGED_IN = false;
+  var LOGGED_IN_USER = '';
+  // ── Current status + inloggningsstatus ──
+  // (pricing.html laddar inte api.js → rå fetch med credentials)
+  fetch('/api/me', { credentials: 'include' }).then(function (r) {
+    return r.ok ? r.json() : null;
+  }).then(function (u) {
+    LOGGED_IN = !!u;
+    LOGGED_IN_USER = (u && u.username) || '';
+    if (!u) return;
+    // 2026-09-27: unlock10-kortet markeras för tier2/lifetime + alla med
+    // upplåsta features (även legacy Patron-köpare har 'You have this').
+    var tierKey = { tier1: 'unlock10', tier2: 'unlock10', lifetime: 'unlock10' }[u.subscription_status];
+    var feats = (u.features || {});
+    if (!tierKey) {
+      if (feats.all_models || feats.wan1080 || feats.export) tierKey = 'unlock10';
+    }
+    // 2026-10-01: a donation (1€+) permanently unlocks undo + campaign export —
+    // mark the donation card for supporters who lack the 10€ unlock benefits.
+    if (!tierKey && feats.supporter) tierKey = 'donation';
+    if (!tierKey) return;
+    var btn = document.querySelector('.tier-btn[data-tier="' + tierKey + '"]');
+    if (!btn) return;
+    btn.textContent = '✓ You have this';
+    btn.classList.add('current');
+    btn.removeAttribute('onclick');
+    btn.href = '#';
+  }).catch(function () {}).then(function () {
+    // Nivå 1 (2026-09-20): deep-link ?donate=N från cap-modalens quick top-up
+    // chips (chat.html) — fyll beloppet, scrolla till donationskortet och
+    // öppna köp-modalen direkt. Körs EFTER /api/me så LOGGED_IN/renderPlan
+    // visar rätt CTA (checkout vs sign in).
+    // ?plan=unlock10 (2026-09-27): deep-link från unlock-modalerna → öppna
+    // 10€-planen direkt.
+    var pm = /[?&]plan=([a-z0-9_]+)/i.exec(location.search);
+    if (pm && PLAN_DATA[pm[1].toLowerCase()]) {
+      openPlan(null, pm[1].toLowerCase());
+      return;
+    }
+    var m = /[?&]donate=(\d+(?:[.,]\d+)?)/.exec(location.search);
+    if (!m) return;
+    var eur = parseFloat(m[1].replace(',', '.'));
+    if (!(eur >= 1 && eur <= 1000)) return;
+    var inp = document.getElementById('donate-amount');
+    if (inp) inp.value = eur;
+    var card = document.getElementById('tier-donation');
+    if (card && card.scrollIntoView) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    openPlan(null, 'donation');
+  });
+</script>
+<script src="i18n.js?v=20261028a"></script>
+<script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20261006a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+</body>
+</html>

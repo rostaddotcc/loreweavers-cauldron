@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#09070B">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>The Lore Weaver's Cauldron — The Memory Archive</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+  /* Paletten bor i snes.css (Emberwatch) — inga lokala kopior. Kvar: sidlokala tokens som reglerna använder. */
+  --font-flavor:'EB Garamond',Georgia,serif;--rubric:#E4616F;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;font-size:17px;line-height:1.65;font-family:var(--font-body)}
+  body{
+    font-family:var(--font-body,'Spectral',Georgia,serif);color:var(--bone);
+    background:
+      radial-gradient(1000px 500px at 50% 115%, color-mix(in srgb, var(--arcane) 10%, transparent), transparent 60%),
+      radial-gradient(700px 400px at 90% -5%, rgba(var(--gold-rgb),.07), transparent 55%),
+      var(--ink);
+    display:flex;flex-direction:column;overflow:hidden;
+  font-size:17px;line-height:1.65;font-family:var(--font-body)}
+  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(8,6,4,.88)}
+
+  /* ═══════════ Topbar ═══════════ */
+  
+  
+  
+  
+  
+  
+  .top-btn.danger:hover{color:var(--rubric);border-color:var(--rubric);box-shadow:0 0 12px -3px rgba(var(--blood-bright-rgb),.4)}
+
+  /* ═══════════ Layout ═══════════ */
+  .layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}
+
+  /* ── Vänster: Arkivets hyllor ── */
+  .shelves{width:300px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),var(--ink));border-right:1px solid var(--edge)}
+  .shelves-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}
+  .shelves-title{font-family:var(--font-display,'Grenze',serif);font-weight:900;color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:1rem}
+  .shelves-sub{font-style:italic;color:var(--bone-dim);font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .search-wrap{padding:.8rem 1rem .5rem}
+  .search-wrap input{
+    width:100%;font-family:var(--font-body,'Spectral',serif);font-size:var(--fs-base);color:var(--bone-bright);
+    background:var(--stone-3);border:1px solid var(--edge);padding:.55rem .8rem;outline:none;border-radius:var(--radius-sm);
+    transition:border-color .2s,box-shadow .2s}
+  .search-wrap input::placeholder{color:var(--bone-dim);font-style:italic}
+  .search-wrap input:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(var(--gold-bright-rgb),.35)}
+  .filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.6rem 1rem .8rem;border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent);flex-wrap:wrap;}
+  .fchip{font-family:var(--font-display,'Grenze',serif);font-size:max(12px,var(--fs-micro));letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:var(--radius-sm);transition:all .2s;display:inline-flex;align-items:center;gap:.35rem;min-height:44px}
+  .fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}
+  .fchip.on{color:var(--ink);background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(var(--gold-bright-rgb),.5)}
+  .fchip .cnt{font-size:max(12px,var(--fs-micro));opacity:.75}
+
+  /* ── Statistik ── */
+  .stats{padding:.9rem 1rem;border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent)}
+  .stats-title{font-family:var(--font-display,'Grenze',serif);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .stat-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+  .stat-bar-track{flex:1;height:6px;background:var(--stone-3);border:1px solid color-mix(in srgb, var(--edge) 50%, transparent);overflow:hidden}
+  .stat-bar{height:100%;transition:width .6s cubic-bezier(.22,1,.36,1)}
+  .stat-label{color:var(--bone-dim);width:82px;flex-shrink:0;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .stat-num{font-family:var(--font-display,'Grenze',serif);font-size:var(--fs-tiny);color:var(--bone-bright);width:22px;text-align:right;flex-shrink:0}
+
+  .shelves-foot{margin-top:auto;padding:.8rem 1rem;border-top:1px solid color-mix(in srgb, var(--edge) 50%, transparent);font-size:.85rem;font-style:italic;color:var(--bone-dim);text-align:center}
+
+  /* ── Kollapsbara hyllsektioner (2026-08-11) ── */
+  .shelves-coll{border-bottom:1px solid color-mix(in srgb, var(--edge) 45%, transparent)}
+  .coll-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;width:100%;
+    font-family:var(--font-display,'Grenze',serif);font-size:max(12px,var(--fs-micro));letter-spacing:.16em;text-transform:uppercase;
+    color:var(--bone-dim);background:transparent;border:none;padding:.6rem 1rem;cursor:pointer;transition:color .2s;min-height:44px}
+  .coll-head:hover{color:var(--gold-bright)}
+  .coll-caret{font-size:max(12px,var(--fs-micro));opacity:.75;transition:transform .25s}
+  .shelves-coll.collapsed .coll-caret{transform:rotate(-90deg)}
+  .shelves-coll.collapsed .coll-body{display:none}
+  .coll-body .search-wrap{padding-top:.2rem}
+
+  /* ── ✦ Superseded-popup (2026-08-11) ── */
+  .sup-backdrop{position:fixed;inset:0;z-index:40;background:rgba(8,6,4,.72);display:none}
+  .sup-backdrop.show{display:block}
+  .sup-modal{position:fixed;z-index:41;top:50%;left:50%;transform:translate(-50%,-48%) scale(.97);opacity:0;pointer-events:none;
+    width:min(640px,92vw);max-height:80dvh;display:flex;flex-direction:column;
+    background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));
+    border:1px solid var(--gold);border-radius:var(--radius-md);box-shadow:0 24px 60px -18px rgba(0,0,0,.9);
+    transition:opacity .25s,transform .25s;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .sup-modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+  .sup-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+    padding:.85rem 1.1rem;border-bottom:1px solid var(--edge)}
+  .sup-title{font-family:var(--font-display,'Grenze',serif);font-weight:900;font-size:.95rem;
+    color:var(--gold-bright);letter-spacing:.06em;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .sup-close{background:none;border:1px solid var(--edge);color:var(--bone-dim);width:44px;height:44px;
+    cursor:pointer;border-radius:var(--radius-sm);transition:all .2s;min-height:44px;min-width:44px;flex:0 0 44px}
+  .sup-close:hover{color:var(--rubric);border-color:var(--rubric)}
+  .sup-sub{padding:.6rem 1.1rem;font-size:var(--fs-tiny);font-style:italic;color:var(--bone-dim);
+    border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent);line-height:1.55;font-family:var(--font-flavor);font-style:italic}
+  .sup-body{overflow-y:auto;padding:1rem 1.1rem 1.4rem;min-height:120px}
+  .sup-body::-webkit-scrollbar{width:8px}
+  .sup-empty{padding:1.6rem 0;text-align:center;color:var(--bone-dim);font-style:italic}
+  .sup-fact{position:relative;padding:.7rem .9rem .65rem 1rem;margin-bottom:.55rem;
+    background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);
+    border-left:3px solid var(--edge);border-radius:var(--radius-md);position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .sup-fact .sf-text{font-size:.98rem;color:var(--bone);opacity:.62;text-decoration:line-through;line-height:1.5}
+  .sup-fact .sf-meta{display:flex;align-items:center;gap:.7rem;margin-top:.4rem;font-size:var(--fs-tiny);color:var(--bone-dim);flex-wrap:wrap}
+  .sup-fact .sf-repl{margin-top:.45rem;padding:.45rem .6rem;background:color-mix(in srgb, var(--poison) 8%, transparent);
+    border:1px dashed color-mix(in srgb, var(--poison) 40%, transparent);border-radius:var(--radius-sm);font-size:.85rem;color:var(--poison)}
+  .sup-fact .sf-repl b{font-family:var(--font-display,'Grenze',serif);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--poison)}
+  .sup-fact .sf-repl .sf-rtext{color:var(--bone);font-style:italic;text-decoration:none}
+  .sup-fact .frank{display:inline-flex;align-items:center;gap:.25rem;font-size:.7rem;letter-spacing:.06em;
+    color:var(--bone-dim);border:1px solid var(--edge);padding:1px 6px;border-radius:var(--radius-sm)}
+  .sup-fact .frank.hot{color:var(--gold-bright);border-color:rgba(var(--gold-bright-rgb),.4)}
+  .sup-fact .frank b{font-family:var(--font-display,'Grenze',serif);font-variant-numeric:tabular-nums}
+
+  /* ── Höger: Arkivsalen ── */
+  .archive{flex:1;overflow-y:auto;padding:1.6rem 2rem 4rem;min-width:0;word-wrap:break-word;overflow-wrap:break-word}
+  .archive::-webkit-scrollbar{width:8px}
+  .archive-head{margin-bottom:1.4rem}
+  .archive-title{font-family:var(--font-display,'Grenze',serif);font-weight:900;font-size:1.5rem;color:var(--bone-bright);letter-spacing:.04em;text-shadow:0 0 18px rgba(var(--gold-bright-rgb),.2);animation:gr-flicker 6s ease-in-out infinite}
+  .archive-sub{font-size:.98rem;font-style:italic;color:var(--bone-dim);margin-top:.2rem;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+
+  .cat-section{margin-bottom:1.8rem;animation:rise .45s ease both}
+  .cat-head{display:flex;align-items:center;gap:.7rem;margin-bottom:.7rem}
+  .cat-head::before,.cat-head::after{content:'';flex:1;height:1px;background:color-mix(in srgb, var(--edge) 50%, transparent);height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.7) 15%,rgba(var(--gold-rgb),.7) 85%,transparent) center/100% 1px no-repeat;height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.7) 15%,rgba(var(--gold-rgb),.7) 85%,transparent) center/100% 1px no-repeat}
+  .cat-head b{font-family:var(--font-display,'Grenze',serif);font-size:max(12px,var(--fs-micro));letter-spacing:.18em;text-transform:uppercase;color:var(--cc,var(--gold-bright));display:flex;align-items:center;gap:.45rem}
+
+  .fact{position:relative;padding:.7rem .9rem .6rem 1.1rem;margin-bottom:.5rem;
+    background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:var(--radius-md);
+    transition:transform .22s cubic-bezier(.22,1,.36,1),border-color .22s,box-shadow .22s;overflow:hidden;
+    animation:rise .4s ease both;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .fact::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cc,var(--edge));opacity:.55;transition:opacity .22s}
+  .fact:hover{transform:translateX(5px);border-color:var(--cc,var(--gold));box-shadow:0 0 16px -6px var(--cg,rgba(var(--gold-rgb),.35))}
+  .fact:hover::before{opacity:1}   /* touch-audit 2026-10-27: ren dekoration — .fact::before står på .55 i vila (mätt), faktaraden själv opacity 1. Ingen touch-regel behövs. */
+  .fact .ftext{color:var(--bone);line-height:1.55;font-size:1.0625rem;line-height:1.65}
+  .fact .fmeta{display:flex;align-items:center;gap:.8rem;margin-top:.45rem;font-size:.83rem;color:var(--bone-dim)}
+  .fact .fturn{font-family:var(--font-display,'Grenze',serif);font-size:max(12px,var(--fs-micro));letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim)}
+  .fact .fconf{display:flex;align-items:center;gap:.3rem}
+  .fact .fconf .dots{display:flex;gap:2px}
+  .fact .fconf .dot{width:5px;height:5px;background:var(--stone-3);border:1px solid var(--edge)}
+  .fact .fconf .dot.on{background:var(--cc,var(--gold));border-color:var(--cc,var(--gold));box-shadow:0 0 5px var(--cg,transparent)}
+  .fact.superseded{opacity:.4}
+  .fact.superseded .ftext{text-decoration:line-through}
+  .fact.superseded .fmeta::after{content:'✦ superseded by newer information';color:var(--rubric);font-style:italic}
+  /* ── Rank: nedrankade/glömda fakta (rörligt fönster) ── */
+  .fact.downranked{opacity:.62;border-style:dashed}
+  .fact.downranked::before{background:var(--bone-dim)}
+  .fact.downranked .fmeta::after{content:'▼ nedgraderad · fallit ur det aktiva minnet';color:var(--bone-dim);font-style:italic;opacity:.85}
+  .frank{display:inline-flex;align-items:center;gap:.25rem;margin-left:.4rem;font-size:.72rem;letter-spacing:.06em;color:var(--bone-dim);border:1px solid var(--edge);padding:1px 6px;border-radius:var(--radius-sm)}
+  .frank.hot{color:var(--gold-bright);border-color:rgba(var(--gold-bright-rgb),.4);text-shadow:0 0 6px rgba(var(--gold-bright-rgb),.3)}
+  .frank.cold{color:var(--bone-dim);border-color:var(--edge)}
+  .frank b{font-family:var(--font-display,'Grenze',serif);font-variant-numeric:tabular-nums}
+  .fact .f-repl{margin-top:.45rem;padding:.45rem .6rem;background:color-mix(in srgb, var(--poison) 8%, transparent);
+    border:1px dashed color-mix(in srgb, var(--poison) 40%, transparent);border-radius:var(--radius-sm);font-size:.85rem;color:var(--poison)}
+  .fact .f-repl .fr-label{font-family:var(--font-display,'Grenze',serif);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--poison)}
+  .fact .f-repl .fr-text{color:var(--bone);font-style:italic;text-decoration:none}
+
+  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;text-align:center;color:var(--bone-dim)}
+  .empty .rune{font-size:3rem;margin-bottom:1rem;filter:grayscale(.5);animation:flicker 3s ease-in-out infinite}
+  .empty p{font-size:var(--fs-base);font-style:italic;line-height:1.8;max-width:400px}
+  .talk-btn{font-family:var(--font-display,'Grenze',serif);font-weight:700;font-size:var(--fs-sm);letter-spacing:.16em;text-transform:uppercase;color:var(--ink);
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,color-mix(in srgb, var(--gold) 65%, var(--ink)));border:1px solid color-mix(in srgb, var(--gold) 50%, var(--ink));padding:.8rem 1.5rem;cursor:pointer;border-radius:var(--radius-sm);
+    box-shadow:0 6px 18px -6px rgba(var(--gold-bright-rgb),.5);transition:all .2s;text-decoration:none;display:inline-block;margin-top:1.2rem;min-height:44px}
+  .talk-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}
+
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:var(--font-display,'Grenze',serif);font-size:var(--fs-sm);letter-spacing:.12em;
+    background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;
+    box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .toast.show{transform:translate(-50%,0);opacity:1}
+
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes flicker{0%,100%{opacity:.6}50%{opacity:1}}
+
+  @media(max-width:900px){
+    html{-webkit-tap-highlight-color:transparent}
+    .shelves{width:210px}
+    .shelves-head{padding:.7rem .8rem .55rem}
+    .archive{padding:1.2rem 1.2rem 3rem}
+    
+    
+    
+    
+  }
+  @media(max-width:640px){
+    /* Facts-panelen 2026-10-01: i Codex (smal kolumn) låg .shelves ÖVER .archive
+       med gemensam scroll på .layout → att fälla ut "The scope of the archive"
+       tryckte ihop faktaboxen till en pytteliten scrollbar låda, och statistik-
+       panelen kunde lägga sig så att fakta blev oläslig. Fix: layouten får
+       fast höjd (flex:1 på body), .shelves blir en EGENT scroll-box med tak
+       (max 38dvh) och .archive tar ALL återstående höjd (flex:1 + min-height:0).
+       Nu krymper aldrig faktaboxen för att en hyllsektion fälls ut — den får
+       alltid majoriteten av panelen, och hyllorna scrollar internt vid behov. */
+    .layout{flex-direction:column;overflow:hidden;min-height:0}
+    .shelves{width:100%;height:auto;max-height:38dvh;overflow-y:auto;border-right:none;border-bottom:1px solid var(--edge)}
+    .archive{flex:1;min-height:0;height:auto;overflow-y:auto;padding:1.1rem .75rem 3rem}
+    /* Sökfält: full bredd, 48px, 16px mot iOS-zoom */
+    .search-wrap input{min-height:var(--tap-lg);font-size:18px;padding:.6rem .9rem}
+    /* Kollapsbara sektioner: 44px träffytor */
+    .coll-head{min-height:44px;font-size:max(12px,var(--fs-micro));padding:.6rem .8rem;min-height:44px}
+    /* Filterchips: radbrytning (wrap) — ingen horisontell rem som kapar chips */
+    .filters{flex-wrap:wrap;overflow-x:visible;padding:.6rem .8rem .7rem;flex-wrap:wrap;}
+    .fchip{min-height:44px;display:inline-flex;align-items:center;min-height:44px}
+    /* Statistik: kompaktare */
+    .stats{padding:.7rem .8rem}
+    .stat-label{width:60px;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+    /* Faktakort: en kolumn, full bredd */
+    .fact{padding:.65rem .75rem .55rem .9rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+    .fact:hover{transform:none}
+    .fact .ftext{font-size:1.01rem;font-size:1.0625rem;line-height:1.65}
+    .fact .fmeta{gap:.6rem}
+    .archive-title{font-size:1.25rem;animation:gr-flicker 6s ease-in-out infinite}
+    .talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center;min-height:44px}
+    .empty{height:auto;padding:3rem 1rem}
+    .toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}
+    .toast.show{transform:translateY(0)}
+  }
+  @media(max-width:400px){
+    .archive{padding:.9rem .5rem 2.5rem}
+    .shelves-head{padding:.8rem .8rem .6rem}
+    .archive-title{font-size:var(--fs-chat);animation:gr-flicker 6s ease-in-out infinite}
+    .cat-head b{font-size:.56rem;letter-spacing:.12em}
+  }
+/* ═══════════ MJUKA UPP — Codex-knappar (2026-08-05) ═══════════ */
+.talk-btn, 
+.talk-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
+
+</style>
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<style>
+/* ═══════════ Codex fakta — transitions/touch (2026-08-05) — EFTER snes.css ═══════════ */
+
+
+.fchip{ transition: all .2s !important; min-height:44px}
+.fchip:hover{ transform: translateY(-1px) !important; }
+.fact-card{ transition: all .2s !important; }
+.talk-btn{ min-height:44px}
+</style>
+<script src="sprites.js?v=20260806b"></script>
+
+<style id="grimoire-leaf">
+/* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
+.archive-title::first-letter{font-family:var(--font-display,'Grenze',serif);font-style:normal;font-weight:700;font-size:1.06em;line-height:1;vertical-align:0;margin-right:0;color:var(--gold);text-shadow:0 0 12px rgba(var(--gold-rgb),.3)}
+.fact::after,.sup-fact::after,.sup-modal::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/svg%3E") left top/24px 24px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg transform='rotate(180 16 16)'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/g%3E%3C/svg%3E") right bottom/24px 24px no-repeat;opacity:.9}
+@keyframes gr-flicker{0%,100%{text-shadow:0 0 20px rgba(var(--gold-bright-rgb),.28),0 2px 0 #000}43%{text-shadow:0 0 26px rgba(var(--gold-bright-rgb),.42),0 2px 0 #000}47%{text-shadow:0 0 12px rgba(var(--gold-bright-rgb),.16),0 2px 0 #000}76%{text-shadow:0 0 22px rgba(var(--gold-bright-rgb),.3),0 2px 0 #000}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.archive-title{animation:none!important;text-shadow:0 2px 0 #000}}
+</style>
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+<div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
+
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">FACT LEDGER</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="shelves fresh-frame">
+    <div class="shelves-head">
+      <div class="shelves-title">📚 The Archive's Shelves</div>
+      <div class="shelves-sub">What the world knows about your adventure</div>
+    </div>
+    <div class="shelves-coll" id="coll-search">
+      <button type="button" class="coll-head" onclick="toggleShelf('search')" aria-expanded="true">🔍 Search &amp; filters <span class="coll-caret">▾</span></button>
+      <div class="coll-body">
+        <div class="search-wrap">
+          <input type="text" id="fact-search" placeholder="Search the archive…" oninput="renderFacts()" aria-label="Search the memory archive">
+        </div>
+        <div class="filters" id="filters"></div>
+      </div>
+    </div>
+    <div class="shelves-coll collapsed" id="coll-stats">
+      <button type="button" class="coll-head" onclick="toggleShelf('stats')" aria-expanded="false">📊 The scope of the archive <span class="coll-caret">▾</span></button>
+      <div class="coll-body">
+        <div class="stats" id="stats"></div>
+      </div>
+    </div>
+    <div class="shelves-foot" id="foot-count"></div>
+  </aside>
+
+  <main class="archive fresh-frame" id="archive">
+    <div class="empty fresh-empty"><span class="fe-glyph">🕯️</span>
+      <p>Laddar arkivet…</p>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ✦ Superseded-fakta: popup med ersatta sanningar (2026-08-11) -->
+<div class="sup-backdrop" id="sup-backdrop" onclick="closeSuperseded()"></div>
+<div class="sup-modal" id="sup-modal" role="dialog" aria-modal="true" aria-labelledby="sup-title">
+  <div class="sup-head">
+    <span class="sup-title" id="sup-title">✦ Superseded truths</span>
+    <button class="sup-close" onclick="closeSuperseded()" title="Close" aria-label="Close">✕</button>
+  </div>
+  <div class="sup-sub">A fact is superseded when the Lorekeeper records a newer, conflicting truth about the same thing — the old entry stays in the archive for the record, but the DM no longer uses it. Below: the old truth, its rating at the time, and what replaced it.</div>
+  <div class="sup-body" id="sup-body"></div>
+</div>
+
+<script src="api.js?v=20261010a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+<script src="i18n.js?v=20261028a"></script>
+<script>
+// Auth-guard — omdirigera till porten om ej inloggad
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+</script>
+<script>
+// ═══════════════════════════════════════
+// MINNESARKIVET — Faktaregister (Fas 3)
+// ═══════════════════════════════════════
+const CATS = {
+  npc:          { label:'Gestalter',    icon:'🎭', color:'var(--arcane)', glow:'color-mix(in srgb, var(--arcane) 40%, transparent)' },
+  location:     { label:'Platser',      icon:'🗺️', color:'var(--teal)', glow:'rgba(var(--teal-rgb),.4)' },
+  item:         { label:'Föremål',      icon:'🗡️', color:'var(--gold)', glow:'rgba(var(--gold-rgb),.4)' },
+  event:        { label:'Händelser',    icon:'⚡', color:'var(--ember)', glow:'color-mix(in srgb, var(--ember) 40%, transparent)' },
+  promise:      { label:'Löften',       icon:'✉️', color:'var(--poison)', glow:'color-mix(in srgb, var(--poison) 40%, transparent)' },
+  world:        { label:'Världen',      icon:'🌙', color:'var(--blood-bright)', glow:'rgba(var(--blood-bright-rgb),.4)' },
+  relationship: { label:'Relationer',   icon:'💞', color:'var(--arcane-bright)', glow:'color-mix(in srgb, var(--arcane-bright) 40%, transparent)' },
+};
+const CAT_ORDER = ['npc','location','item','event','promise','world','relationship'];
+
+let ALL_FACTS = [];
+let ALL_SUPERSEDED = [];
+let activeFilter = 'alla';
+
+// ── Kollapsbara hyllsektioner (sökfilter / arkivets omfattning) ──
+function toggleShelf(id) {
+  const el = document.getElementById(id === 'search' ? 'coll-search' : 'coll-stats');
+  if (!el) return;
+  const collapsed = el.classList.toggle('collapsed');
+  const head = el.querySelector('.coll-head');
+  if (head) head.setAttribute('aria-expanded', String(!collapsed));
+  try { localStorage.setItem('facts_collapse_' + id, collapsed ? '1' : '0'); } catch (_) {}
+}
+function shelfInit() {
+  [['search', false], ['stats', true]].forEach(function (pair) {
+    const id = pair[0], def = pair[1];
+    const el = document.getElementById(id === 'search' ? 'coll-search' : 'coll-stats');
+    if (!el) return;
+    let collapsed = def;
+    try { const v = localStorage.getItem('facts_collapse_' + id); if (v != null) collapsed = v === '1'; } catch (_) {}
+    el.classList.toggle('collapsed', collapsed);
+    const head = el.querySelector('.coll-head');
+    if (head) head.setAttribute('aria-expanded', String(!collapsed));
+  });
+}
+
+// ── ✦ Superseded-popup ──
+function openSuperseded() {
+  const body = document.getElementById('sup-body');
+  const backdrop = document.getElementById('sup-backdrop');
+  const modal = document.getElementById('sup-modal');
+  if (!body || !modal) return;
+  if (!ALL_SUPERSEDED.length) {
+    body.innerHTML = '<div class="sup-empty fresh-empty"><span class="fe-glyph">✦</span>No superseded truths yet — the archive holds only living memories.</div>';
+  } else {
+    body.innerHTML = ALL_SUPERSEDED.map(function (f) {
+      const c = CATS[f.category] || { color: 'var(--edge)', glow: 'transparent' };
+      const rank = f.rank_score != null ? Math.round(f.rank_score * 100) : null;
+      const rankCls = rank != null && rank >= 60 ? 'hot' : '';
+      const repl = f.replaced_by_text
+        ? `<div class="sf-repl"><b>Replaced by</b> · <span class="sf-rtext">${escapeHtml(f.replaced_by_text)}</span>${f.replaced_by_turn != null ? ' <span style="opacity:.7">(turn ' + f.replaced_by_turn + ')</span>' : ''}</div>`
+        : '';
+      return `<div class="sup-fact" style="border-left-color:${c.color}">
+        <div class="sf-text">${escapeHtml(f.text)}</div>
+        <div class="sf-meta">
+          <span>${c.icon} ${I18N.t(c.label)}</span>
+          <span>${I18N.t('Tur')} ${f.source_turn ?? '?'}</span>
+          <span class="frank ${rankCls}" title="Rank — how relevant this memory was at its peak">◈ <b>${rank != null ? rank : '—'}</b></span>
+          <span class="frank" title="Confidence when recorded">✦ ${Math.round((f.confidence ?? 0.5) * 100)}%</span>
+        </div>
+        ${repl}
+      </div>`;
+    }).join('');
+  }
+  backdrop.classList.add('show');
+  modal.classList.add('show');
+}
+function closeSuperseded() {
+  const backdrop = document.getElementById('sup-backdrop');
+  const modal = document.getElementById('sup-modal');
+  if (backdrop) backdrop.classList.remove('show');
+  if (modal) modal.classList.remove('show');
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeSuperseded();
+});
+
+// ── Ladda fakta från backend ──
+(async () => {
+  try {
+    // Initialize i18n with campaign language
+    try {
+      const cr = await fetch('/api/campaign', { credentials: 'include' });
+      if (cr.ok) { const cd = await cr.json(); I18N.init(cd?.meta?.language || 'en'); }
+    } catch(_) {}
+    // Laddningstext tvåspråkig (2026-09-06, audit-design-system §8.9): statiskt
+    // SV i HTML:n — byt till EN om kampanjen är engelsk och den ännu visas.
+    try {
+      if (typeof I18N !== 'undefined' && I18N.getLang() === 'en') {
+        const p = document.querySelector('#archive .empty p');
+        if (p && p.textContent.trim() === 'Laddar arkivet…') p.textContent = 'Loading the archive…';
+      }
+    } catch(_) {}
+    const { facts, superseded, stats } = await API.getFacts();
+    ALL_FACTS = facts || [];
+    ALL_SUPERSEDED = superseded || [];
+    shelfInit();
+    buildFilters(stats);
+    renderStats(stats);
+    renderFacts();
+    document.getElementById('foot-count').textContent =
+      ALL_FACTS.length + I18N.t(' uppgifter i arkivet');
+  } catch (e) {
+    document.getElementById('archive').innerHTML = `
+      <div class="empty fresh-empty"><span class="fe-glyph">🗺️</span>
+        <p>${I18N.t('Ingen aktiv kampanj — skapa ett äventyr först')}</p>
+        <a class="talk-btn btn-gold" href="adventure.html">${I18N.t('✦ Skapa äventyr')}</a>
+      </div>`;
+  }
+})();
+
+function buildFilters(stats) {
+  const counts = (stats && stats.by_category_active) || {};
+  let html = `<button class="fchip on" data-f="alla" onclick="setFilter('alla')">${I18N.t('Alla')} <span class="cnt">${ALL_FACTS.length}</span></button>`;
+  for (const key of CAT_ORDER) {
+    const c = CATS[key];
+    const n = counts[key] || 0;
+    if (n > 0) {
+      html += `<button class="fchip" data-f="${key}" onclick="setFilter('${key}')">${c.icon} ${I18N.t(c.label)} <span class="cnt">${n}</span></button>`;
+    }
+  }
+  // ✦ Ersatta (superseded) — visas som eget filter + popup
+  const sup = (stats && stats.superseded) || ALL_SUPERSEDED.length;
+  if (sup > 0) {
+    html += `<button class="fchip" data-f="superseded" onclick="setFilter('superseded')">✦ ${I18N.t('Ersatta')} <span class="cnt">${sup}</span></button>`;
+  }
+  document.getElementById('filters').innerHTML = html;
+}
+
+function setFilter(id) {
+  activeFilter = id;
+  document.querySelectorAll('.fchip').forEach(c => c.classList.toggle('on', c.dataset.f === id));
+  renderFacts();
+}
+
+function renderStats(stats) {
+  if (!stats || !stats.by_category_active) return;
+  const counts = stats.by_category_active;
+  const max = Math.max(1, ...Object.values(counts));
+  let html = '';
+  for (const key of CAT_ORDER) {
+    const n = counts[key] || 0;
+    if (n === 0) continue;
+    const c = CATS[key];
+    const pct = Math.round(100 * n / max);
+    html += `
+      <div class="stat-row">
+        <span class="stat-label">${c.icon} ${I18N.t(c.label)}</span>
+        <div class="stat-bar-track"><div class="stat-bar" style="width:${pct}%;background:${c.color};box-shadow:0 0 8px ${c.glow}"></div></div>
+        <span class="stat-num">${n}</span>
+      </div>`;
+  }
+  if (stats.superseded > 0) {
+    html += `<button type="button" class="btn-ghost" onclick="openSuperseded()" title="Click to see which truths were replaced" style="margin-top:.5rem;width:100%;text-align:left;background:transparent;border:1px dashed rgba(var(--blood-bright-rgb),.45);border-radius:var(--radius-sm);padding:.45rem .55rem;font-size:.8rem;color:var(--bone-dim);font-style:italic;cursor:pointer;transition:all .2s">✦ ${stats.superseded}${I18N.t(' ersatta uppgifter')} — <span style="color:var(--rubric);font-style:normal">click to view</span> →</button>`;
+  } else if (ALL_SUPERSEDED.length > 0) {
+    html += `<button type="button" class="btn-ghost" onclick="openSuperseded()" title="Click to see which truths were replaced" style="margin-top:.5rem;width:100%;text-align:left;background:transparent;border:1px dashed rgba(var(--blood-bright-rgb),.45);border-radius:var(--radius-sm);padding:.45rem .55rem;font-size:.8rem;color:var(--bone-dim);font-style:italic;cursor:pointer">✦ ${ALL_SUPERSEDED.length} ersatta — <span style="color:var(--rubric);font-style:normal">click to view</span> →</button>`;
+  }
+  document.getElementById('stats').innerHTML = html;
+}
+
+function confDots(conf, color, glow) {
+  const n = Math.max(1, Math.min(5, Math.round(conf * 5)));
+  let d = '';
+  for (let i = 0; i < 5; i++) {
+    d += `<span class="dot ${i < n ? 'on' : ''}"></span>`;
+  }
+  return `<span class="fconf" title="${I18N.t('Tillförlitlighet')} ${Math.round(conf*100)}%"><span class="dots">${d}</span></span>`;
+}
+
+function renderFacts() {
+  const q = (document.getElementById('fact-search').value || '').toLowerCase().trim();
+  let facts = ALL_FACTS;
+  const supersededView = activeFilter === 'superseded';
+
+  if (supersededView) {
+    facts = ALL_SUPERSEDED;
+  } else if (activeFilter !== 'alla') {
+    facts = facts.filter(f => f.category === activeFilter);
+  }
+  if (q) {
+    facts = facts.filter(f => (f.text || '').toLowerCase().includes(q));
+  }
+
+  const archive = document.getElementById('archive');
+
+  if (ALL_FACTS.length === 0 && ALL_SUPERSEDED.length === 0) {
+    archive.innerHTML = `
+      <div class="empty fresh-empty"><span class="fe-glyph">🕯️</span>
+        <p>No truths recorded yet — speak with the world…<br>NPCs, places, promises and events will be archived here.</p>
+      </div>`;
+    return;
+  }
+  if (facts.length === 0) {
+    archive.innerHTML = `
+      <div class="empty fresh-empty"><span class="fe-glyph">🔍</span>
+        <p>${I18N.t('Inga uppgifter matchar ')}${q ? '«' + q + '»' : I18N.t('detta filter')}.</p>
+      </div>`;
+    return;
+  }
+
+  // Gruppera per kategori, nyaste först inom varje
+  const groups = {};
+  for (const f of facts) {
+    (groups[f.category] = groups[f.category] || []).push(f);
+  }
+
+  let html = `
+    <div class="archive-head">
+      <div class="page-eyebrow">THE ARCHIVE · WHAT IS TRUE</div><div class="archive-title">${I18N.t('📚 Minnesarkivet')}</div><div class="page-rule">✦</div>
+      <div class="archive-sub">${facts.length}${supersededView ? I18N.t(' ersatta sanningar — gamla sanningar som ersatts av nyare') : (I18N.t(' uppgifter · extraherade ur berättelsen av DM:n'))}</div>
+    </div>`;
+
+  for (const key of CAT_ORDER) {
+    const list = groups[key];
+    if (!list || !list.length) continue;
+    const c = CATS[key];
+    list.sort((a, b) => (b.source_turn || 0) - (a.source_turn || 0));
+    html += `
+      <div class="cat-section" style="--cc:${c.color};--cg:${c.glow}">
+        <div class="cat-head"><b>${c.icon} ${I18N.t(c.label)} <span style="opacity:.6">· ${list.length}</span></b></div>
+        ${list.map((f, i) => {
+          const down = !f.superseded_by && f.relevance != null && f.relevance < 0.9;
+          const cls = f.superseded_by ? 'superseded' : (down ? 'downranked' : '');
+          const rank = f.rank_score != null ? Math.round(f.rank_score * 100) : null;
+          const rankCls = rank != null && rank >= 60 ? 'hot' : (rank != null && rank < 35 ? 'cold' : '');
+          const mentions = f.mentions || 1;
+          return `<div class="fact ${cls}" style="--cc:${c.color};--cg:${c.glow};animation-delay:${i * 40}ms">
+            <div class="ftext">${escapeHtml(f.text)}</div>
+            <div class="fmeta">
+              <span class="fturn">${I18N.t('Tur')} ${f.source_turn ?? '?'}</span>
+              ${confDots(f.confidence ?? 0.5, c.color, c.glow)}
+              ${rank != null ? `<span class="frank ${rankCls}" title="${I18N.t('Rank-poäng: hur relevant detta minne är just nu')}">◈ <b>${rank}</b></span>` : ''}
+              ${mentions > 1 ? `<span class="frank ${rankCls}" title="${I18N.t('Omnämnt flera gånger i berättelsen')}">📖 ×${mentions}</span>` : ''}
+            </div>
+            ${f.replaced_by_text ? `<div class="f-repl"><span class="fr-label">Replaced by</span> · <span class="fr-text">${escapeHtml(f.replaced_by_text)}</span>${f.replaced_by_turn != null ? ` <span style="opacity:.7">(turn ${f.replaced_by_turn})</span>` : ''}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  archive.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Toast + logout ──
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 2200);
+}
+async function doLogout() {
+  try { await API.logout(); } catch(_) {}
+  sessionStorage.removeItem('dnd_user');
+  location.href = 'login.html';
+}
+</script>
+<script src="embed.js?v=20261001a"></script>
+<script src="rail.js?v=20261006a"></script>
+</body>
+</html>

@@ -1,0 +1,15675 @@
+"""
+The Lore Weaver's Cauldron — FastAPI Backend
+=================================
+LLM-driven D&D Dungeon Master. Alla endpoints under /api/.
+"""
+
+import asyncio
+import contextvars
+from contextlib import asynccontextmanager
+import copy
+import io
+import json
+import logging
+import os
+import random
+import re
+import secrets
+import sys
+import threading
+import time
+import uuid
+import zipfile
+import base64
+import hashlib
+import hmac
+from collections import deque
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import AsyncGenerator
+
+logger = logging.getLogger("loreweavers")
+
+# ═══════════════════════════════════════
+# 🛠️ MASKINRUMMET — ringbuffer för live-debugloggar
+# ═══════════════════════════════════════
+# Fångar alla loggar från loreweavers.* (main, rag, extraction, …) i en
+# ringbuffer som frontend kan polla via /api/debug/logs. Påverkar inte
+# den vanliga stdout-loggen — bara en extra kopia i minnet.
+DEBUG_LOGS: deque = deque(maxlen=600)
+_LOG_ORDER = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+
+# Loggkontext per request: bär user + aktiv kampanj så att ringbufferns
+# poster kan filtreras per instans. Sätts i _get_current_user; ärvs av
+# asyncio.create_task-bakgrundsuppgifter (guardian, dag-entry, …).
+_LOG_CTX: contextvars.ContextVar = contextvars.ContextVar(
+    "loreweavers_log_ctx", default={"user": None, "campaign": None}
+)
+
+# Håller referenser till bakgrundsuppgifter så de inte garbage-collectas
+# (asyncio.create_task returnerar en svag referens annars).
+_BACKGROUND_TASKS: set = set()
+
+# Bakgrundsuppgifter som frontenden ska vänta på innan tärningen låses upp
+# (guardian post-DM + faktextraktion/RAG = "lorekeeper jobbar och sparar ned
+# fakta"). Nyckel: (username, campaign_id). Exponeras via
+# /api/campaign/transcript → guardian_running (2026-08-06, dice-lock).
+_RUNNING_BG: set = set()
+
+# Per-campaign registry of in-flight post-turn background tasks (Guardian
+# post-DM, fact extraction, day entry). Tasks are registered SYNCHRONOUSLY at
+# creation time via _register_bg_task — registering inside the task body (the
+# _RUNNING_BG pattern) leaves a race window where an undo can miss an
+# in-flight task that later writes zombie data over the restored state.
+# Undo awaits this task group before restoring (undo-turn design 2026-09);
+# the meta.epoch guard covers anything that slips past the wait.
+_CAMPAIGN_TASKS: dict[tuple, set] = {}
+
+
+def _register_bg_task(username: str, campaign_id: str, coro) -> asyncio.Task:
+    """Spawn a per-campaign background task, tracked from THIS call — not from
+    inside the task. Keeps a strong reference (_BACKGROUND_TASKS) and puts the
+    task in the per-campaign group that _wait_for_bg_tasks drains."""
+    task = asyncio.create_task(coro)
+    key = (username, campaign_id)
+    bucket = _CAMPAIGN_TASKS.setdefault(key, set())
+    bucket.add(task)
+    _BACKGROUND_TASKS.add(task)
+
+    def _done(t: asyncio.Task, _key=key) -> None:
+        _BACKGROUND_TASKS.discard(t)
+        b = _CAMPAIGN_TASKS.get(_key)
+        if b is not None:
+            b.discard(t)
+            if not b:
+                _CAMPAIGN_TASKS.pop(_key, None)
+
+    task.add_done_callback(_done)
+    return task
+
+
+async def _wait_for_bg_tasks(username: str, campaign_id: str, timeout: float = 60.0) -> int:
+    """Wait for the campaign's in-flight background tasks, then return.
+
+    MUST be called OUTSIDE the per-campaign state lock — the background tasks
+    themselves acquire that lock, so waiting while holding it deadlocks.
+    On timeout we proceed anyway: the meta.epoch guard makes any straggler
+    abort before it saves. Returns the number of tasks waited out.
+    """
+    key = (username, campaign_id)
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    waited = 0
+    while True:
+        pending = {t for t in _CAMPAIGN_TASKS.get(key, set()) if not t.done()}
+        if not pending:
+            return waited
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            logger.warning(
+                "↶ Undo: background wait timed out after %.0fs (%d task(s) still running) — "
+                "proceeding; the epoch guard discards stragglers", timeout, len(pending))
+            return waited
+        done, _ = await asyncio.wait(pending, timeout=remaining)
+        waited += len(done)
+
+# Per-kampanj-lås för state read-modify-write.
+# Bakgrundsuppgifterna (_guardian_post_dm, _post_turn_tasks, dag-entry)
+# körs parallellt; var och en gör store.get() → mutera → store.save().
+# Utan lås skriver den som sparar sist över de andras ändringar
+# (t.ex. NPC tillagd av Guardian försvann när faktextraktionen sparade
+# en gammal kopia 30s senare). Nyckel: f"{username}:{campaign_id}".
+_STATE_LOCKS: dict[str, asyncio.Lock] = {}
+_STATE_LOCKS_GUARD = threading.Lock()
+
+
+def _state_lock(username: str, campaign_id: str) -> asyncio.Lock:
+    """Returnera per-kampanj-låset (thread-safe skapande)."""
+    key = f"{username}:{campaign_id}"
+    with _STATE_LOCKS_GUARD:
+        lock = _STATE_LOCKS.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            _STATE_LOCKS[key] = lock
+        return lock
+
+
+def _epoch_ok(username: str, campaign_id: str, epoch: int | None) -> bool:
+    """True om turen fortfarande är aktuell (ingen undo har skett sedan start).
+
+    Bakgrundsuppgifter (Guardian, faktextraktion, dag-entry) fångar kampanjens
+    epoch när turen startar. Ångrar spelaren turen bumpas epoch → uppgiften
+    avbryter innan den sparar, så ingen zombiedata skrivs ovanpå det
+    återställda läget. epoch=None → ingen kontroll (övriga anrop).
+    """
+    if epoch is None:
+        return True
+    try:
+        st = store.get(username, campaign_id)
+        return st is not None and int(st.get("meta", {}).get("epoch", 0) or 0) == int(epoch)
+    except Exception:
+        return True
+
+
+class _RingBufferHandler(logging.Handler):
+    """Kopierar varje loggpost till ringbuffern (för live-konsolen)."""
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            ctx = _LOG_CTX.get()
+            DEBUG_LOGS.append({
+                "ts": record.created,
+                "time": datetime.fromtimestamp(record.created).strftime("%H:%M:%S"),
+                "level": record.levelname,
+                "name": record.name.replace("loreweavers", "lw").lstrip("."),
+                "msg": record.getMessage(),
+                "user": ctx.get("user"),
+                "campaign": ctx.get("campaign"),
+            })
+        except Exception:
+            pass  # Loggfångst får aldrig krascha spelet
+
+
+_ring = _RingBufferHandler(level=logging.DEBUG)
+logger.addHandler(_ring)
+logger.setLevel(logging.DEBUG)
+
+# StreamHandler → stdout (syns i docker logs)
+_stream = logging.StreamHandler()
+_stream.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S"))
+_stream.setLevel(logging.INFO)
+logger.addHandler(_stream)
+
+import httpx
+from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+from auth import (
+    KEEP_LOGGED_IN_DAYS,
+    create_token,
+    hash_password,
+    load_users,
+    normalize_username,
+    save_users,
+    validate_password,
+    validate_username,
+    verify_password,
+    verify_token,
+)
+from dice import roll as dice_roll
+import avatar_purge
+import selfhost
+from models import (
+    DM_COMBAT_PROMPT,
+    DM_CORE_PROMPT,
+    DM_NARRATIVE_PROMPT,
+    DM_PROMPT_VERSION,
+    MODELS,
+    get_api_key,
+    get_model,
+    list_models_for_frontend,
+)
+from atmosphere import (
+    should_generate_art,
+)
+from languages import (
+    is_supported,
+    get_directive,
+    get_reminder,
+    get_opening_styles,
+    get_awakening_ask,
+    get_awakening_open,
+    get_char_sheet_output_directive,
+    DEFAULT_CAMPAIGN_NAMES,
+    TTS_PRONUNCIATION_HINTS,
+)
+from locations import get_locations_with_travel, place_location, clean_location_name, find_location
+from logbook import build_log_prompt
+from state_manager import CAMPAIGNS_DIR, VAULTS_DIR, CampaignStore, CharacterVault
+
+# Spelarprofilens avatar (konto) — SEPARAT från äventyrarens kort. Genereras
+# med Wan 2.7 / Qwen Image 3 Pro (Token Plan).
+# (StepFun step-image-edit-2 pensionerad 2026-10-10 — leverantören serverar
+# inte bild-API:n längre.)
+# Beräknas lazy via CAMPAIGNS_DIR så testerna kan monkeypatcha sökvägen.
+
+
+def _user_avatar_path(username: str) -> Path:
+    return (CAMPAIGNS_DIR.parent / "user_avatars") / f"{username}.png"
+
+
+# ── Profilavatarens galleri (2026-08-07): kontots porträtt sparas som upp
+#    till 5 bilder i user_avatars/{username}.json + bildfiler. Legacy: en
+#    ensam {username}.png migreras automatiskt till ett 1-bildsgalleri. ──
+def _user_gallery_path(username: str) -> Path:
+    return (CAMPAIGNS_DIR.parent / "user_avatars") / f"{username}.json"
+
+
+def _load_user_avatar_gallery(username: str) -> dict:
+    """Läs kontots porträtt-galleri. Saknas JSON men finns legacy-png →
+    migrera till ett 1-bildsgalleri (filen refereras, ej flyttad)."""
+    gp = _user_gallery_path(username)
+    if gp.exists():
+        try:
+            data = json.loads(gp.read_text())
+            if isinstance(data.get("gallery"), list):
+                return data
+        except (json.JSONDecodeError, OSError):
+            pass
+    # Legacy-migrering
+    legacy = _user_avatar_path(username)
+    if legacy.exists():
+        return {
+            "gallery": [{
+                "disk_name": legacy.name,
+                "ext": ".png",
+                "size": legacy.stat().st_size,
+                "ai_generated": True,
+                "uploaded": datetime.now(timezone.utc).isoformat(),
+            }],
+            "gallery_index": 0,
+        }
+    return {"gallery": [], "gallery_index": 0}
+
+
+def _save_user_avatar_gallery(username: str, data: dict) -> None:
+    gp = _user_gallery_path(username)
+    gp.parent.mkdir(parents=True, exist_ok=True)
+    gp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+
+
+import rag
+from extraction import FactRegister, extract_facts, format_facts_block, build_extraction_messages, parse_extraction_result, _extract_json_object
+from guardian import (
+    _combat_tag,
+    _normalize_item,
+    _normalize_relation,
+    _CLASS_ALIASES,
+    _canonical_fighting_style,
+    _set_fighting_style_feature,
+    _note_sheet_allowance,
+    _norm_sheet_name,
+    _hit_die_for_class,
+    _SPELL_SLOTS_BY_LEVEL,
+    _parse_json as _guardian_parse_json,
+    _XP_THRESHOLDS as XP_THRESHOLDS,  # D&D 5e XP-trösklar (definieras i guardian.py)
+    apply_mechanics,
+    build_extract_mechanics_messages,
+    build_roll_check_messages,
+    format_guardian_summary,
+    guardian_check_roll,
+    guardian_extract_mechanics,
+    mechanics_empty_template,
+    normalize_mechanics_result,
+    parse_roll_check_result,
+    spell_limits,
+)
+# W3-M2 (audit-mechanics §2): EN beräkning av bärvikt — weight_utils är single
+# source of truth (fyra divergerande vägar fanns; DM truth block migreras här).
+from weight_utils import compute_carry_weight
+from combat import (
+    start_combat as combat_start,
+    roll_initiative as combat_roll_initiative,
+    add_allies as combat_add_allies,
+    build_combat_context,
+)
+
+# P2: combat.damage_multiplier(type, entity) applies resistances/vulnerabilities/
+# immunities. Added by the engine workstream — import defensively so main.py
+# works both before and after it lands (None → multiplier skipped = 1.0).
+try:
+    from combat import damage_multiplier as combat_damage_multiplier
+except ImportError:
+    combat_damage_multiplier = None
+import iplog
+import local_relay
+
+app = FastAPI(title="The Lore Weaver's Cauldron", version="1.0.0")
+
+
+@app.middleware("http")
+async def ip_tracking_middleware(request, call_next):
+    """Spåra klient-IP per användare (för admin-landskoll) + säkerhetsheaders.
+
+    IP: läser X-Forwarded-For (nginx sätter den), fallback till direkt
+    anslutning. Körs för varje request — gör aldrig nätverksanrop, bara en
+    snabb token-decode + in-memory-update.
+
+    Headers (2026-08-04, security audit P1): X-Content-Type-Options,
+    X-Frame-Options (Codex-iframe är same-origin), Referrer-Policy,
+    Permissions-Policy + HSTS. CSP utelämnas medvetet — UI:t är tätt
+    inline-stilat/scriptat och en strikt CSP skulle bryta spelet.
+    """
+    try:
+        cookie = request.cookies.get(COOKIE_NAME)
+        if cookie:
+            payload = verify_token(cookie)
+            if payload and payload.get("sub"):
+                ip = iplog.client_ip(request)
+                if ip:
+                    iplog.record_ip(payload["sub"], ip)
+    except Exception:
+        pass  # aldrig blockera spelet för IP-spårning
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    # Besöksräkning (2026-08-05, rostad): bara sidvisningar — HTML-sidor,
+    # inte API-anrop. Private/localhost hoppas inte över helt (dev-besök
+    # syns som LOCAL i admin) men bokförs ändå — det är ändå "ett besök".
+    try:
+        path = request.url.path
+        if request.method == "GET" and not path.startswith("/api") and (
+            path.endswith(".html") or path in ("/", "/index.html")
+        ):
+            # Referer-headern → varifrån besökaren klickade in (Google, Reddit…).
+            # self_host filtrerar bort intern navigering (egna sidor = Direct).
+            iplog.record_visit(
+                iplog.client_ip(request),
+                request.headers.get("referer", ""),
+                request.headers.get("host", ""),
+            )
+    except Exception:
+        pass
+    response.headers["Strict-Transport-Security"] = "max-age=31536000"
+    return response
+
+# ═══════════════════════════════════════
+# Language helpers
+# ═══════════════════════════════════════
+
+def _get_lang(state: dict) -> str:
+    """Get campaign language from state (defaults to 'en')."""
+    return state.get("meta", {}).get("language", "en")
+
+
+def _err(msg_sv: str, msg_en: str, lang: str = "sv") -> str:
+    """Return an error message in the campaign's language.
+
+    EU rule (i18n-wave 2026-10): only 'sv' gets the Swedish message — every
+    other campaign language (en/de/fr/es/it) falls back to English.
+    """
+    return msg_sv if lang == "sv" else msg_en
+
+# ═══════════════════════════════════════
+# NPC-parsning + Äventyrsöppningar
+# ═══════════════════════════════════════
+
+NPC_PATTERN = re.compile(r'\[NPC:([^|]+)\|([^|]+)\|([^\]]+)\]')
+KAST_PATTERN = re.compile(r'\[KAST:\s*([^\]|]+)(?:\|([^\]]+))?\]')
+
+# Säkerhetsnät: DM skrev "rulla tärningen" i PROSA men glömde [KAST:]-taggen.
+# Utan taggen spawnas ingen klickbar tärning → spelaren fastnar. Vi känner av
+# uppmaningsfraser och auto-spawnar en 1d20 så spelet aldrig stannar.
+PROSE_ROLL_PATTERN = re.compile(
+    r'(rulla (en |din )?tärning|slå (en |din )?tärning|kasta (en |din )?tärning|'
+    r'gör ett (tärnings)?slag|låt tärning\w* avgöra|tärning\w* avgör)',
+    re.IGNORECASE,
+)
+
+# Säkerhetsnät: DM narrerar att spelaren FÅR/HITTAR/KÖPER ett föremål i prosa
+# men glömde [FÖREMÅL:]-taggen. Utan taggen hamnar föremålet aldrig i inventory.
+# VIKTIGT: Endast entydiga GÅVO-/FYND-verb. "ser", "tar", "får" är FÖR vanliga
+# i svensk prosa och fångar meningsfragment ("ser lite besviken ut" → falskt föremål).
+# PROSE_ITEM_PATTERN borttagen (v18) — LLM-extraktion i bakgrunden
+# hanterar nu föremål som DM glömde tagga. Regex gav för många falska positiva.
+
+NPC_COLORS = ['#8b5fd4', '#d4691e', '#7aa35e', '#5e9aa3', '#d43a4d', '#c9a227', '#a8b2c0', '#b06fd4']
+NPC_ICONS = ['🧙', '⚔️', '🏹', '🛡️', '🎭', '👻', '🐺', '🦉', '💀', '🔮', '🗡️', '🌙']
+
+
+def _parse_npcs(text: str) -> tuple[str, list[dict]]:
+    """Extrahera [NPC:namn|roll|relation]-taggar ur DM-svar."""
+    npcs = []
+    for m in NPC_PATTERN.finditer(text):
+        name, role, relation = m.group(1).strip(), m.group(2).strip(), m.group(3).strip().lower()
+        if relation not in ('allierad', 'neutral', 'fiende', 'okänd'):
+            relation = 'okänd'
+        # Hash-baserad färg/ikon: samma NPC får alltid samma färg oavsett
+        # när den dyker upp (istället för att bero på parse-ordning).
+        h = int.from_bytes(name.encode('utf-8'), 'big')
+        npcs.append({
+            'name': name, 'role': role, 'relation': relation,
+            'color': NPC_COLORS[h % len(NPC_COLORS)],
+            'icon': NPC_ICONS[h % len(NPC_ICONS)],
+            'notes': '', 'alive': True,
+            'mentions': 1,       # rank-meta (rörligt fönster)
+            'last_seen_turn': 0,
+        })
+    clean = NPC_PATTERN.sub('', text).strip()
+    return clean, npcs
+
+
+# ═══════════════════════════════════════
+# @-NPC-chatt — spelaren pratar direkt med en NPC
+# ═══════════════════════════════════════
+
+# Tecken som kan fortsätta ett namn — används för att undvika att '@Tordsson'
+# matchar NPC:n 'Tord' (namnet måste sluta vid en ordgräns).
+_NPC_NAME_CHARS = set("abcdefghijklmnopqrstuvwxyzåäö-")
+_AT_FIRST_WORD = re.compile(r"@([A-Za-zÅÄÖåäö\-]+)")
+
+
+def _find_at_target(message: str, npcs: list[dict]) -> dict | None:
+    """Hitta vilken NPC spelaren riktar sig till via @-omnämnande.
+
+    1. Fullt namn (flerordiga namn OK): '@Mimmrick Fjäderpung …' — matchas var
+       som helst i meddelandet, case-insensitivt. Namnet måste sluta vid en
+       ordgräns (så '@Tordsson' inte matchar NPC:n 'Tord').
+    2. Fallback: första ordet i namnet i BÖRJAN av meddelandet:
+       '@Mimmrick: hjälp!' matchar NPC:n 'Mimmrick Fjäderpung'.
+
+    Returnerar det matchade NPC-dict:et eller None. Ren detektor — filtrerar
+    INTE på levande/fiende; det görs vid injektionen.
+    """
+    if not message or not npcs:
+        return None
+    low = message.lower()
+    for npc in npcs:
+        name = (npc.get("name") or "").strip()
+        if not name:
+            continue
+        at_name = "@" + name.lower()
+        idx = low.find(at_name)
+        if idx != -1:
+            end = idx + len(at_name)
+            # Nästa tecken får inte vara en bokstav — annars är '@namnet' bara
+            # ett prefix av ett längre ord (t.ex. '@Tordsson' → 'Tord').
+            if end >= len(low) or low[end] not in _NPC_NAME_CHARS:
+                return npc
+    m = _AT_FIRST_WORD.match(message.strip())
+    if m:
+        first_word = m.group(1).lower()
+        for npc in npcs:
+            name = (npc.get("name") or "").strip()
+            npc_first = (name.split()[0] if name.split() else "").lower()
+            if npc_first == first_word:
+                return npc
+    return None
+
+
+def _build_npc_chat_context(npc: dict, lang: str) -> str:
+    """Bygg ett kompakt NPC-chatt-block för DM-systemprompten.
+
+    Instruerar DM:n att svara I KARAKTÄR som NPC:n (första person, citerat tal,
+    personlighet från anteckningarna) medan resten av världen pausar. Inkluderar
+    NPC:ns roll, relation och anteckningar om de finns. Språk: svenska för
+    'sv' (default), engelska för 'en'.
+    """
+    name = npc.get("name", "NPC")
+    role = (npc.get("role") or "").strip()
+    relation = npc.get("relation", "okänd")
+    notes = (npc.get("notes") or "").strip()
+
+    if lang != "sv":  # EU-languages fall back to the English block (sv-only Swedish)
+        lines = [
+            f"The player is directly addressing **{name}**. You MUST respond "
+            f"IN CHARACTER as {name} — first-person, with quoted speech, "
+            f"personality drawn from the notes below. The rest of the world "
+            f"pauses until this conversation resolves.",
+        ]
+        facts = []
+        if role:
+            facts.append(f"Role: {role}")
+        facts.append(f"Relation to the player: {relation}")
+        if notes:
+            facts.append(f"Notes: {notes}")
+        header = "## 💬 NPC CONVERSATION"
+    else:
+        lines = [
+            f"Spelaren pratar direkt med **{name}**. Du MÅSTE svara I KARAKTÄR "
+            f"som {name} — i första person, med citerat tal, personlighet utifrån "
+            f"anteckningarna nedan. Resten av världen pausar tills samtalet är avslutat.",
+        ]
+        facts = []
+        if role:
+            facts.append(f"Roll: {role}")
+        facts.append(f"Relation till spelaren: {relation}")
+        if notes:
+            facts.append(f"Anteckningar: {notes}")
+        header = "## 💬 NPC-SAMTAL"
+
+    return header + "\n" + "\n".join(lines + [f"- {f}" for f in facts])
+
+
+def _maybe_inject_npc_context(system_content: str, message: str, state: dict) -> str:
+    """Om spelaren @nämner en levande, icke-fiende NPC → lägg NPC-chattkontexten
+    till systemprompten (appenrad, tydligt avgränsad). Annars oförändrad —
+    fullt bakåtkompatibel när inget @-omnämnande matchar.
+
+    Fiender och döda NPC:er får INGEN injektion — DM:n hanterar det som vanligt
+    (hån, hot, eller vad berättelsen kräver).
+    """
+    npc = _find_at_target(message, state.get("npcs", []))
+    if not npc:
+        return system_content
+    if npc.get("alive", True) is False:
+        return system_content
+    if npc.get("relation") in ("fiende", "enemy"):
+        return system_content
+    block = _build_npc_chat_context(npc, _get_lang(state))
+    return system_content + "\n\n" + block
+
+
+def _parse_roll_requests(text: str) -> tuple[str, list[dict]]:
+    """Extrahera [KAST: 1d20+4 | SMIDIGHET för att smyga]-taggar ur DM-svar."""
+    rolls = []
+    for m in KAST_PATTERN.finditer(text):
+        notation = m.group(1).strip()
+        label = (m.group(2) or '').strip()
+        rolls.append({'notation': notation, 'label': label or notation})
+    clean = KAST_PATTERN.sub('', text).strip()
+    return clean, rolls
+
+
+# ═══════════════════════════════════════
+# Mekaniska taggar — påverka spelstate
+# ═══════════════════════════════════════
+
+# Regex-mönster för mekaniska taggar
+_MECH_PATTERNS = {
+    'SKADA':           re.compile(r'\[SKADA:(\d+)(?::([a-z]+))?\]'),
+    'HELA':            re.compile(r'\[HELA:(\d+)\]'),
+    'XP':              re.compile(r'\[XP:(\d+)\]'),
+    'GULD':            re.compile(r'\[GULD:(-?\d+)\]'),
+    'SILVER':          re.compile(r'\[SILVER:(-?\d+)\]'),
+    'KOPPAR':          re.compile(r'\[KOPPAR:(-?\d+)\]'),
+    'PLATINA':         re.compile(r'\[PLATINA:(-?\d+)\]'),
+    'FÖREMÅL':         re.compile(r'\[FÖREMÅL:([^|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]'),
+    'QUEST':           re.compile(r'\[QUEST:([^|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]'),
+    'QUEST_SLUTFÖRD':  re.compile(r'\[QUEST_SLUTFÖRD:([^\]]+)\]'),
+    'QUEST_MISSLYCKAD': re.compile(r'\[QUEST_MISSLYCKAD:([^\]]+)\]'),
+    'KONSEKVENS':      re.compile(r'\[KONSEKVENS:([^\]]+)\]'),
+    'NPC_DÖD':         re.compile(r'\[NPC_DÖD:([^\]]+)\]'),
+    'PLATS':           re.compile(r'\[PLATS:([^\]]+)\]'),
+    'TID':             re.compile(r'\[TID:([^\]]+)\]'),
+    'FÖREMÅL_BORT':    re.compile(r'\[FÖREMÅL_BORT:([^\]]+)\]'),
+    'NPC_RELATION':    re.compile(r'\[NPC_RELATION:([^|\]]+)\|([^\]]+)\]'),
+    'NY_DAG':          re.compile(r'\[NY_DAG:([^\]]+)\]'),
+    # P1a §4.2: [MORALE:target|trigger] — begär moralprov; servern rullar.
+    'MORALE':          re.compile(r'\[MORALE:([^|\]]+)\|([^\]]+)\]'),
+}
+
+# [STRID:namn|hp|ac, namn2|hp|ac] — DM öppnar strid; Guardian sköter sedan
+# skada, rundor och turordning. Skapar world.combat (se combat-spec).
+STRID_PATTERN = re.compile(r'\[STRID:([^\]]+)\]')
+
+# [ALLIERAD:namn|hp|ac, namn2|hp|ac] — DM låter vänliga NPC:er gå med i en
+# PÅGÅENDE strid. Lägger till allierade i world.combat (combat.add_allies).
+ALLIERAD_PATTERN = re.compile(r'\[ALLIERAD:([^\]]+)\]')
+
+# [Resultat: ETIKETT → VÄRDE (rullar)] — spelarens tärningsresultat.
+# Uppdaterar initiative (combat) och dödsräddningar (character.death_saves).
+RESULT_PATTERN = re.compile(r'\[Resultat: ([^→]+) → (\d+)(?: \(([^)]*)\))?\]')
+
+# ── D&D 5e Valutasystem ──
+# Konvertering: 1 pp = 10 gp = 100 sp = 1000 cp (ep hoppas över för enkelhet)
+# Vikt: 50 mynt = 1 lb oavsett valör
+COIN_TO_CP = {'pp': 1000, 'gp': 100, 'sp': 10, 'cp': 1}
+COIN_NAMES = {'pp': 'platina', 'gp': 'guld', 'sp': 'silver', 'cp': 'koppar'}
+
+
+def normalize_currency(currency: dict) -> dict:
+    """Konvertera överflöde uppåt: cp → sp → gp → pp.
+    Exempel: {cp: 25, sp: 0, gp: 0, pp: 0} → {cp: 5, sp: 2, gp: 0, pp: 0}
+    """
+    total_cp = sum(currency.get(d, 0) * COIN_TO_CP[d] for d in COIN_TO_CP)
+    total_cp = max(0, total_cp)
+    result = {}
+    for denom in ('pp', 'gp', 'sp', 'cp'):
+        value = COIN_TO_CP[denom]
+        result[denom] = total_cp // value
+        total_cp %= value
+    return result
+
+
+def currency_to_cp(currency: dict) -> int:
+    """Totalt värde i kopparmynt."""
+    return sum(currency.get(d, 0) * COIN_TO_CP[d] for d in COIN_TO_CP)
+
+
+def currency_weight(currency: dict) -> float:
+    """Vikt i lb — 50 mynt = 1 lb oavsett valör."""
+    total_coins = sum(currency.get(d, 0) for d in COIN_TO_CP)
+    return round(total_coins / 50, 2)
+
+
+def currency_display(currency: dict) -> str:
+    """Mänskligt läsbar sträng: '2 pp, 15 gp, 3 sp, 7 cp' (skippar nollor)."""
+    parts = []
+    for d in ('pp', 'gp', 'sp', 'cp'):
+        v = currency.get(d, 0)
+        if v > 0:
+            parts.append(f"{v} {d}")
+    return ', '.join(parts) if parts else '0 gp'
+
+
+def apply_currency(state: dict, denom: str, amount: int) -> tuple[bool, str]:
+    """Lägg till eller dra av mynt. Normaliserar efteråt.
+    Returnerar (success, message). Vid negativt saldo: vägrar.
+    """
+    currency = state.setdefault('currency', {'pp': 0, 'gp': 0, 'sp': 0, 'cp': 0})
+    # Säkerställ att alla valörer finns
+    for d in COIN_TO_CP:
+        currency.setdefault(d, 0)
+
+    if amount >= 0:
+        currency[denom] = currency.get(denom, 0) + amount
+        state['currency'] = normalize_currency(currency)
+        return True, f"+{amount} {COIN_NAMES[denom]}"
+    else:
+        # Kontrollera att saldot räcker (i cp)
+        needed_cp = abs(amount) * COIN_TO_CP[denom]
+        available_cp = currency_to_cp(currency)
+        if needed_cp > available_cp:
+            logger.warning(
+                f"Currency: attempt to spend {abs(amount)} {COIN_NAMES[denom]} "
+                f"but balance is only {currency_display(currency)}"
+            )
+            return False, f"Otillräckligt saldo: behövde {abs(amount)} {COIN_NAMES[denom]}, hade {currency_display(currency)}"
+        # Dra av
+        currency[denom] = currency.get(denom, 0) + amount  # amount är negativt
+        # Om valören blev negativ, växla ner från högre valörer
+        state['currency'] = normalize_currency(currency)
+        return True, f"-{abs(amount)} {COIN_NAMES[denom]}"
+
+
+def _grant_xp_tag_path(char: dict, amount: int, effects: list[dict]) -> None:
+    """XP-tillägg + level-up-check för DM-tagg-vägarna ([XP:] och quest-rewards).
+
+    (fix w2c) Level-up via tagg-vägen ger nu även max HP/spell slots/klass-
+    features — tidigare anropade bara Guardian-vägen _apply_level_up_bonuses,
+    så tagg-level-ups gav "level 5 på pappret" med level-1-HP.
+    Guardian importeras defensivt inne i funktionen (cirkulär-säkerhet).
+    """
+    xp = char.setdefault('xp', {'current': 0, 'next_level': 300})
+    xp['current'] = xp.get('current', 0) + amount
+    effects.append({'type': 'xp', 'value': amount})
+    # Level-up check
+    level = char.get('level', 1)
+    while level < len(XP_THRESHOLDS) and xp['current'] >= XP_THRESHOLDS[level]:
+        level += 1
+        char['level'] = level
+        if level < len(XP_THRESHOLDS):
+            xp['next_level'] = XP_THRESHOLDS[level]
+        try:
+            import guardian as _g
+            # Appendar själv {'type': 'level_up'} + HP/slots/features
+            _g._apply_level_up_bonuses(char, effects)
+        except Exception as _e:
+            logger.warning("Level-up bonuses unavailable via tag path: %s", _e)
+            effects.append({'type': 'level_up', 'value': level})
+
+
+def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict]]:
+    """
+    Hitta och ta bort alla mekaniska taggar ur DM-svaret.
+    Uppdaterar state och returnerar (clean_text, state, effects_list).
+    """
+    effects: list[dict] = []
+
+    # SKADA — minska HP. P2: [SKADA:12:fire] respekterar resistanser/
+    # sårbarheter via combat.damage_multiplier (typ-lowercase). Ingen typ →
+    # oförändrad skada (mult 1.0). effect 'skada' behåller value=amount
+    # efter modifiering.
+    for m in _MECH_PATTERNS['SKADA'].finditer(text):
+        amount = int(m.group(1))
+        dmg_type = (m.group(2) or '').strip().lower() or None
+        char = state.setdefault('character', {})
+        if dmg_type and combat_damage_multiplier is not None:
+            amount = int(amount * combat_damage_multiplier(dmg_type, char))
+        hp = char.setdefault('hp', {'current': 10, 'max': 10, 'temp': 0})
+        hp['current'] = max(0, hp.get('current', 0) - amount)
+        effects.append({'type': 'skada', 'value': amount})
+
+    # HELA — öka HP
+    for m in _MECH_PATTERNS['HELA'].finditer(text):
+        amount = int(m.group(1))
+        char = state.setdefault('character', {})
+        hp = char.setdefault('hp', {'current': 10, 'max': 10, 'temp': 0})
+        hp['current'] = min(hp.get('max', 10), hp.get('current', 0) + amount)
+        effects.append({'type': 'hela', 'value': amount})
+
+    # XP — ge erfarenhet + level-up (delad helper: bonusar via guardian, w2c)
+    for m in _MECH_PATTERNS['XP'].finditer(text):
+        amount = int(m.group(1))
+        char = state.setdefault('character', {})
+        _grant_xp_tag_path(char, amount, effects)
+
+    # VALUTA — guld, silver, koppar, platina
+    _CURRENCY_TAGS = [
+        ('GULD', 'gp'), ('SILVER', 'sp'), ('KOPPAR', 'cp'), ('PLATINA', 'pp'),
+    ]
+    for tag_name, denom in _CURRENCY_TAGS:
+        for m in _MECH_PATTERNS[tag_name].finditer(text):
+            amount = int(m.group(1))
+            ok, msg = apply_currency(state, denom, amount)
+            if ok:
+                effects.append({'type': 'guld', 'value': amount, 'denom': denom, 'msg': msg})
+            else:
+                effects.append({'type': 'guld_fail', 'value': amount, 'denom': denom, 'msg': msg})
+
+    # FÖREMÅL — lägg till i inventariet (med deduplicering)
+    for m in _MECH_PATTERNS['FÖREMÅL'].finditer(text):
+        name = m.group(1).strip()
+        item_type = (m.group(2) or 'Annat').strip()
+        rarity = (m.group(3) or 'normal').strip()
+        inv = state.setdefault('inventory', [])
+        # Deduplicering: samma namn (skiftlägesokänsligt) → qty++
+        existing = next((it for it in inv if it['name'].lower() == name.lower()), None)
+        if existing:
+            existing['qty'] = existing.get('qty', 1) + 1
+            logger.info("📦 Dedup: '%s' → qty=%d", name, existing['qty'])
+        else:
+            inv.append(_normalize_item({
+                'id': f"tag-{len(inv)}",
+                'name': name,
+                'type': item_type,
+                'qty': 1,
+                'weight': 0,
+                'equipped': False,
+                'rarity': rarity,
+                'description': '',
+            }))
+        effects.append({'type': 'föremål', 'value': name})
+
+    # QUEST — skapa nytt uppdrag (med dedup mot befintliga namn)
+    for m in _MECH_PATTERNS['QUEST'].finditer(text):
+        name = m.group(1).strip()
+        desc = (m.group(2) or '').strip()
+        reward = (m.group(3) or '').strip()
+        quests = state.setdefault('quests', [])
+        if not any(qq.get('name', '').lower() == name.lower() for qq in quests):
+            import uuid
+            quests.append({
+                'id': str(uuid.uuid4()),
+                'name': name,
+                'description': desc,
+                'reward': reward,
+                'xp_reward': 100,
+                'gold_reward': 0,
+                'status': 'aktiv',
+                'created_turn': state.get('meta', {}).get('turn_count', 0),
+            })
+            effects.append({'type': 'quest', 'value': name})
+
+    # QUEST_SLUTFÖRD (matcha bara aktiva quests)
+    # (fix w2c) Tagg-vägen BETALAR rewarden — tidigare betalade bara Guardians
+    # quests_completed-väg, så tagg-slutförda quests gav aldrig xp/gold.
+    # Dedup: ('xp', n)/('guld', n)-effekterna följer med meta['last_effects'] →
+    # skip_effects → Guardians quest-betalning (guardian.py:1955-1979) skippar
+    # redan utbetalda belopp (dess _skip_keys-match på (type, str(value))).
+    # Status-flippen till 'slutförd' gör dessutom att Guardians
+    # _find_quest(require_active=True) missar questen samma tur (post-DM).
+    for m in _MECH_PATTERNS['QUEST_SLUTFÖRD'].finditer(text):
+        name = m.group(1).strip()
+        for q in state.get('quests', []):
+            if q.get('name', '').lower() == name.lower() and q.get('status') in ('aktiv', 'active'):
+                q['status'] = 'slutförd'
+                q['completed_turn'] = state.get('meta', {}).get('turn_count', 0)
+                effects.append({'type': 'quest_slutförd', 'value': name})
+                _paid_keys = {(e.get('type'), str(e.get('value'))) for e in effects}
+                # XP-reward (gamla quests utan fältet → default 100, som vid skapande)
+                _xp_raw = q.get('xp_reward')
+                try:
+                    xp_r = int(_xp_raw) if _xp_raw is not None else 100
+                except (TypeError, ValueError):
+                    xp_r = 100
+                if xp_r > 0 and ('xp', str(xp_r)) not in _paid_keys:
+                    char = state.setdefault('character', {})
+                    _grant_xp_tag_path(char, xp_r, effects)
+                # Guld-reward (gamla quests utan fältet → default 0)
+                _g_raw = q.get('gold_reward')
+                try:
+                    gold_r = int(_g_raw) if _g_raw is not None else 0
+                except (TypeError, ValueError):
+                    gold_r = 0
+                if gold_r > 0 and ('guld', str(gold_r)) not in _paid_keys:
+                    ok, msg = apply_currency(state, 'gp', gold_r)
+                    if ok:
+                        effects.append({'type': 'guld', 'value': gold_r, 'denom': 'gp',
+                                        'msg': msg, 'source': 'quest'})
+                break
+
+    # QUEST_MISSLYCKAD (matcha bara aktiva quests)
+    for m in _MECH_PATTERNS['QUEST_MISSLYCKAD'].finditer(text):
+        name = m.group(1).strip()
+        for q in state.get('quests', []):
+            if q.get('name', '').lower() == name.lower() and q.get('status') in ('aktiv', 'active'):
+                q['status'] = 'misslyckad'
+                effects.append({'type': 'quest_misslyckad', 'value': name})
+                break
+
+    # KONSEKVENS — permanent världsförändring → lore
+    for m in _MECH_PATTERNS['KONSEKVENS'].finditer(text):
+        desc = m.group(1).strip()
+        state.setdefault('lore', []).append(desc)
+        effects.append({'type': 'konsekvens', 'value': desc})
+
+    # NPC_DÖD — markera NPC som död
+    for m in _MECH_PATTERNS['NPC_DÖD'].finditer(text):
+        name = m.group(1).strip()
+        for npc in state.get('npcs', []):
+            if npc.get('name', '').lower() == name.lower():
+                npc['alive'] = False
+                break
+        effects.append({'type': 'npc_död', 'value': name})
+
+    # PLATS — uppdatera nuvarande plats + lägg till i locations[]
+    for m in _MECH_PATTERNS['PLATS'].finditer(text):
+        name = clean_location_name(m.group(1))
+        world = state.setdefault('world', {})
+        # Dedup (2026-08-02): återanvänd kanoniskt namn om en nära-duplikat redan
+        # finns (t.ex. "The X" vs "X") — annars växer kartan med dubbel-platser.
+        locs = state.setdefault('locations', [])
+        _lidx, _lex = find_location(locs, name)
+        if _lex:
+            name = _lex['name']
+        old_loc = world.get('current_location', '')
+        world['current_location'] = name
+        # Ruttspårning: logga förflyttningar
+        if old_loc and old_loc != name:
+            travel_log = world.setdefault('travel_log', [])
+            travel_log.append({'from': old_loc, 'to': name, 'day': world.get('day', 1)})
+        visited = world.setdefault('visited_locations', [])
+        if name not in visited:
+            visited.append(name)
+        # Lägg till i locations-arrayen (så kartan kan visa den)
+        if _lidx is None:
+            placed = place_location(name, state.get('meta', {}).get('campaign_id', ''))
+            locs.append({
+                'name': name, 'description': '', 'terrain': placed['terrain'],
+                'x': placed['x'], 'y': placed['y'],
+            })
+        effects.append({'type': 'plats', 'value': name})
+
+    # TID — uppdatera tid/väder
+    for m in _MECH_PATTERNS['TID'].finditer(text):
+        desc = m.group(1).strip()
+        world = state.setdefault('world', {})
+        world['time'] = desc
+        effects.append({'type': 'tid', 'value': desc})
+
+    # FÖREMÅL_BORT — ta bort föremål ur inventariet
+    for m in _MECH_PATTERNS['FÖREMÅL_BORT'].finditer(text):
+        name = m.group(1).strip().lower()
+        inv = state.get('inventory', [])
+        state['inventory'] = [it for it in inv if it.get('name', '').lower() != name]
+        effects.append({'type': 'föremål_bort', 'value': m.group(1).strip()})
+
+    # NPC_RELATION — uppdatera en NPCs relation
+    for m in _MECH_PATTERNS['NPC_RELATION'].finditer(text):
+        npc_name = m.group(1).strip().lower()
+        new_rel = _normalize_relation(m.group(2))
+        if new_rel is None:
+            continue  # okänt värde → behåll gammal relation (ingen tyst enum-drift)
+        for npc in state.get('npcs', []):
+            if npc.get('name', '').lower() == npc_name:
+                npc['relation'] = new_rel
+                break
+        effects.append({'type': 'npc_relation', 'value': f"{m.group(1).strip()} → {new_rel}"})
+
+    # NY_DAG — ny dag i äventyret
+    for m in _MECH_PATTERNS['NY_DAG'].finditer(text):
+        desc = m.group(1).strip()
+        world = state.setdefault('world', {})
+        world['day'] = world.get('day', 1) + 1
+        world['day_description'] = desc
+        world.setdefault('day_log', []).append({'day': world['day'], 'description': desc})
+        # Markera att en dag-entry ska genereras i bakgrunden
+        world['_pending_day_entry'] = True
+        effects.append({'type': 'ny_dag', 'value': f"Dag {world['day']}: {desc}"})
+
+    # MORALE (P1a §4.2) — [MORALE:target|trigger] begär moralprov. Samma
+    # hjälpfunktion som Guardian-vägen (guardian._apply_morale_checks) →
+    # identisk semantik (validering/roll/utfall/dedup). Servern rullar ALLTID.
+    _morale_entries = [
+        {'target': m.group(1).strip(), 'trigger': m.group(2).strip(), 'note': 'dm-tag'}
+        for m in _MECH_PATTERNS['MORALE'].finditer(text)
+    ]
+    if _morale_entries:
+        try:
+            import guardian as _g  # cirkulär-säkerhet (samma mönster som XP-vägen)
+            _g._apply_morale_checks(state, _morale_entries, effects)
+        except Exception as _e:
+            logger.warning("MORALE tag path unavailable: %s", _e)
+        state.setdefault('meta', {})['combat_tag_dirty'] = True
+
+    # Ta bort alla taggar ur texten
+    clean = text
+    for pattern in _MECH_PATTERNS.values():
+        clean = pattern.sub('', clean)
+    # Städa upp dubbla blanksteg/rader som blir kvar
+    clean = re.sub(r'\n{3,}', '\n\n', clean).strip()
+
+    return clean, state, effects
+
+
+def _parse_strid_tag(text: str, state: dict) -> tuple[str, list[dict]]:
+    """Extrahera [STRID:namn|hp|ac, namn2|hp|ac] → combat-motorn (v25).
+
+    DM öppnar striden med taggen; combat.py skapar world.combat med
+    turordning, action economy och fiende-stats. Taggen stripas ur narrationen.
+    """
+    effects: list[dict] = []
+    m = STRID_PATTERN.search(text)
+    if not m:
+        return text, effects
+    clean = STRID_PATTERN.sub('', text)
+    clean = re.sub(r'[ \t]{2,}', ' ', clean).strip()
+
+    world = state.setdefault('world', {})
+    combat = world.get('combat')
+    existing = bool(combat and combat.get('active'))
+
+    enemies_in: list[dict] = []
+    names: list[str] = []
+    for entry in m.group(1).split(','):
+        entry = entry.strip()
+        if not entry:
+            continue
+        parts = [p.strip() for p in entry.split('|')]
+        name = parts[0] if parts else ''
+        if not name:
+            continue
+        try:
+            hp = int(parts[1])
+        except (IndexError, ValueError):
+            hp = 7
+        try:
+            ac = int(parts[2])
+        except (IndexError, ValueError):
+            ac = 10
+        # attack_bonus och damage_dice: DM kan ange som 4:e och 5:e fält
+        try:
+            atk_bonus = int(parts[3])
+        except (IndexError, ValueError):
+            atk_bonus = 3
+        try:
+            dmg_dice = parts[4]
+        except IndexError:
+            dmg_dice = "1d6+1"
+        enemies_in.append({
+            "name": name, "hp": hp, "ac": ac,
+            "attack_bonus": atk_bonus, "damage_dice": dmg_dice,
+        })
+        names.append(name)
+
+    if existing:
+        # Redan aktiv strid → lägg till nya fiender
+        for e in enemies_in:
+            combat.setdefault('enemies', []).append({
+                'id': len(combat.get('enemies', [])),
+                'name': e['name'], 'hp': e['hp'], 'max_hp': e['hp'],
+                'ac': e['ac'], 'alive': True, 'statuses': [],
+                'attack_bonus': e.get('attack_bonus', 3),
+                'damage_dice': e.get('damage_dice', '1d6+1'),
+                'actions_remaining': 1,
+            })
+    else:
+        # Ny strid → combat-motorn
+        combat_start(state, enemies_in)
+
+    if names:
+        effects.append({'type': 'combat_start', 'value': ', '.join(names)})
+        # Flagga att combat-state ändrats via tagg-parsning → Guardian skickar
+        # [COMBAT:]-taggen till frontendens Krigsråd (utan denna syns inget UI).
+        state.setdefault("meta", {})["combat_tag_dirty"] = True
+    logger.info("⚔️ [STRID:] combat registered: %s", ', '.join(names) if names else '(no enemies)')
+    return clean, effects
+
+
+def _parse_allierad_tag(text: str, state: dict) -> tuple[str, list[dict]]:
+    """Extrahera [ALLIERAD:namn|hp|ac, namn2|hp|ac] → allierade i pågående strid.
+
+    Allierade är vänliga NPC:er som kämpar PÅ SPELARENS SIDA. Taggen är bara
+    meningsfull mitt i en aktiv strid (world.combat.active) — combat.add_allies
+    lägger till dem med egna turer i turordningen. Utan aktiv strid loggas en
+    varning och taggen ignoreras (allierade existerar bara i strid).
+    Taggen stripas ur narrationen oavsett.
+    """
+    effects: list[dict] = []
+    m = ALLIERAD_PATTERN.search(text)
+    if not m:
+        return text, effects
+    clean = ALLIERAD_PATTERN.sub('', text)
+    clean = re.sub(r'[ \t]{2,}', ' ', clean).strip()
+
+    world = state.setdefault('world', {})
+    combat = world.get('combat')
+    if not (combat and combat.get('active')):
+        logger.warning("🤝 [ALLIERAD:] ignored — no active combat")
+        return clean, effects
+
+    allies_in: list[dict] = []
+    names: list[str] = []
+    for entry in m.group(1).split(','):
+        entry = entry.strip()
+        if not entry:
+            continue
+        parts = [p.strip() for p in entry.split('|')]
+        name = parts[0] if parts else ''
+        if not name:
+            continue
+        try:
+            hp = int(parts[1])
+        except (IndexError, ValueError):
+            hp = 7
+        try:
+            ac = int(parts[2])
+        except (IndexError, ValueError):
+            ac = 10
+        # attack_bonus och damage_dice: DM kan ange som 4:e och 5:e fält
+        try:
+            atk_bonus = int(parts[3])
+        except (IndexError, ValueError):
+            atk_bonus = 3
+        try:
+            dmg_dice = parts[4]
+        except IndexError:
+            dmg_dice = "1d6+1"
+        allies_in.append({
+            "name": name, "hp": hp, "ac": ac,
+            "attack_bonus": atk_bonus, "damage_dice": dmg_dice,
+        })
+        names.append(name)
+
+    if allies_in:
+        combat_add_allies(state, allies_in)
+        effects.append({'type': 'ally_add', 'value': ', '.join(names)})
+        # Flagga att combat-state ändrats → Guardian skickar [COMBAT:]-taggen
+        # så frontendens Krigsråd visar de nya allierade direkt.
+        state.setdefault("meta", {})["combat_tag_dirty"] = True
+    logger.info("🤝 [ALLIERAD:] allies added: %s", ', '.join(names) if names else '(none)')
+    return clean, effects
+
+
+def _parse_result_tag(text: str, state: dict) -> tuple[str, list[dict]]:
+    """Parsa [Resultat: ETIKETT → VÄRDE (rullar)] — initiative + dödsräddningar.
+
+    - INITIATIV/INITIATIVE (case-insensitive) + aktiv strid → spelarens
+      initiativ läggs i world.combat.initiative (ersätter player-entry).
+    - DÖDSRÄDDNING/DEATH SAVE → uppdaterar character.death_saves enligt
+      D&D 5e: nat1 = +2 misslyckanden, 20+ = vaknar med 1 HP,
+      10+ = framgång, <10 = misslyckande, 3 framgångar = stabil,
+      3 misslyckanden = död.
+    """
+    effects: list[dict] = []
+    clean = text
+    for m in RESULT_PATTERN.finditer(text):
+        label = (m.group(1) or '').strip().lower()
+        try:
+            value = int(m.group(2))
+        except (TypeError, ValueError):
+            continue
+        rolls_str = (m.group(3) or '').strip()
+        rolls = [int(r) for r in re.findall(r'\d+', rolls_str)] if rolls_str else []
+
+        # ── INITIATIV — spelarens initiativ i pågående strid (v25) ──
+        if 'initiativ' in label or 'initiative' in label:
+            combat = state.setdefault('world', {}).get('combat')
+            if combat and combat.get('active'):
+                # Combat-motorn rullar alla initiativ (spelare + fiender)
+                combat_roll_initiative(state, player_roll=value)
+                char = state.setdefault('character', {})
+                pname = char.get('name', 'Spelaren')
+                effects.append({'type': 'initiativ', 'value': f"{pname}: {value}"})
+                logger.info("🎲 Initiative registered: %s → %d", pname, value)
+            continue
+
+        # ── DÖDSRÄDDNING — D&D 5e-regler ──
+        if 'dödsräddning' in label or 'death save' in label:
+            char = state.setdefault('character', {})
+            hp = char.setdefault('hp', {'current': 0, 'max': 10, 'temp': 0})
+            ds = char.setdefault('death_saves', {'successes': 0, 'failures': 0})
+            nat1 = (rolls and rolls[0] == 1) or (not rolls and value == 1)
+            if nat1:
+                ds['failures'] = ds.get('failures', 0) + 2
+                effects.append({'type': 'dödsräddning', 'value': 'naturlig 1 — 2 misslyckanden'})
+                logger.info("💀 Death save: nat 1 → 2 failures")
+            elif value >= 20:
+                # Nat 20: vaknar med 1 HP, dödsräddningarna nollställs
+                if hp.get('current', 0) == 0:
+                    hp['current'] = 1
+                char['death_saves'] = {'successes': 0, 'failures': 0}
+                effects.append({'type': 'dödsräddning', 'value': 'naturlig 20 — vaknar med 1 HP'})
+                logger.info("💀 Death save: nat 20 — player wakes with 1 HP")
+            elif value >= 10:
+                ds['successes'] = ds.get('successes', 0) + 1
+                effects.append({'type': 'dödsräddning', 'value': f"framgång ({value})"})
+            else:
+                ds['failures'] = ds.get('failures', 0) + 1
+                effects.append({'type': 'dödsräddning', 'value': f"misslyckande ({value})"})
+            if ds.get('successes', 0) >= 3:
+                # Stabiliserad — nollställ (frontend visar pips från death_saves)
+                char['death_saves'] = {'successes': 0, 'failures': 0}
+                effects.append({'type': 'dödsräddning', 'value': 'stabiliserad — 3 framgångar'})
+                logger.info("💀 Player stabilized (3 successes)")
+            elif ds.get('failures', 0) >= 3:
+                ds['dead'] = True
+                effects.append({'type': 'dödsräddning', 'value': 'DÖD — 3 misslyckanden'})
+                logger.info("💀 Player died (3 failures)")
+            continue
+    # Flagga att combat-state ändrats via tagg-parsning → _guardian_post_dm
+    # skickar [COMBAT:]-taggen till frontendens Krigsråd även om Guardian
+    # inte hittade egna effekter denna tur (initiativslag, dödsräddning).
+    if effects:
+        state.setdefault("meta", {})["combat_tag_dirty"] = True
+    return clean, effects
+
+
+app.add_middleware(
+    CORSMiddleware,
+    # 2026-08-04 (security audit P1): appen är same-origin (FastAPI serverar
+    # frontenden) — "*" + credentials var onödigt öppet. Endast publika domänen.
+    allow_origins=["https://dnd.rostad.cc"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+store = CampaignStore()
+vault = CharacterVault()
+
+COOKIE_NAME = "morkrets_token"
+# Sätts i docker-compose (prod = HTTPS-only). Tester/lokal http-dev default false.
+_COOKIE_SECURE = os.getenv("COOKIE_SECURE", "0").lower() in ("1", "true", "yes")
+
+# ── Konto-säkerhet (iteration 1) ──
+# Lås för alla users.json-mutationer (login last_login, register, admin-ändringar).
+_USER_LOCK = threading.Lock()
+
+# Default turn-tak för NYA konton (0 = oändligt). Admin höjer via admin-vyn.
+# 2026-10-28: free tier = 20 turns/dag (var 30). 10€-unlåset ger +100 turn_bonus
+# och rör ALDRIG det dagliga taket — inget köp höjer antalet turer per dag.
+DEFAULT_TURN_CAP = 20
+# Patron (one-time, 2026-08-07): daglig cap höjs till 100 (istället för +500
+# permanenta turns). Gäller i 30 dagar från köpet (cap_until), sedan tillbaka
+# till DEFAULT_TURN_CAP (lazy-återställning i _turn_cap_for / _maybe_rollover).
+PATRON_DAILY_CAP = 100
+# Patron (30€): premiummodell-access gäller i 30 dagar från köpet.
+PATRON_MODEL_DAYS = 30
+# Patron (30€): Wan/Qwen-bilder max 10/dag; varje bild drar en turn.
+WAN_DAILY_LIMIT = 10
+
+# Globalt tak för nya registreringar (skript-skydd; per-IP funkar inte bakom proxy).
+_REGISTER_LIMIT = 30          # max registreringar…
+_REGISTER_WINDOW = 3600       # …per timme
+_REGISTER_TIMES: deque = deque(maxlen=_REGISTER_LIMIT)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _register_allowed() -> bool:
+    """Returnerar True om en ny registrering tillåts just nu."""
+    now = time.time()
+    while _REGISTER_TIMES and now - _REGISTER_TIMES[0] > _REGISTER_WINDOW:
+        _REGISTER_TIMES.popleft()
+    if len(_REGISTER_TIMES) >= _REGISTER_LIMIT:
+        return False
+    _REGISTER_TIMES.append(now)
+    return True
+
+
+def _cap_until_expired(udata: dict) -> bool:
+    """True om kontots Patron-dagliga cap-fönster (cap_until) har passerat."""
+    cu = udata.get("cap_until") if isinstance(udata, dict) else None
+    if not cu:
+        return False
+    try:
+        return datetime.fromisoformat(str(cu)).date() < _today_date()
+    except ValueError:
+        return False
+
+
+def _turn_cap_for(username: str) -> int:
+    """Kontots turn-tak (0 = oändligt). Läser users.json — snabbt och litet.
+
+    FAS A: backfilla nya free-tier-fält (setdefault) så gamla konton inte
+    kraschar när de nya fälten saknas.
+    Patron (one-time, 2026-08-07): turn_cap höjs till PATRON_DAILY_CAP (100)
+    i 30 dagar (cap_until) — därefter tillbaka till DEFAULT_TURN_CAP."""
+    if selfhost.enabled():
+        return 0                      # 0 = unlimited
+    try:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            return 0
+        udata = _ensure_user_fields(username, udata)
+        cap = int(udata.get("turn_cap", 0) or 0)
+        if _cap_until_expired(udata) and cap == PATRON_DAILY_CAP:
+            cap = DEFAULT_TURN_CAP
+        return cap
+    except Exception:
+        return 0
+
+
+# ═══════════════════════════════════════
+# FAS A — free account system (periodbaserad turn-räkning)
+# ═══════════════════════════════════════
+# Period = daglig (förnyelse per dygn). turns_used nollställs vid rollover (lazy,
+# vid nästa API-anrop efter midnatt), turn_bonus (admin top-up) behålls.
+# Premium → oändliga turns.
+
+_FREE_FIELD_DEFAULTS = {
+    "turns_used": 0,
+    "turn_bonus": 0,
+    "reset_date": None,  # sätts dynamiskt till _today_str()
+    "subscription_status": "free",
+    "subscription_until": None,
+    # One-time-förmåner (2026-08-05): features = dict med flaggor.
+    #   export:     3€ — kampanjexport + forge-karaktärs-export
+    #   wan1080:   30€ — Wan 2.7 Pro (2048²) avatarer
+    #   all_models:30€ — premiummodeller + Qwen TTS
+    #   features_until: ISO-datum för när ALLA features-förmåner går ut.
+    #   (2026-08-05 v2 → 2026-08-15: Support 3€ borttagen, Patron 30€ = en MÅNAD förmåner, stackbart. Köpta turns
+    #   behålls alltid — turn_bonus rörs inte av features_until.)
+    "features": {},
+    "features_until": None,  # legacy-fält: models_until hedras som fallback
+    # 2026-08-05 v3 (turn-ordning): promo_bonus var signup-300 (intro-promo,
+    # BORTTAGEN 2026-09-06 — finns kvar som LEGACY-fält som spenderas av de
+    # konton som hade kvar). turn_bonus = KÖPTA turns (Support/Patron, spenderas
+    # SIST). Daglig cap (turns_used) ligger i mitten: promo → cap → köpta.
+    "promo_bonus": 0,
+    # Turn-pott per spelare (2026-09-28): livstids-räknare per hink. De
+    # nollställs ALDRIG av dygns-rollovern — den rör bara `turns_used`.
+    # Varför: potten spenderas promo → daglig cap → köpta, så "hur mycket har
+    # gått åt" gick inte att läsa ut ur users.json (rollover nollade) och inte
+    # ur turn-ledgern (saknade hink + beskärs vid 2 000 rader). Dessa tre tal
+    # är den varaktiga sanningen; ledgern är detaljen.
+    "turns_used_free_total": 0,   # daglig cap (inkl. lifetime-kontons oändliga)
+    "turns_used_paid_total": 0,   # köpta/grants (turn_bonus)
+    "turns_used_promo_total": 0,  # legacy-promo (promo_bonus)
+    # Ledger-rader UTAN hink (skrivna före 2026-09-28). Känt och mätt — aldrig
+    # omfördelat till "free", bara redovisat som legacy/okänt.
+    "turns_used_unknown_total": 0,
+    # Från när kontots pottsiffror är tillförlitliga (ISO-datum). Sätts av
+    # backfill-skriptet; UI:t skriver "okänt före <datum>" i stället för att
+    # hitta på historik.
+    "pool_data_since": None,
+    # Wan-bildkvot (10/dag): wan_used_today + wan_reset_date
+    "wan_used_today": 0,
+    "wan_reset_date": None,
+}
+
+
+def _today_str() -> str:
+    """Dagens datum som ISO-sträng (YYYY-MM-DD, UTC)."""
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _today_date():
+    """Dagens datum (date-objekt, UTC)."""
+    return datetime.now(timezone.utc).date()
+
+
+def _ensure_user_fields(username: str, udata: dict) -> dict:
+    """Backfilla FAS A-fält (setdefault-mönstret) för konton som saknar dem.
+
+    Sparar users.json ENDAST om något lades till. Returnerar uppdaterad udata.
+    Får INTE anropas innanför _USER_LOCK (threading.Lock är inte reentrant)."""
+    missing = [k for k in _FREE_FIELD_DEFAULTS if k not in udata]
+    if not missing:
+        return udata
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if isinstance(u, dict):
+            for k in _FREE_FIELD_DEFAULTS:
+                u.setdefault(k, _today_str() if k == "reset_date" else _FREE_FIELD_DEFAULTS[k])
+            save_users(users)
+            return u
+        for k, v in _FREE_FIELD_DEFAULTS.items():
+            udata.setdefault(k, _today_str() if k == "reset_date" else v)
+        return udata
+
+
+
+
+
+# ═══════════════════════════════════════
+# TIERS — free < tier1(legacy) < tier2 < lifetime
+# ═══════════════════════════════════════
+# free      — 20 turns/dag; step-3.7-flash ENDAST (2026-10-27: step-3.5-flash-2603
+#             borttagen, så free-tiern har EN modell).
+#             TTS, bildgenerering, röstinmatning och övriga DM:er ligger bakom
+#             10€-unlåset (2026-09-27, ny prissättning).
+# tier1     — 3€ Support: LEGACY (togs bort 2026-08-15). Befintliga köpare
+#             behåller sina förmåner tills features_until löper ut.
+# tier2     — 30€ Patron: 100 turns/dag (cap_until, 30 dagar), allt i Free +
+#             alla modeller (Qwen/DeepSeek) + Qwen TTS + Wan 2.7 (+Pro 2048²)
+#             + Qwen Image 3 Pro + export/forge/uppladdning, i 30 dagar.
+# lifetime  — ∞ turns (turn_cap 0), allt (befintliga 100€-köpare)
+# Legacy "premium" → tier2 (bakåtkompatibilitet).
+TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
+
+
+# Turn-period (timmar): alla får det dagliga taket (DEFAULT_TURN_CAP, 24h) — tier1/tier2 ger inga extra
+# dagliga turns längre (de får bonus-turns vid köp istället). Lifetime = ∞ (0).
+def _period_hours_for(tier: str) -> int:
+    return 0 if tier == "lifetime" else 24
+
+
+def _features_for(username: str) -> dict:
+    """Kontots one-time-förmåner (features-dict). Alltid en dict."""
+    try:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            return {}
+        f = udata.get("features")
+        return f if isinstance(f, dict) else {}
+    except Exception:
+        return {}
+
+
+def _benefits_until(username: str, udata: dict | None = None) -> str | None:
+    """Kontots features-förmåner går ut detta datum (ISO YYYY-MM-DD) eller None.
+
+    Enhetligt fönster för ALLA features (Patron 30€ = 30 dagar; legacy Support 3€ hedras,
+    stackbart — 2026-08-05 v2). Legacy: `models_until` hedras som fallback så
+    gamla patron-köp (och testseeds) fortsätter fungera utan features_until.
+    """
+    if udata is None:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            udata = {}
+    return udata.get("features_until") or udata.get("models_until") or None
+
+
+def _benefits_active(username: str, udata: dict | None = None) -> bool:
+    """True om kontots features-förmåner är aktiva (inom 30-dagarsfönstret).
+
+    Legacy-regel: features utan något utgångsdatum (admin-grants, tidiga köp)
+    = permanent aktiva — säkrast för konton som redan fått förmåner.
+    """
+    try:
+        fu = _benefits_until(username, udata)
+        if not fu:
+            f = (udata.get("features") if udata else None)
+            if f is None:
+                f = _features_for(username)
+            return bool(f)
+        return datetime.fromisoformat(str(fu)).date() >= _today_date()
+    except ValueError:
+        return True  # korrupt datum → behandla som aktiv (säkert håll)
+    except Exception:
+        return False
+
+
+# ── Supporter (2026-10-01): "har någonsin betalat" ──────────────────────────
+# Donationen (valfritt belopp, 1€+) är en egen unlock: den låser upp
+# undo-knappen + kampanj-exporten PERMANENT. Flaggan features["supporter"]
+# sätts i VARJE betalväg (donation, unlock10, legacy support/patron, lifetime,
+# admin-grant) och läses DIREKT — aldrig via _benefits_active, som dömer alla
+# features mot EN gemensam features_until och därför skulle låsa en donator så
+# snart ett legacy-fönster löpt ut.
+_PAID_FEATURE_KEYS = ("supporter", "export", "wan1080", "all_models", "unlock10")
+
+
+def _is_supporter(username: str, udata: dict | None = None) -> bool:
+    """True om kontot någonsin betalat: supporter-flaggan, en legacy-betald
+    feature-flagga, eller en betald tier (tier1/tier2/lifetime).
+
+    Hålls UTANFÖR _tier_for/_benefits_active (se kommentaren ovan) — annars
+    läcker donationen in i tier-modellen. Läser users.json om udata inte
+    skickas in (så anropare med udata redan i handen slipper en extra läsning).
+    Kastar vidare läsfel — _require_supporter gör 503 av dem.
+    """
+    if udata is None:
+        udata = load_users().get(username, {})
+    if not isinstance(udata, dict):
+        udata = {}
+    if selfhost.enabled():
+        # Self-host build: there is no billing at all, so everything a payment
+        # would have unlocked (undo, export, all models) is simply on.
+        return True
+    f = udata.get("features")
+    f = f if isinstance(f, dict) else {}
+    if any(f.get(k) for k in _PAID_FEATURE_KEYS):
+        return True
+    return _tier_for(username) in ("tier1", "tier2", "lifetime")
+
+
+def _stack_benefits_until(udata: dict, days: int = PATRON_MODEL_DAYS) -> str:
+    """Nytt features_until efter ett köp: +30 dagar från max(dagens datum,
+    nuvarande aktiva fönster). Flera köp staplas — köper man igen medan
+    förmånerna är aktiva förlängs fönstret, annars startar det idag."""
+    today = _today_date()
+    current = None
+    fu = udata.get("features_until") or udata.get("models_until")
+    if fu:
+        try:
+            current = datetime.fromisoformat(str(fu)).date()
+        except ValueError:
+            current = None
+    base = max(today, current) if current else today
+    return (base + timedelta(days=days)).isoformat()
+
+
+def _tier_for(username: str) -> str:
+    """free|tier1|tier2|lifetime.
+
+    one-time-modellen (2026-08-05):
+      - lifetime (turn_cap 0) → lifetime, upphör aldrig
+      - features.all_models aktiv (models_until ej passerad) → tier2
+      - features.export → tier1
+      - annars free
+    Legacy subscription_status (subscription_until) hedras tills den går ut
+    (befintliga prenumeranter), sedan demote till free — men features vinner.
+    """
+    if selfhost.enabled():
+        # Self-host build: no tiers exist. Every account is "lifetime" so the
+        # quota maths, feature flags and model gates all resolve to unlimited.
+        return "lifetime"
+    try:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            udata = {}
+        udata = _ensure_user_fields(username, udata)
+        status = (udata.get("subscription_status") or "free").strip().lower()
+        if status == "premium":
+            status = "tier2"
+        if status == "lifetime":
+            return "lifetime"
+        today = _today_date()
+        features = udata.get("features") or {}
+        if not isinstance(features, dict):
+            features = {}
+        # Patron-förmåner: premiummodeller + Qwen TTS t.o.m. features_until
+        # (30 dagar, stackbart). Legacy: models_until hedras som fallback.
+        if features.get("all_models") and _benefits_active(username, udata):
+            return "tier2"
+        # Support-förmåner: export + StepFun t.o.m. features_until (30 dagar).
+        if features.get("export") and _benefits_active(username, udata):
+            return "tier1"
+        # Legacy-subscription (befintliga prenumeranter) — hedra tills den går ut
+        if status in TIER_ORDER and status != "free":
+            until = udata.get("subscription_until")
+            if until:
+                try:
+                    until_date = datetime.fromisoformat(str(until)).date()
+                except ValueError:
+                    until_date = None
+                if until_date is not None and until_date >= today:
+                    return status
+            # Betalt tier utgånget (eller utan datum) → demote
+            with _USER_LOCK:
+                users = load_users()
+                u = users.get(username)
+                if isinstance(u, dict) and u.get("subscription_status") not in (None, "free"):
+                    u["subscription_status"] = "free"
+                    save_users(users)
+        return "free"
+    except Exception:
+        return "free"
+
+
+def _maybe_rollover(username: str, udata: dict) -> dict:
+    """Period-rollover baserad på tier:
+    - free:  daglig (reset_date YYYY-MM-DD, midnatt UTC)
+    - tier1/tier2: var 6:e timme (reset_ts full ISO-timestamp)
+    - lifetime: ingen rollover (∞ turns)
+
+    Nollställer turns_used, BEHÅLLER turn_bonus, flyttar reset till nästa period.
+    Körs lazy vid varje API-anrop — ingen extern cron behövs."""
+    tier = _tier_for(username)
+    hours = _period_hours_for(tier)
+    now = datetime.now(timezone.utc)
+    if hours <= 0:
+        return udata  # lifetime: ∞
+
+    if hours >= 24:
+        # Daglig (free): reset_date = YYYY-MM-DD
+        today = _today_date()
+        reset = udata.get("reset_date")
+        due = False
+        if reset:
+            try:
+                due = today >= datetime.fromisoformat(str(reset)).date()
+            except ValueError:
+                due = False
+        if not due:
+            return udata
+        new_reset = (today + timedelta(days=1)).isoformat()
+    else:
+        # Tim-baserad (tier1/tier2): reset_ts = full ISO-timestamp
+        reset_ts = udata.get("reset_ts")
+        due = False
+        if reset_ts:
+            try:
+                due = now >= datetime.fromisoformat(str(reset_ts))
+            except ValueError:
+                due = False
+        if not due:
+            return udata
+        new_reset = (now + timedelta(hours=hours)).isoformat()
+
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if isinstance(u, dict):
+            # Patron-cap (100/dag) löper ut med cap_until → återställ till DEFAULT_TURN_CAP.
+            if _cap_until_expired(u) and int(u.get("turn_cap", 0) or 0) == PATRON_DAILY_CAP:
+                u["turn_cap"] = DEFAULT_TURN_CAP
+                u.pop("cap_until", None)
+            u["turns_used"] = 0
+            if hours >= 24:
+                u["reset_date"] = new_reset
+            else:
+                u["reset_ts"] = new_reset
+            save_users(users)
+            return u
+    udata["turns_used"] = 0
+    if hours >= 24:
+        udata["reset_date"] = new_reset
+    else:
+        udata["reset_ts"] = new_reset
+    return udata
+
+
+def _turns_available(username: str) -> int:
+    """Antal turns kvar denna period.
+
+    Spenderingsordning (2026-08-05 v3, rostad): promo (legacy-kvarvarande) →
+    daglig cap (DEFAULT_TURN_CAP/dag) → köpta turns (turn_bonus). Available = promo_left +
+    cap_left + purchased_left. Lifetime (turn_cap 0) eller ∞: 999999."""
+    if selfhost.enabled():
+        return 999999
+    try:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            udata = {}
+        udata = _ensure_user_fields(username, udata)
+        if _tier_for(username) == "lifetime":
+            return 999999
+        udata = _maybe_rollover(username, udata)
+        turn_cap = int(udata.get("turn_cap", 0) or 0)
+        turns_used = int(udata.get("turns_used", 0) or 0)
+        promo = int(udata.get("promo_bonus", 0) or 0)
+        purchased = int(udata.get("turn_bonus", 0) or 0)
+        if turn_cap <= 0:
+            return 999999
+        cap_left = max(0, turn_cap - turns_used)
+        return promo + cap_left + purchased
+    except Exception:
+        return 0
+
+
+def _gate_turn_quota(username: str) -> None:
+    """Kasta 403 om kontot har 0 turns kvar (samma shape som chat-gaten).
+
+    Används av LLM-tunga endpoints som INTE är chatten (karaktärsgenerering)
+    så de inte blir gratis kostnadsmissbruk. 2026-08-04 (security audit P1).
+    """
+    if selfhost.enabled():
+        return                        # self-host has no turn economy at all
+    turns_left = _turns_available(username)
+    if turns_left <= 0:
+        _udata = load_users().get(username, {})
+        _reset = _udata.get("reset_date") if isinstance(_udata, dict) else None
+        _reset = _reset or _today_str()
+        logger.info("⛔ Turn cap reached (char-gen): %s", username)
+        raise HTTPException(
+            403,
+            detail={
+                "cap_reached": True,
+                "reset_date": _reset,
+                "message": f"Your free turns are spent. New turns on {_reset} — or upgrade for unlimited.",
+            },
+        )
+
+
+def _consume_turn(username: str, action: str = "turn", model: str | None = None, tokens: int = 0) -> str:
+    """Bokför en förbrukad turn (efter ev. period-rollover). Spara under _USER_LOCK.
+
+    Returnerar hinken som betalade: "promo" | "free" | "paid" | "none" — anroparen
+    kan behöva veta det, och turn-ledgern bokför den (2026-09-28, turn-pott).
+    "free" täcker även lifetime-konton (cap 0): deras turns är oändliga men de
+    förbrukas ur samma räknare och ska inte få en egen hink i statistiken.
+
+    Spenderingsordning (2026-08-05 v3): promo (legacy) → daglig cap →
+    köpta turns. Anropas bara när en turn faktiskt skickas (403-checks klara).
+
+    PITFALL (deadlock 2026-08-05): _tier_for → _ensure_user_fields tar
+    _USER_LOCK (non-reentrant) — beräkna tier INNAN låset, aldrig innanför.
+
+    2026-08-08 (1 turn per prompt — revert av per-anrops-modellen): `action`
+    beskriver VAD som förbrukade turnen (dm|image|char_gen|search|repair|tts|
+    chapter|logbook|turn). Chat-meddelandet kostar EXAKT en turn (action="dm");
+    Guardian pre/post, faktaextraktion, threads, sammanfattningar, dag-entry och
+    battle-AI är interna bakgrundsanrop som INGÅR i den turnen. Varje
+    förbrukning loggas också i
+    per-användar-ledgern (backend/data/turn_ledgers/<user>.jsonl) så admin kan
+    se exakt förbrukning per turn/anrop.
+    """
+    # Tier/period beräknas UTOM låset — _tier_for kan skriva users.json
+    # (ensure-fields, demote) och får inte köra innanför _USER_LOCK.
+    tier = _tier_for(username)
+    hours = _period_hours_for(tier)
+    now = datetime.now(timezone.utc)
+    bucket = "none"
+    pool_after = None
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if not isinstance(u, dict):
+            return "none"
+        # setdefault-backfill inline (vi är redan innanför låset)
+        u.setdefault("turns_used", 0)
+        u.setdefault("turn_bonus", 0)
+        u.setdefault("promo_bonus", 0)
+        u.setdefault("reset_date", _today_str())
+        u.setdefault("subscription_status", "free")
+        u.setdefault("subscription_until", None)
+        # Period-rollover (tier-baserad) innan turns_used += 1
+        if hours > 0:
+            if hours >= 24:
+                today = _today_date()
+                reset = u.get("reset_date")
+                rd = None
+                if reset:
+                    try:
+                        rd = datetime.fromisoformat(str(reset)).date()
+                    except ValueError:
+                        rd = None
+                if rd is not None and today >= rd:
+                    u["turns_used"] = 0
+                    u["reset_date"] = (today + timedelta(days=1)).isoformat()
+            else:
+                reset_ts = u.get("reset_ts")
+                due = False
+                if reset_ts:
+                    try:
+                        due = now >= datetime.fromisoformat(str(reset_ts))
+                    except ValueError:
+                        due = False
+                if due:
+                    u["turns_used"] = 0
+                    u["reset_ts"] = (now + timedelta(hours=hours)).isoformat()
+        # Spenderingsordning (2026-08-05 v3): promo (legacy-kvarvarande) →
+        # daglig cap → köpta turns. Promo förbrukas FÖRE day-cappen;
+        # köpta turns sparas till sist.
+        # 2026-09-28 (turn-pott): hinken som betalade bokförs (bucket) OCH
+        # räknas i en livstids-räknare som rollovern inte rör — annars går
+        # "free vs paid" inte att läsa ut någonstans (cap-räknaren nollas varje
+        # dygn, ledgern saknade hink och beskärs).
+        promo = int(u.get("promo_bonus", 0) or 0)
+        if promo > 0:
+            u["promo_bonus"] = promo - 1
+            bucket = "promo"
+            u["turns_used_promo_total"] = int(u.get("turns_used_promo_total", 0) or 0) + 1
+        else:
+            cap = int(u.get("turn_cap", 0) or 0)
+            used = int(u.get("turns_used", 0) or 0)
+            if cap <= 0 or used < cap:
+                u["turns_used"] = used + 1
+                bucket = "free"
+                u["turns_used_free_total"] = int(u.get("turns_used_free_total", 0) or 0) + 1
+            else:
+                purchased = int(u.get("turn_bonus", 0) or 0)
+                if purchased > 0:
+                    u["turn_bonus"] = purchased - 1
+                    bucket = "paid"
+                    u["turns_used_paid_total"] = int(u.get("turns_used_paid_total", 0) or 0) + 1
+                else:
+                    # Gaten ska ha stoppat detta; bokför "none" i stället för att
+                    # låtsas att en hink betalade.
+                    bucket = "none"
+        pool_after = _pot_units_left(u)
+        save_users(users)
+    # Per-användar-ledger: varje förbrukad turn bokförs med hink + pottläge
+    _append_turn_ledger(username, action, model, tokens, bucket=bucket, pool_after=pool_after)
+    return bucket
+
+
+# ═══════════════════════════════════════
+# TURN-LEDGER — bokföring per förbrukad turn (sedan 2026-08-08)
+# ═══════════════════════════════════════
+# Append-only JSONL per användare: backend/data/turn_ledgers/<user>.jsonl
+# Rad: {"ts", "action", "model", "tokens"}. Prune vid skrivning (>3000 rader
+# → behåll sista 2000) så filen aldrig växer utan gräns.
+_TURN_LEDGERS_DIR = Path(__file__).resolve().parent / "data" / "turn_ledgers"
+_TURN_LEDGER_MAX = 3000
+_TURN_LEDGER_KEEP = 2000
+_TURN_LEDGER_LOCK = threading.Lock()
+
+
+def _append_turn_ledger(username: str, action: str, model: str | None = None, tokens: int = 0,
+                        bucket: str | None = None, pool_after: int | None = None) -> None:
+    """Bokför EN förbrukad turn i användarens turn-ledger. Får aldrig kasta —
+    en ledger-skrivning ska inte kunna sänka ett spelaranrop.
+
+    2026-09-28 (turn-pott): `bucket` (promo|free|paid|none) = hinken som
+    betalade, `pool_after` = turns kvar i potten efter turen (None = oändligt).
+    Rader skrivna FÖRE detta datum saknar fälten — läsare ska tolka dem som
+    "unknown" (gammal rad ≠ free), aldrig gissa.
+    """
+    try:
+        _TURN_LEDGERS_DIR.mkdir(parents=True, exist_ok=True)
+        p = _TURN_LEDGERS_DIR / f"{username}.jsonl"
+        rec = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "action": action,
+            "model": model,
+            "tokens": int(tokens or 0),
+            "bucket": bucket,
+            "pool_after": pool_after,
+        }
+        with _TURN_LEDGER_LOCK:
+            with open(p, "a", encoding="utf-8") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            try:
+                if p.stat().st_size > 1_500_000:  # ~1.5 MB säkerhetsventil
+                    lines = p.read_text(encoding="utf-8").splitlines()
+                    if len(lines) > _TURN_LEDGER_MAX:
+                        p.write_text("\n".join(lines[-_TURN_LEDGER_KEEP:]) + "\n", encoding="utf-8")
+            except OSError:
+                pass
+    except Exception:
+        logger.warning("turn ledger append failed for %s", username, exc_info=True)
+
+
+def _read_turn_ledger(username: str, limit: int = 200) -> list[dict]:
+    """Senaste N ledger-posterna för en användare (nyaste sist)."""
+    try:
+        p = _TURN_LEDGERS_DIR / f"{username}.jsonl"
+        if not p.exists():
+            return []
+        lines = p.read_text(encoding="utf-8").splitlines()
+        out: list[dict] = []
+        for ln in lines[-limit:]:
+            try:
+                out.append(json.loads(ln))
+            except ValueError:
+                continue
+        return out
+    except Exception:
+        return []
+
+
+def _turn_ledger_breakdown(username: str, since: str | None = None) -> dict:
+    """Per-åtgärd-aggregation av ledgern: {action: {"turns": N, "tokens": N}}.
+    `since` = ISO-datumsträng (YYYY-MM-DD) — bara poster från och med den dagen."""
+    out: dict = {}
+    for rec in _read_turn_ledger(username, limit=_TURN_LEDGER_KEEP):
+        if since and not str(rec.get("ts", "")).startswith(since):
+            continue
+        a = rec.get("action") or "turn"
+        agg = out.setdefault(a, {"turns": 0, "tokens": 0})
+        agg["turns"] += 1
+        agg["tokens"] += int(rec.get("tokens") or 0)
+    return out
+
+
+# ═══════════════════════════════════════
+# TURN-POTT — köpt, använt och kvar per hink (2026-09-28, rostad)
+# ═══════════════════════════════════════
+# Potten har tre hinkar med fast spenderingsordning (promo → daglig cap →
+# köpta). Två saker gick inte att svara på före detta datum:
+#   1) "hur mycket har spelaren köpt" — turn_bonus är KVARVARANDE, och 7 konton
+#      hade 300 turns kvar utan en enda rad i betalningsledgern.
+#   2) "hur mycket gick åt, free vs paid" — cap-räknaren nollas varje dygn och
+#      turn-ledgern saknade hink (och beskärs vid 2 000 rader).
+# Grant-ledgern nedan bokför varje BEVILJAT paket; users.json bär livstids-
+# räknarna per hink. `_turn_pool` är den enda källan admin-API:t läser.
+_TURN_GRANTS_FILE = Path(__file__).resolve().parent / "data" / "turn_grants.jsonl"
+_TURN_GRANTS_LOCK = threading.Lock()
+# Från detta datum bokförs hink per turn. Äldre ledger-rader är "unknown" —
+# aldrig "free" (det vore en gissning).
+POOL_TRACKING_SINCE = "2026-09-28"
+
+
+def _append_turn_grant(username: str, turns: int, source: str, note: str | None = None) -> bool:
+    """Bokför ett beviljat turn-paket (en rad per paket). Får aldrig kasta —
+    samma regel som turn-ledgern: bokföring får inte sänka ett spelaranrop."""
+    try:
+        turns = int(turns or 0)
+        if turns <= 0 or not username:
+            return False
+        _TURN_GRANTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        rec = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "user": username,
+            "turns": turns,
+            "source": source,      # stripe:<produkt> | admin | opening_balance
+            "note": note or "",
+        }
+        with _TURN_GRANTS_LOCK:
+            with open(_TURN_GRANTS_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        return True
+    except Exception:
+        logger.warning("turn grant append failed for %s", username, exc_info=True)
+        return False
+
+
+def _read_turn_grants(username: str | None = None, limit: int | None = None) -> list[dict]:
+    """Grant-rader (nyaste sist). `username` filtrerar på spelare."""
+    out: list[dict] = []
+    try:
+        if not _TURN_GRANTS_FILE.exists():
+            return []
+        for ln in _TURN_GRANTS_FILE.read_text(encoding="utf-8").splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                rec = json.loads(ln)
+            except ValueError:
+                continue
+            if not isinstance(rec, dict):
+                continue
+            if username is not None and rec.get("user") != username:
+                continue
+            out.append(rec)
+    except Exception:
+        return []
+    return out[-limit:] if limit else out
+
+
+def _turn_grants_index() -> dict:
+    """{user: {"turns": N, "rows": N, "sources": [...]}} i EN filläsning.
+
+    Overview loopar över ~160 konton — att läsa grant-filen per konto vore 160
+    filläsningar per request. Samma skäl som att `_turn_pool` tar emot en redan
+    läst users-rad.
+    """
+    idx: dict = {}
+    for rec in _read_turn_grants():
+        u = str(rec.get("user") or "")
+        if not u:
+            continue
+        e = idx.setdefault(u, {"turns": 0, "rows": 0, "sources": []})
+        e["turns"] += int(rec.get("turns") or 0)
+        e["rows"] += 1
+        src = str(rec.get("source") or "unknown")
+        if src not in e["sources"]:
+            e["sources"].append(src)
+    return idx
+
+
+def _pot_units_left(udata: dict) -> int | None:
+    """Turns kvar i potten ur en users-rad. None = oändligt (cap 0).
+
+    Samma formel som `_turns_available` (promo + cap_left + köpta), så ledgerns
+    `pool_after` aldrig kan säga något annat än gaten gör.
+    """
+    try:
+        if not isinstance(udata, dict):
+            return None
+        cap = int(udata.get("turn_cap", 0) or 0)
+        if cap <= 0:
+            return None
+        used = int(udata.get("turns_used", 0) or 0)
+        promo = int(udata.get("promo_bonus", 0) or 0)
+        paid = int(udata.get("turn_bonus", 0) or 0)
+        return promo + max(0, cap - used) + paid
+    except Exception:
+        return None
+
+
+def _turn_pool(username: str, udata: dict | None = None, grants_index: dict | None = None) -> dict:
+    """Potten för EN spelare: hinkarna, förbrukat i livstid och kvar.
+
+    ENDA källan för pottsiffror i admin-API:t (tabell, dossier, drawer, CSV
+    läser alla samma tal). Skicka in `udata` (redan läst users-rad) och
+    `grants_index` när du loopar — `load_users()` läser filen varje gång.
+    """
+    if udata is None:
+        udata = load_users().get(username) or {}
+    if not isinstance(udata, dict):
+        udata = {}
+    grants = grants_index if grants_index is not None else _turn_grants_index()
+    g = grants.get(username) or {}
+    granted = int(g.get("turns") or 0)
+    grant_rows = int(g.get("rows") or 0)
+    sources = list(g.get("sources") or [])
+    cap = int(udata.get("turn_cap", 0) or 0)
+    used_period = int(udata.get("turns_used", 0) or 0)
+    unlimited = cap <= 0
+    free_left = None if unlimited else max(0, cap - used_period)
+    promo_left = int(udata.get("promo_bonus", 0) or 0)
+    paid_left = int(udata.get("turn_bonus", 0) or 0)
+    used = {
+        "free": int(udata.get("turns_used_free_total", 0) or 0),
+        "paid": int(udata.get("turns_used_paid_total", 0) or 0),
+        "promo": int(udata.get("turns_used_promo_total", 0) or 0),
+        # Rader utan hink (före 2026-09-28) — egen post, aldrig "free".
+        "unknown": int(udata.get("turns_used_unknown_total", 0) or 0),
+    }
+    return {
+        "free": {"cap": cap, "used_period": used_period, "left_period": free_left, "unlimited": unlimited},
+        "promo": {"left": promo_left, "used_total": used["promo"]},
+        "paid": {
+            "left": paid_left,
+            "granted": granted,
+            "grant_rows": grant_rows,
+            "sources": sources,
+            "used_total": used["paid"],
+            # "köpt" är bara KÄNT om grant-ledgern har riktiga köp/grants —
+            # en opening_balance-rad är ett bokslut, inte ett köp.
+            "granted_known": bool(grant_rows) and any(s != "opening_balance" for s in sources),
+        },
+        "used_lifetime": used,
+        # None = oändlig pott (cap 0). _turns_available() svarar 999999 där —
+        # gaten och UI:t visar ∞, aldrig "0 av 0".
+        "available": None if unlimited else (int(free_left or 0) + promo_left + paid_left),
+        "period_reset": udata.get("reset_date"),
+        "data_since": udata.get("pool_data_since"),
+        "buckets_tracked_since": POOL_TRACKING_SINCE,
+        "checked_at": _now_iso(),
+    }
+
+
+def _pool_compact(tp: dict) -> dict:
+    """Platta pott-fälten som dashboarden ritar (rad, drawer, CSV).
+
+    EN form på potten i hela admin-API:t: /api/admin/overview, /api/admin/stats
+    och /api/admin/user/{u} skickar SAMMA nycklar. Dossién lägger till
+    livstidsräknarna och grant-raderna ovanpå (`_pool_detail`), men siffrorna
+    kommer alltid ur `_turn_pool` — klienten ska aldrig behöva känna igen två
+    varianter av samma pott (det var så tabell och dossier kunde glida isär).
+    """
+    free = tp.get("free") or {}
+    promo = tp.get("promo") or {}
+    paid = tp.get("paid") or {}
+    return {
+        "free_cap": int(free.get("cap") or 0),
+        "free_left": free.get("left_period"),
+        "free_used_period": int(free.get("used_period") or 0),
+        "unlimited": bool(free.get("unlimited")),
+        "promo_left": int(promo.get("left") or 0),
+        "paid_left": int(paid.get("left") or 0),
+        "paid_granted": int(paid.get("granted") or 0),
+        "paid_granted_known": bool(paid.get("granted_known")),
+        "available": tp.get("available"),
+        # Ärlighetsgränsen: satt av backfill-skriptet. UI:t skriver "köpt: okänt
+        # före <datum>" — den hör till RADEN också, inte bara dossién, eftersom
+        # tabellen och pott-drawern visar samma not.
+        "data_since": tp.get("data_since"),
+        # Livstidsförbrukningen per hink — liten (3 tal) och dashboarden visar
+        # den i tabellen ("Spent") och på mobilkortet. Finns i både rad och
+        # dossier så ingen yta behöver gissa.
+        "used_lifetime": dict(tp.get("used_lifetime") or {}),
+    }
+
+
+def _pool_detail(tp: dict) -> dict:
+    """Kompakt pott + det dossién behöver: livstid, källor, ärlighetsgränser."""
+    out = _pool_compact(tp)
+    promo = tp.get("promo") or {}
+    paid = tp.get("paid") or {}
+    out.update({
+        "promo_used_total": int(promo.get("used_total") or 0),
+        "paid_used_total": int(paid.get("used_total") or 0),
+        "sources": list(paid.get("sources") or []),
+        "grant_rows": int(paid.get("grant_rows") or 0),
+        "period_reset": tp.get("period_reset"),
+        "tracked_since": tp.get("buckets_tracked_since"),
+        "checked_at": tp.get("checked_at"),
+    })
+    return out
+
+
+def _player_coding(username: str, revenue: float | None = None, pool: dict | None = None,
+                   tier: str | None = None) -> dict:
+    """Free/paid-kodning för dashboarden (rostad 2026-09-28).
+
+    Tre koder, för två vore oärligt — konton med turns kvar men ingen
+    betalningsrad finns (7 st 2026-09-28) och de får inte se ut som köpare:
+
+      paid    = betalningsrad i betalningsledgern, eller tier2/lifetime
+      granted = ingen betalning, men pott utöver den dagliga gratiscappen
+                (grants/köpta, legacy-promo eller annan cap)
+      free    = ren gratispott (standardcap, ingen promo, ingen bonus)
+
+    `tier` skickas in när anroparen redan räknat den (_tier_for läser
+    users.json varje gång — i en loop över 160 konton vill vi inte det).
+    """
+    if tier is None:
+        tier = _tier_for(username)
+    if pool is None:
+        pool = _turn_pool(username)
+    rev = float(revenue or 0) if revenue is not None else float(_ledger_per_user().get(username, 0) or 0)
+    grant_turns = int(pool["paid"].get("granted") or 0)
+    paid_left = int(pool["paid"].get("left") or 0)
+    promo_left = int(pool["promo"].get("left") or 0)
+    used_promo = int(pool["promo"].get("used_total") or 0)
+    used_paid = int(pool["paid"].get("used_total") or 0)
+    cap = int(pool["free"].get("cap") or 0)
+    unlimited = bool(pool["free"].get("unlimited"))
+    paid = rev > 0 or tier in ("tier2", "lifetime")
+    beyond_quota = bool(
+        paid_left or promo_left or used_promo or used_paid or grant_turns or unlimited
+        or cap != DEFAULT_TURN_CAP
+    )
+    if paid:
+        code = "paid"
+        why = f"{int(rev)} kr paid" if rev > 0 else f"tier {tier}"
+    elif beyond_quota:
+        code = "granted"
+        bits = []
+        if grant_turns:
+            bits.append(f"{grant_turns} turns granted")
+        elif paid_left:
+            bits.append(f"{paid_left} bought turns left")
+        if used_paid:
+            bits.append(f"{used_paid} bought turns used")
+        if promo_left or used_promo:
+            bits.append("legacy promo turns")
+        if unlimited or cap != DEFAULT_TURN_CAP:
+            bits.append(f"cap {cap if not unlimited else 'unlimited'}")
+        why = ", ".join(bits) or "turns beyond the free quota"
+    else:
+        code = "free"
+        why = f"daily free quota only ({cap}/day)"
+    return {
+        "code": code,            # paid | granted | free
+        "tier": tier,            # free | tier1 | tier2 | lifetime (sekundär)
+        "paid": code == "paid",
+        "granted": code == "granted",
+        "why": why,
+        "revenue": int(rev),
+    }
+
+
+def _turn_ledger_bucket_breakdown(username: str, since: str | None = None) -> dict:
+    """Ledger-rader per hink: {promo, free, paid, unknown}.
+
+    `unknown` = rader skrivna före 2026-09-28 (ingen hink bokfördes då) — de
+    räknas som okända, aldrig som free.
+    """
+    out = {"promo": 0, "free": 0, "paid": 0, "unknown": 0}
+    for rec in _read_turn_ledger(username, limit=_TURN_LEDGER_KEEP):
+        if since and not str(rec.get("ts", "")).startswith(since):
+            continue
+        b = str(rec.get("bucket") or "unknown")
+        out[b if b in out else "unknown"] += 1
+    return out
+
+
+def _reserve_chat_pipeline(username: str, model_id: str, is_awakening: bool, msg: str, effective_turn: int) -> None:
+    """1 turn per prompt (2026-08-08 — revert av per-anrops-modellen): varje
+    spelarmeddelande kostar EXAKT EN turn. DM, Guardian pre/post-DM,
+    faktaextraktion, active threads och alla bakgrundsanrop i pipelinen ingår i
+    den turnen — de räknas inte separat. 403 om kontot har 0 turns kvar.
+    """
+    turns_left = _turns_available(username)
+    if turns_left < 1:
+        _udata = load_users().get(username, {})
+        _reset = _udata.get("reset_date") if isinstance(_udata, dict) else None
+        _reset = _reset or _today_str()
+        logger.info("⛔ Turn cap reached (chat): %s", username)
+        raise HTTPException(
+            403,
+            detail={
+                "cap_reached": True,
+                "reset_date": _reset,
+                "message": f"This action costs 1 turn — you have {turns_left} left. New turns on {_reset} — or upgrade for unlimited.",
+            },
+        )
+    _consume_turn(username, action="dm", model=model_id)
+
+
+def _wan_model_and_size(username: str) -> tuple[str, str]:
+    """Patron (30€, features.wan1080) → Wan 2.7 Pro 2048²; lifetime → Pro.
+    Annars standard wan2.7-image 1024² (nås endast via Patron-gaten)."""
+    f = _features_for(username)
+    if f.get("wan1080") or _tier_for(username) == "lifetime":
+        return "wan2.7-image-pro", "2048*2048"
+    return "wan2.7-image", "1024*1024"
+
+
+def _qwen_image_model_and_size() -> tuple[str, str]:
+    """Qwen Image 3 Pro (Token Plan) — Patron-premium (2026-08-15)."""
+    return "qwen-image-3.0-pro", "1024*1024"
+
+
+async def _token_plan_image(model: str, prompt: str, size: str, seed: int) -> bytes:
+    """Måla via Alibaba Token Plan (wan2.7-image(-pro) / qwen-image-3.0-pro).
+
+    Samma DashScope-native endpoint för båda modellerna; svaret har bild-URL
+    på output.choices[0].message.content[0].image (wan2.7 har "type"-nyckel,
+    qwen-image-3.0-pro har inte — vi läser bara "image")."""
+    api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("ALIBABA_TOKEN_PLAN_API_KEY")
+    base = os.getenv(
+        "WAN_BASE_URL",
+        "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+    )
+    if not api_key:
+        raise HTTPException(500, "DASHSCOPE_API_KEY missing on the server (Token Plan image models need it)")
+    async with httpx.AsyncClient(timeout=150) as client:
+        resp = await client.post(
+            base,
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+            json={
+                "model": model,
+                "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
+                "parameters": {"size": size, "n": 1, "watermark": False, "thinking_mode": False, "seed": seed},
+            },
+        )
+    if resp.status_code != 200:
+        logger.error("🎨 Token Plan %s error: HTTP %d %s", model, resp.status_code, resp.text[:400])
+        raise HTTPException(502, f"{model} error ({resp.status_code})")
+    wdata = resp.json()
+    try:
+        img_url = wdata["output"]["choices"][0]["message"]["content"][0]["image"]
+    except (KeyError, IndexError, TypeError):
+        raise HTTPException(502, f"{model} returned no image")
+    async with httpx.AsyncClient(timeout=60) as dl:
+        dl_resp = await dl.get(img_url)
+        dl_resp.raise_for_status()
+        return dl_resp.content
+
+
+def _consume_wan_quota(username: str) -> None:
+    """Wan-bildkvot: max 10 bilder/dag (wan_used_today rollover vid datumbyte).
+
+    DUBBELGRIND (medvetet behållen, W3-M2 2026-09-06): varje Wan-bild kostar
+    BÅDE 1 premiumbild/dag OCH 1 turn ur turn-saldot. 403 om kvoten eller
+    turn-saldot är slut — dagskvot-403:n säger därför uttryckligen "daily
+    image cap" så spelaren inte tror att turnerna är slut (ärlig text,
+    oförändrat beteende). Körs strax innan själva genereringen."""
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if not isinstance(u, dict):
+            raise HTTPException(404, "Användare saknas")
+        today = _today_str()
+        if u.get("wan_reset_date") != today:
+            u["wan_used_today"] = 0
+            u["wan_reset_date"] = today
+        used = int(u.get("wan_used_today", 0) or 0)
+        if used >= WAN_DAILY_LIMIT:
+            raise HTTPException(403, (
+                f"Daily image cap reached: {WAN_DAILY_LIMIT} premium images/day. "
+                "This is the daily image limit — not your turn balance. "
+                "Image quota resets tomorrow (UTC)."
+            ))
+        u["wan_used_today"] = used + 1
+        save_users(users)
+    # Bilden räknas som en turn — kvot + turn-saldo måste räcka
+    _gate_turn_quota(username)
+    _consume_turn(username, action="image", model="wan")
+
+
+def _user_free_info(username: str) -> dict:
+    """FAS A: periodbaserad turn-info för /api/me (backfill + rollover applicerade)."""
+    udata = load_users().get(username, {})
+    if not isinstance(udata, dict):
+        udata = {}
+    udata = _ensure_user_fields(username, udata)
+    tier = _tier_for(username)
+    if tier != "lifetime":
+        udata = _maybe_rollover(username, udata)
+    # Färsk rad — demote/rollover kan ha skrivit users.json sedan vår första läsning
+    fresh = load_users().get(username)
+    if isinstance(fresh, dict):
+        udata = fresh
+    return {
+        "turns_used": int(udata.get("turns_used", 0) or 0),
+        "turn_bonus": int(udata.get("turn_bonus", 0) or 0),
+        "promo_bonus": int(udata.get("promo_bonus", 0) or 0),
+        # W3-M2: legacy-flagga för frontend-utfasning — promo-turns delas inte
+        # ut längre (borttagna 2026-09-06) men grandfatherade konton har kvar dem.
+        "promo_bonus_legacy": int(udata.get("promo_bonus", 0) or 0) > 0,
+        "reset_date": udata.get("reset_date"),
+        "reset_ts": udata.get("reset_ts"),
+        "subscription_status": tier,
+        "subscription_until": udata.get("subscription_until"),
+        "turns_available": _turns_available(username),
+        "period_hours": _period_hours_for(tier),
+        "features": {
+            "export": bool((udata.get("features") or {}).get("export")),
+            # 2026-10-01: "har någonsin betalat" — styr undo-knappens låsta läge
+            # och exporten. Alla konto-svar bär den (frontend läser den direkt).
+            "supporter": _is_supporter(username, udata),
+            "all_models": _tier_for(username) in ("tier2", "lifetime"),
+            "models_until": udata.get("models_until"),
+            # 2026-08-05 v2: hela förmånspaketet (Support+Patron) går ut på
+            # features_until — köpta turns behålls alltid (turn_bonus).
+            "features_until": _benefits_until(username, udata),
+            "benefits_active": _benefits_active(username, udata),
+            "wan1080": bool((udata.get("features") or {}).get("wan1080")) or _tier_for(username) == "lifetime",
+            "wan_used_today": int(udata.get("wan_used_today", 0) or 0),
+            "wan_daily_limit": WAN_DAILY_LIMIT,
+            "cap_until": udata.get("cap_until"),
+            "wan_reset_date": udata.get("wan_reset_date"),
+        },
+    }
+
+# Atmosfär-subagent: feature avstängd (default ändrad från borttagna
+# mimo-v2.5 → step-3.7-flash, 2026-09-21)
+ATMOSPHERE_ENABLED = os.getenv("ATMOSPHERE_ENABLED", "0") == "1"
+EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "step-3.7-flash")
+# Guardian: smartare modell för kontextmedveten mekanisk extraktion
+# (NPC-avslöjanden, implicita relationsändringar, karaktärsuppdateringar)
+GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "step-3.7-flash")
+
+# Standardmodell för icke-admin-spelare (DM + karaktär).
+# StepFun 3.7 Flash är default — spelaren måste aktivt välja annan modell.
+DEFAULT_PLAYER_MODEL = "step-3.7-flash"
+# Modeller som icke-admin-spelare får välja mellan
+# (2026-09-27, ny prissättning: qwen3.8-max + qwen3.7-plus BORT.
+#  2026-10-27: qwen3.6-flash + step-3.5-flash-2603 BORT (rostads beslut) —
+#  registret = 3 premium-DM (qwen3.8-flash, deepseek-v4.1-flash, step-5-preview)
+#  + 1 free (step-3.7-flash).)
+PLAYER_MODELS = ("qwen3.8-flash", "deepseek-v4.1-flash", "step-5-preview", "step-3.7-flash")
+
+# Gratisväljaren: free/tier1 får ENDAST step-3.7-flash.
+# Historik: 2026-09-09 öppnades Qwen 3.8 Flash för free tier; 2026-09-20 öppnades
+# Step 5 Preview; 2026-09-27 flyttades båda bakom 10€-unlåset och free blev
+# StepFun 3.7 + 3.5 flash. 2026-10-27 togs 3.5-flash-2603 bort ⇒ free = 3.7.
+FREE_PLAYER_MODELS = ("step-3.7-flash",)
+
+
+def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
+    """Icke-admin: tillåt bara PLAYER_MODELS (eller kända orfree:), annars default.
+
+    2026-09-27 (ny prissättning): free/tier1 = StepFun ENDAST —
+    även OpenRouter free-modeller (orfree:) ligger bakom 10€-unlåsningen.
+    2026-10-27: free = step-3.7-flash (den enda kvarvarande free-modellen).
+    tier2/lifetime (eller tier=None, t.ex. interna anrop) → allt i PLAYER_MODELS
+    + orfree:."""
+    if selfhost.enabled():
+        # Self-host build: the roster is the local Ollama server, nothing else.
+        if model_id.startswith("local:") or selfhost.is_ollama_id(model_id):
+            return model_id
+        return selfhost.default_model_id() or DEFAULT_PLAYER_MODEL
+    if model_id.startswith("local:"):
+        # 🏮 Local AI (relä): huset betalar 0 för DM-steget — tillåtet för ALLA
+        # tiers (ingen 10€-gate). Djupvalidering (regex/TTL/cap) sker i prepare.
+        return model_id
+    if tier in ("free", "tier1"):
+        return model_id if model_id in FREE_PLAYER_MODELS else DEFAULT_PLAYER_MODEL
+    if model_id.startswith("orfree:"):
+        from or_free import is_known_free
+        return model_id if is_known_free(model_id) else DEFAULT_PLAYER_MODEL
+    return model_id if model_id in PLAYER_MODELS else DEFAULT_PLAYER_MODEL
+
+
+def _validate_model_id(model_id: str) -> bool:
+    """True om modellen finns i registret, är en känd OpenRouter-free-modell
+    ELLER ett 🏮 local:-id (relä-validering sker i /api/chat/local/prepare)."""
+    if model_id.startswith("local:"):
+        return True
+    if model_id.startswith("orfree:"):
+        from or_free import is_known_free
+        return is_known_free(model_id)
+    try:
+        get_model(model_id)
+        return True
+    except ValueError:
+        return False
+
+
+def _house_guardian_model() -> str:
+    """JSON-safe fallback model for Guardian.
+
+    Hosted: the configured GUARDIAN_MODEL. Self-host build: there are no API
+    keys, so the fallback is the same local Ollama model the campaign plays on
+    — falling back to a cloud id would only 502 without a key.
+    """
+    if selfhost.enabled():
+        return selfhost.default_model_id() or GUARDIAN_MODEL
+    return GUARDIAN_MODEL
+
+
+def _house_extraction_model() -> str:
+    """Same as _house_guardian_model, for the extraction/background stack."""
+    if selfhost.enabled():
+        return selfhost.default_model_id() or EXTRACTION_MODEL
+    return EXTRACTION_MODEL
+
+
+def _guardian_model_for(state: dict) -> str:
+    """Per-kampanj Guardian-modell (admin kan välja vid kampanjskapande).
+
+    Fallback: global GUARDIAN_MODEL. Valideras mot modellregistret (samma
+    mönster som _extraction_model_for) så en borttagen modell — t.ex.
+    deepseek-v4-flash-0731 eller ollama:* (bortplockade 2026-09-21) — aldrig
+    kraschar Guardian med ValueError i get_model().
+    """
+    if selfhost.enabled():
+        return _house_guardian_model()
+    m = state.get("meta", {}).get("guardian_model") or GUARDIAN_MODEL
+    if m.startswith("orfree:"):
+        return m  # 🆓 OpenRouter free — inte i MODELS-registret, routas direkt i _call_llm
+    try:
+        get_model(m)
+    except ValueError:
+        m = GUARDIAN_MODEL
+    return m
+
+
+async def _guardian_call(state: dict, messages: list, usage_out: dict,
+                         temperature: float = 0.2, max_tokens: int = 4096,
+                         **kw) -> str:
+    """Anropa Guardian-modellen med JSON-fallback.
+
+    Vissa valbara modeller (t.ex. 🆓 OpenRouter free reasoning-modeller som
+    Nemotron 3.5 Lightning) pratar istället för att returnera JSON — de skriver
+    "Let me analyze this turn carefully…" som content och Guardian post-DM
+    misslyckas. Om svaret inte innehåller JSON-tecken { } alls, gör vi om
+    anropet med husets JSON-säkra GUARDIAN_MODEL.
+    """
+    model = _guardian_model_for(state)
+    _house = _house_guardian_model()
+    # ETT anrop som KASTAR (timeout, 5xx, tom leverantörsrespons) propagerade
+    # tidigare upp till extract_mechanics, som försökte igen med SAMMA modell
+    # och sedan returnerade en tom mall — mekaniken försvann helt utan spår i
+    # spelarens vy. hero2 2026-10-22 10:30–11:52: 12 turer (24 anrop à
+    # 180 s) där ingen attack registrerades. Husets modell ska alltid få en
+    # chans när den valda modellen kastar — samma regel som JSON-fallbacken.
+    try:
+        raw = await _call_llm(model, messages, temperature=temperature,
+                              max_tokens=max_tokens, usage_out=usage_out, **kw)
+    except Exception as exc:
+        if model == _house:
+            raise
+        logger.warning("🛡️ Guardian %s failed (%s) → retry with house model %s",
+                       model, exc or type(exc).__name__, _house)
+        raw = await _call_llm(_house, messages, temperature=temperature,
+                              max_tokens=max_tokens, usage_out=usage_out, **kw)
+    # JSON-look: svaret måste BÖRJA med { (eller markdown-fence). Räcker inte
+    # att det "innehåller" { } — Lightning citerar promptens JSON-exempel i
+    # sitt prat, vilket ger falskt positiv.
+    stripped = raw.lstrip()
+    if stripped.startswith("{") or stripped.startswith("```"):
+        return raw
+    if model != _house:
+        logger.warning("🛡️ Guardian %s gav ingen JSON → fallback till %s",
+                       model, _house)
+        raw = await _call_llm(_house, messages, temperature=temperature,
+                              max_tokens=max_tokens, usage_out=usage_out, **kw)
+    return raw
+
+
+def _extraction_model_for(state: dict) -> str:
+    """Per-kampanj extraction-modell (bakgrundsanrop: fakta, dagbok, summaries).
+
+    Fallback: global EXTRACTION_MODEL. Valideras mot modellregistret så en
+    borttagen modell aldrig kraschar bakgrundsstacken.
+    """
+    if selfhost.enabled():
+        return _house_extraction_model()
+    m = state.get("meta", {}).get("extraction_model") or EXTRACTION_MODEL
+    if m.startswith("orfree:"):
+        return m  # 🆓 OpenRouter free — inte i MODELS-registret, routas direkt i _call_llm
+    try:
+        get_model(m)
+    except ValueError:
+        m = EXTRACTION_MODEL
+    return m
+
+
+async def _extraction_call(state: dict, messages: list, usage_out: dict,
+                           temperature: float = 0.3, max_tokens: int = 300,
+                           **kw) -> str:
+    """Anropa extraction-modellen med JSON-fallback (samma mönster som
+    _guardian_call). Vissa valbara modeller (t.ex. Nemotron 3.5 Lightning)
+    pratar istället för att returnera JSON — då görs om med EXTRACTION_MODEL."""
+    model = _extraction_model_for(state)
+    _house = _house_extraction_model()
+    raw = await _call_llm(model, messages, temperature=temperature,
+                          max_tokens=max_tokens, usage_out=usage_out, **kw)
+    # JSON-look: svaret måste BÖRJA med { (eller markdown-fence). Se
+    # _guardian_call — Lightning citerar promptens JSON-exempel i sitt prat.
+    stripped = raw.lstrip()
+    if stripped.startswith("{") or stripped.startswith("```"):
+        return raw
+    if model != _house:
+        # Steg 1: retry EN gång på samma modell med sänkt temperatur (0.1) —
+        # pratiga reasoning-modeller ger oftast JSON när kreativiteten tas bort.
+        logger.warning("🧠 Extraction %s gav ingen JSON → retry temperature=0.1", model)
+        raw = await _call_llm(model, messages, temperature=0.1,
+                              max_tokens=max_tokens, usage_out=usage_out, **kw)
+        stripped = raw.lstrip()
+        if stripped.startswith("{") or stripped.startswith("```"):
+            return raw
+        # Steg 2: sista utvägen — husets extraction-modell.
+        logger.warning("🧠 Extraction %s gav ingen JSON även efter retry → fallback till %s",
+                       model, _house)
+        raw = await _call_llm(_house, messages, temperature=temperature,
+                              max_tokens=max_tokens, usage_out=usage_out, **kw)
+    return raw
+
+
+# ═══════════════════════════════════════
+# Pydantic-modeller
+# ═══════════════════════════════════════
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+    remember: bool = False  # "Keep me logged in" → 30 dagars session
+
+
+class ChatRequest(BaseModel):
+    message: str
+    model_id: str
+
+
+class LocalPrepareRequest(BaseModel):
+    message: str
+    model_id: str
+    num_ctx: int | None = None
+
+
+class LocalCommitRequest(BaseModel):
+    step_id: str
+    content: str
+    reasoning: str | None = None
+    tokens: int | None = None
+
+
+class CharacterRequest(BaseModel):
+    prompt: str
+    model_id: str
+
+
+class DiceRequest(BaseModel):
+    notation: str
+
+
+class CampaignCreateRequest(BaseModel):
+    name: str = ""
+    language: str = "en"
+    guardian_model: str = ""  # Admin kan välja Guardian-modell per kampanj
+    extraction_model: str = ""  # Spelare/admin väljer extraction-modell (bakgrund)
+
+
+class CampaignActivateRequest(BaseModel):
+    campaign_id: str
+
+
+class QuickstartRequest(BaseModel):
+    """Quick start: förberedd hjälte + in-medias-res-öppning, inget frågeformulär."""
+    hero: str = ""
+    language: str = "en"
+
+
+class SaveRequest(BaseModel):
+    description: str = ""
+
+
+class PinRequest(BaseModel):
+    fact: str
+
+
+class LoreRequest(BaseModel):
+    text: str
+
+
+class ChapterRequest(BaseModel):
+    title: str
+
+
+# ═══════════════════════════════════════
+# DM-svarsvalidering (Pydantic) + regelinjicering
+# ═══════════════════════════════════════
+
+
+class DMResponse(BaseModel):
+    """Validerad struktur för ett DM-svar efter taggparsning."""
+    narration: str
+    effects: list = []
+    roll_requests: list = []
+    valid: bool = True
+
+
+def validate_dm_response(
+    narration: str, effects: list, roll_requests: list, state: dict
+) -> tuple[DMResponse, list[str]]:
+    """
+    Validera mekaniken i ett DM-svar mot kampanjtillståndet.
+    Returnerar (DMResponse, lista_med_fel). Tom fellista = giltigt.
+
+    Kontroller:
+      - HP-förändringar (skada/hela) får inte överskrida max-HP
+      - XP måste vara positivt
+      - Föremålsnamn får inte vara tomma
+      - Questnamn får inte vara tomma
+    """
+    errors: list[str] = []
+    char = state.get("character", {})
+    hp = char.get("hp", {})
+    hp_max = hp.get("max", 10)
+    hp_current = hp.get("current", hp_max)
+
+    for fx in effects:
+        ftype = fx.get("type", "")
+        value = fx.get("value")
+        if ftype == "skada":
+            try:
+                amt = int(value)
+            except (TypeError, ValueError):
+                errors.append(f"Ogiltig skada: {value!r}")
+                continue
+            if amt > hp_max:
+                errors.append(f"Skada {amt} överstiger max-HP {hp_max}")
+        elif ftype == "hela":
+            try:
+                amt = int(value)
+            except (TypeError, ValueError):
+                errors.append(f"Ogiltig helande: {value!r}")
+                continue
+            if hp_current + amt > hp_max and amt > hp_max:
+                errors.append(f"Helande {amt} överstiger max-HP {hp_max}")
+        elif ftype == "xp":
+            try:
+                amt = int(value)
+            except (TypeError, ValueError):
+                errors.append(f"Ogiltig XP: {value!r}")
+                continue
+            if amt <= 0:
+                errors.append(f"XP måste vara positivt, fick {amt}")
+        elif ftype == "föremål":
+            if not value or not str(value).strip():
+                errors.append("Föremålsnamn får inte vara tomt")
+        elif ftype == "quest":
+            if not value or not str(value).strip():
+                errors.append("Questnamn får inte vara tomt")
+
+    dm_resp = DMResponse(
+        narration=narration,
+        effects=effects,
+        roll_requests=roll_requests,
+        valid=len(errors) == 0,
+    )
+    return dm_resp, errors
+
+
+def _strip_mechanical_tags(text: str) -> str:
+    """Ta bort alla mekaniska taggar ur text (används vid förkastande av trasig mekanik)."""
+    clean = text
+    for pattern in _MECH_PATTERNS.values():
+        clean = pattern.sub("", clean)
+    return re.sub(r"\n{3,}", "\n\n", clean).strip()
+
+
+# ── Per-turs regelinjicering (D&D 5e) ──
+
+RULES_DB: dict[str, str] = {
+    "attack": "ATTACK: Slå 1d20 + attackmodifierare (STY/SMI) mot målets AC. Träff → skada. Naturlig 20 = kritisk träff (dubbla skadetärningar), naturlig 1 = automatisk miss.",
+    "sneak": "SMYGNING: Slå 1d20 + Smidighet (Smygning) mot fiendernas passiva Perception (10 + Perception-mod). Lyckas = du är osedd och kan få överraskning/fördel.",
+    "climb": "KLÄTTRING: Slå 1d20 + Styrka (Atletik) mot en DC satt av DM (typiskt DC 10–15 för klättring). Misslyckande = fall eller ingen framgång.",
+    "jump": "HOPP: Styrka (Atletik)-slag för långt/högt hopp utöver normal räckvidd. Långt hopp = 3 + STY-mod i fot, högt = 3 + STY-mod halverat i fot.",
+    "persuade": "ÖVERTALNING: Slå 1d20 + Karisma (Övertalning) mot målets Insight eller en DC. Lyckas = NPC:n går med på rimlig begäran.",
+    "deceive": "VILSELEDANDE: Slå 1d20 + Karisma (Vilseledande) mot målets Insight. Lyckas = målet tror på lögnen.",
+    "search": "SÖKANDE/UNDERSÖKA: Slå 1d20 + Intelligens (Undersökning) mot en DC. Hittar dolda detaljer, ledtrådar och mekanismer.",
+    "trap": "FÄLLA: Oftast ett Smidighets-räddningsslag (1d20 + SMI-mod) mot fällans DC. Lyckas = halv eller ingen skada.",
+    "poison": "GIFT: Vanligtvis ett Kondition-räddningsslag (1d20 + KON-mod) mot giftets DC. Misslyckande = skada eller tillstånd (förgiftad).",
+    "spell": "BESVÄRJELSE: Magiska attacker slår 1d20 + besvärjelsemodifierare mot AC, ELLER så gör målet ett räddningsslag mot din Spell Save DC (8 + prof + besvärjelse-mod).",
+    "rest": "VILA: Kort vila (1h) → återfå HP via Hit Dice. Lång vila (8h) → full HP + återfå Hit Dice (upp till halva totalen).",
+    "death_save": "DÖDSRÄDDNING: Vid 0 HP, slå 1d20 varje tur. 10+ = framgång, <10 = misslyckande. 3 framgångar = stabil, 3 misslyckanden = död. Naturlig 1 = 2 misslyckanden, naturlig 20 = vakna med 1 HP.",
+    "surprise": "ÖVERRASKNING: Om en sida inte märker den andra får de en överraskningsrunda — de överraskade kan inte röra sig eller agera första rundan.",
+    "cover": "SKYDD: Halvt skydd = +2 AC & SMI-räddningar. Tre fjärdedels skydd = +5. Fullt skydd = kan inte träffas direkt.",
+    "condition": "TILLSTÅND: Vanliga: Liggande (prone) — nackdel på attacker, attacker inom 5 fot har fördel. Bedövad (stunned) — kan inte agera, attacker har fördel mot dig. Förgiftad — nackdel på attacker & förmågeslag.",
+}
+
+
+def inject_rules(player_input: str) -> str:
+    """
+    Extrahera nyckelord ur spelarens meddelande, matcha mot RULES_DB
+    och returnera de 3 mest relevanta reglerna som formaterad sträng.
+    """
+    if not player_input:
+        return ""
+
+    text = player_input.lower()
+
+    # Nyckelordsgrupper — svenska/engelska termer som mappar till RULES_DB-nycklar
+    keyword_map = {
+        "attack": ["attack", "attackerar", "slår", "hugger", "skjuter", "strid", "svärd", "vapen", "pil", "skott"],
+        "sneak": ["smyg", "smyger", "smyga", "ljudlös", "gömma", "gömmer", "osynlig", "lönn"],
+        "climb": ["klättr", "klättrar", "klättra", "vägg", "berg", "upp för"],
+        "jump": ["hopp", "hoppar", "hoppa", "hoppa över", "klyfta", "avgrund"],
+        "persuade": ["övertal", "övertyga", "förhandla", "charma", "charm", "diplomati"],
+        "deceive": ["lura", "ljug", "lögn", "bedra", "vilseled", "fejka", "bluff"],
+        "search": ["sök", "söker", "undersök", "leta", "letar", "granska", "genomsök", "rotar"],
+        "trap": ["fälla", "fällor", "snara", "mekanism", "utlösare"],
+        "poison": ["gift", "giftig", "förgift", "motgift", "dryck"],
+        "spell": ["besvärjelse", "magi", "troll", "trollformel", "kasta en besvärjelse", "eldklot", "mana"],
+        "rest": ["vila", "vilar", "sova", "sömn", "läger", "rast"],
+        "death_save": ["döende", "dör", "medvetslös", "blöder ut", "0 hp", "nära döden"],
+        "surprise": ["överrask", "överfall", "bakhåll", "smygattack", "överrumpla"],
+        "cover": ["skydd", "täckning", "gömmer sig bakom", "mur", "sköld", "barrikad"],
+        "condition": ["knuffa", "vält", "bedöva", "förlama", "skräck", "förblinda", "liggande"],
+    }
+
+    scores: dict[str, int] = {}
+    for rule_key, words in keyword_map.items():
+        for w in words:
+            if w in text:
+                scores[rule_key] = scores.get(rule_key, 0) + 1
+
+    if not scores:
+        return ""
+
+    # Sortera efter poäng (fallande), ta topp 3
+    top = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:3]
+    lines = [f"- {RULES_DB[key]}" for key, _ in top if key in RULES_DB]
+    if not lines:
+        return ""
+    return "\n".join(lines)
+
+
+# ═══════════════════════════════════════
+# Auth-hjälp
+# ═══════════════════════════════════════
+
+
+def _get_current_user(morkrets_token: str | None) -> dict:
+    """Validera cookie → returnerar {sub, role}. 401 om ogiltig."""
+    if not morkrets_token:
+        raise HTTPException(401, "Ej inloggad")
+    payload = verify_token(morkrets_token)
+    if not payload:
+        raise HTTPException(401, "Ogiltig eller utgången session")
+    # Sätt loggkontext för denna request — ärvs av asyncio.create_task-uppgifter.
+    username = payload["sub"]
+    try:
+        active_cid = store._get_active_pointer(username)
+    except Exception:
+        active_cid = None
+    _LOG_CTX.set({"user": username, "campaign": active_cid})
+    return payload
+
+
+# ═══════════════════════════════════════
+# LLM-anrop (OpenAI-kompatibelt via httpx)
+# ═══════════════════════════════════════
+
+
+async def _call_llm(
+    model_id: str,
+    messages: list[dict],
+    temperature: float = 0.8,
+    max_tokens: int = 1024,
+    timeout: float = 180,
+    reasoning_effort: str | None = None,
+    thinking_cap: int = 16000,
+    thinking: str | None = None,
+    usage_out: dict | None = None,
+) -> str:
+    """Anropa vald modell via OpenAI-kompatibelt /chat/completions.
+    Reasoning-modeller (deepseek-v4-flash) behöver högre max_tokens
+    eftersom de tänker innan de svarar. `timeout` sänks för icke-kritiska
+    anrop (t.ex. ASCII-art) så de aldrig blockerar spelupplevelsen.
+
+    thinking="disabled" stänger av resonemang för modeller som stöder det
+    (DeepSeek: {"thinking":{"type":"disabled"}}). KRITISKT för strukturerade
+    JSON-anrop — annars bränner reasoning-modellen hela tokenbudgeten på
+    reasoning och lämnar content tomt → _extract_json hittar ingen JSON → 502.
+
+    usage_out: valfri dict — fylls med {"prompt_tokens", "completion_tokens",
+    "total_tokens"} från API-svaret. Används för att spåra Guardian-tokens."""
+    # 🏮 local:* = relä-modeller (spelarens egen Ollama). SERVERN får ALDRIG
+    # anropa dem — de routas via /api/chat/local/prepare+commit. Hårdavvisning
+    # som defence-in-depth om någon code-path glömmer borttagningen.
+    if model_id.startswith("local:"):
+        raise HTTPException(500, "local model routed to relay")
+    # Self-host build: there is no cloud provider to fall back on, so ANY
+    # non-ollama id (an old campaign's meta, a stale frontend, an orfree: pick)
+    # is answered by the local model instead of failing without an API key.
+    if selfhost.enabled() and not selfhost.is_ollama_id(model_id):
+        model_id = selfhost.default_model_id() or model_id
+    # 🆓 OpenRouter free models: route to or_free.chat_free() BEFORE the
+    # MODELS-registry lookup (orfree:* ids are not in MODELS).
+    if model_id.startswith("orfree:"):
+        from or_free import chat_free
+        return (await chat_free(model_id, messages, max_tokens=max_tokens,
+                                 temperature=temperature, timeout=timeout))[0]
+    config = get_model(model_id)
+    api_key = get_api_key(config)
+
+    # Reasoning-modeller behöver mer utrymme (thinking + content)
+    if config.api_model in ("deepseek-v4.1-flash", "step-3.7-flash", "step-5-preview"):
+        max_tokens = max(max_tokens, 2048)
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    body = {
+        "model": config.api_model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+
+    # DeepSeek: stäng av thinking för strukturerade anrop (JSON-extraktion etc.)
+    # — annars hamnar allt i reasoning_content och content blir tomt/trunkerat.
+    # DeepSeek V4-docs: {"thinking": {"type": "enabled/disabled"}} (OpenAI-format).
+    if thinking == "disabled" and config.provider == "deepseek":
+        body["thinking"] = {"type": "disabled"}
+
+    # StepFun 3.7 Flash: debiterar per prompt, inte per token → high överallt.
+    # High reasoning kräver stor tokenbudget (tanke + svar).
+    # OBS: StepFun räknar reasoning-tokens MOT max_tokens-budgeten. Vid liten
+    # budget kan tänkandet äta allt → finish=length → JSON trunkeras
+    # (intermittent fail i karaktärsgenerering). 32768 ger marginal — och är
+    # gratis eftersom StepFun debiterar per prompt, inte per token.
+    # Step 5 Preview är TOKENDEBITERAT ($1.00/$2.70 per 1M) — 32768 var en
+    # gratishetsrabatt för 3.7. Håll budgeten generös men rimlig: 16392 täcker
+    # tanke + svar för både DM-narration och JSON-extraktion (verifierat live:
+    # reasoning ~2.5k + content ~0.5k på en DM-prompt).
+    if config.api_model in ("step-3.7-flash",):
+        body["reasoning_effort"] = reasoning_effort or "high"
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 32768)
+    elif config.api_model == "step-5-preview":
+        body["reasoning_effort"] = reasoning_effort or "high"
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 16392)
+
+    # DeepSeek V4: skicka reasoning_effort om anroparen vill styra (low/high/max).
+    # Guardian kör t.ex. reasoning_effort="low" för snabbare JSON-extraktion.
+    if config.provider == "deepseek" and reasoning_effort:
+        body["reasoning_effort"] = reasoning_effort
+
+    # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med
+    # utrymme så modellen kan tänka fritt OCH leverera svaret.
+    # qwen3.8-flash/qwen3.6-flash stödjer enable_thinking —
+    # tänker som default, parametern accepteras i båda riktningarna.
+    if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
+        if thinking == "disabled" or reasoning_effort == "off":
+            body["enable_thinking"] = False
+        else:
+            # Thinking på → rejäl budget (tanke + svar)
+            body["max_tokens"] = max(body.get("max_tokens", 1024), thinking_cap)
+
+    url = f"{config.base_url.rstrip('/')}/chat/completions"
+
+    logger.debug("🤖 LLM call: model=%s (%s), max_tokens=%d, temp=%.1f", model_id, config.api_model, body.get("max_tokens", max_tokens), temperature)
+    _llm_t0 = time.time()
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(url, headers=headers, json=body)
+        if resp.status_code != 200:
+            logger.error("🤖 LLM error: model=%s (%s) → HTTP %d", model_id, config.api_model, resp.status_code)
+            raise HTTPException(
+                502, f"LLM-fel ({resp.status_code}): {resp.text[:300]}"
+            )
+        data = resp.json()
+        # Fånga token-användning om anroparen vill ha den
+        if usage_out is not None:
+            u = data.get("usage", {})
+            usage_out["prompt_tokens"] = u.get("prompt_tokens", 0)
+            usage_out["completion_tokens"] = u.get("completion_tokens", 0)
+            usage_out["total_tokens"] = u.get("total_tokens", 0)
+        content = data["choices"][0]["message"].get("content", "")
+        _llm_elapsed = time.time() - _llm_t0
+        if not content:
+            # Reasoning-modeller (StepFun, DeepSeek) kan lägga svaret i
+            # reasoning/reasoning_content och lämna content tomt.
+            msg = data["choices"][0]["message"]
+            reasoning = msg.get("reasoning") or msg.get("reasoning_content") or ""
+            if reasoning:
+                logger.info(
+                    "🧠 %s: empty content → using reasoning (%d chars, %.1fs)",
+                    config.api_model, len(reasoning), _llm_elapsed,
+                )
+                return reasoning
+            logger.warning("🧠 %s returned completely empty response (%.1fs)", config.api_model, _llm_elapsed)
+            return ""
+        u = data.get("usage", {})
+        logger.info("🤖 LLM done: model=%s, %d tkn in / %d tkn out (%.1fs)", config.api_model, u.get("prompt_tokens", 0), u.get("completion_tokens", 0), _llm_elapsed)
+        return content
+
+
+async def _call_llm_with_reasoning(
+    model_id: str,
+    messages: list[dict],
+    temperature: float = 0.8,
+    max_tokens: int = 1024,
+    timeout: float = 180,
+) -> tuple[str, str, dict]:
+    """Som _call_llm men fångar även reasoning-modellens inre monolog
+    (reasoning_content). Returnerar (content, reasoning, usage). Används för
+    huvud-DM-anropet så spelaren kan se hur DM:n resonerar."""
+    # 🏮 local:* = relä-modeller — servern anropar dem ALDRIG (se _call_llm).
+    if model_id.startswith("local:"):
+        raise HTTPException(500, "local model routed to relay")
+    # Self-host build: there is no cloud provider to fall back on, so ANY
+    # non-ollama id (an old campaign's meta, a stale frontend, an orfree: pick)
+    # is answered by the local model instead of failing without an API key.
+    if selfhost.enabled() and not selfhost.is_ollama_id(model_id):
+        model_id = selfhost.default_model_id() or model_id
+    # 🆓 OpenRouter free models: route to or_free.chat_free() (returns the
+    # (content, reasoning, usage) tuple this function promises).
+    if model_id.startswith("orfree:"):
+        from or_free import chat_free
+        return await chat_free(model_id, messages, max_tokens=max_tokens,
+                                temperature=temperature, timeout=timeout)
+    config = get_model(model_id)
+    api_key = get_api_key(config)
+
+    # 2026-08-05 "full mind"-policy (rostad): DM-vägen får ALLTID maximal
+    # tokenbudget + hög reasoning — det är vår nisch (fullstora modeller,
+    # inget kvantiserat, inget nerkapat, inga konstgjorda rate limits på
+    # tänkandet). Latens accepteras medvetet.
+    reasoning_effort_override: str | None = None
+    if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
+        # Qwen3: thinking PÅ som standard — generös budget (tanke + svar)
+        max_tokens = max(max_tokens, 16000)
+    elif config.api_model == "step-3.7-flash":
+        # StepFun debiterar per prompt, inte per token → fri maximal budget
+        max_tokens = max(max_tokens, 32768)
+        reasoning_effort_override = "high"
+    elif config.api_model == "step-5-preview":
+        # Step 5 Preview är tokendebitterat ($1.00/$2.70 per 1M) — 16392 räcker
+        # för tanke + svar på en DM-narration (verifierat live: ~2.5k + ~0.5k).
+        max_tokens = max(max_tokens, 16392)
+        reasoning_effort_override = "high"
+    elif config.provider == "deepseek":
+        max_tokens = max(max_tokens, 8192)
+        reasoning_effort_override = "high"
+    else:
+        max_tokens = max(max_tokens, 8192)
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    body = {
+        "model": config.api_model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+
+    if reasoning_effort_override:
+        body["reasoning_effort"] = reasoning_effort_override
+
+    url = f"{config.base_url.rstrip('/')}/chat/completions"
+
+    logger.debug("🤖 LLM call (reasoning): model=%s (%s), max_tokens=%d, temp=%.1f", model_id, config.api_model, body.get("max_tokens", max_tokens), temperature)
+    _llm_t0 = time.time()
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(url, headers=headers, json=body)
+        if resp.status_code != 200:
+            logger.error("🤖 LLM error (reasoning): model=%s (%s) → HTTP %d", model_id, config.api_model, resp.status_code)
+            raise HTTPException(
+                502, f"LLM-fel ({resp.status_code}): {resp.text[:300]}"
+            )
+        data = resp.json()
+        message = data["choices"][0]["message"]
+        content = message.get("content", "")
+        reasoning = (message.get("reasoning_content") or "").strip()
+        _llm_elapsed = time.time() - _llm_t0
+        if not content:
+            # Reasoning-modellen kan ha förbrukat hela budgeten på thinking och
+            # lämnat content tomt. Försök en gång till med en tydlig uppmaning
+            # att skriva svaret som prosa — annars blir det en tyst 502.
+            retry_messages = list(messages) + [
+                {"role": "user", "content": "[System] Skriv nu ditt svar som ren prosa — minst en mening. Börja direkt med svaret."}
+            ]
+            retry_body = dict(body)
+            retry_body["messages"] = retry_messages
+            retry_body["max_tokens"] = max(max_tokens, 2048)
+            logger.warning("🧠 %s: empty content (%d chars reasoning) → retrying", config.api_model, len(reasoning))
+            async with httpx.AsyncClient(timeout=timeout) as rclient:
+                rresp = await rclient.post(url, headers=headers, json=retry_body)
+                if rresp.status_code == 200:
+                    rdata = rresp.json()
+                    rcontent = (rdata["choices"][0]["message"].get("content") or "").strip()
+                    if rcontent:
+                        logger.info("🧠 %s: retry succeeded (%d chars, %.1fs)", config.api_model, len(rcontent), time.time() - _llm_t0)
+                        return rcontent, reasoning, rdata.get("usage", {})
+            raise RuntimeError(
+                "Modellen returnerade tomt svar (även efter retry)"
+            )
+        u = data.get("usage", {})
+        logger.info("🤖 LLM done (reasoning): model=%s, %d tkn in / %d tkn out, %d chars reasoning (%.1fs)", config.api_model, u.get("prompt_tokens", 0), u.get("completion_tokens", 0), len(reasoning), _llm_elapsed)
+        return content, reasoning, data.get("usage", {})
+
+
+async def _stream_llm(
+    model_id: str,
+    messages: list[dict],
+    temperature: float = 0.8,
+    max_tokens: int = 1024,
+    timeout: float = 300,
+    reasoning_effort: str | None = None,
+    thinking_cap: int = 16000,
+    thinking: str | None = None,
+) -> AsyncGenerator[tuple[str, str, dict | None], None]:
+    """Strömmande variant av _call_llm. Yieldar (reasoning_delta, content_delta,
+    usage_or_none) allt eftersom modellen genererar — reasoning-content visas LIVE
+    i frontend (karaktärsskapande-summoning). Sista yielden bär usage (tokens)
+    om providern rapporterar det (stream_options.include_usage). Samma
+    provider-routing som _call_llm: qwen3-modeller tänker som standard
+    (enable_thinking kan stängas av explicit)."""
+    # 🏮 local:* = relä-modeller — servern anropar dem ALDRIG (se _call_llm).
+    if model_id.startswith("local:"):
+        raise HTTPException(500, "local model routed to relay")
+    # Self-host build: there is no cloud provider to fall back on, so ANY
+    # non-ollama id (an old campaign's meta, a stale frontend, an orfree: pick)
+    # is answered by the local model instead of failing without an API key.
+    if selfhost.enabled() and not selfhost.is_ollama_id(model_id):
+        model_id = selfhost.default_model_id() or model_id
+    # 🆓 OpenRouter free-modeller (orfree:*) finns inte i MODELS-registret —
+    # delegera till or_free.chat_free_stream (streaming, reasoning=low tvingat).
+    if model_id.startswith("orfree:"):
+        from or_free import chat_free_stream
+        async for r_delta, c_delta, u in chat_free_stream(
+            model_id, messages,
+            max_tokens=max(max_tokens, 2048),
+            temperature=temperature,
+            timeout=timeout,
+        ):
+            yield r_delta, c_delta, u
+        return
+    config = get_model(model_id)
+    api_key = get_api_key(config)
+
+    # Reasoning-modeller behöver mer utrymme (thinking + content)
+    if config.api_model in ("deepseek-v4.1-flash", "step-3.7-flash", "step-5-preview"):
+        max_tokens = max(max_tokens, 2048)
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    body = {
+        "model": config.api_model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+        "stream_options": {"include_usage": True},
+    }
+
+    # DeepSeek: stäng av thinking för strukturerade anrop
+    if thinking == "disabled" and config.provider == "deepseek":
+        body["thinking"] = {"type": "disabled"}
+
+    # StepFun 3.7 Flash: debiterar per prompt → high överallt.
+    # OBS: StepFun räknar reasoning-tokens MOT max_tokens. Vid liten budget kan
+    # tänkandet äta allt → finish=length → JSON trunkeras (intermittent fail i
+    # karaktärsgenerering). 32768 ger marginal — gratis (debiterar per prompt).
+    if config.api_model in ("step-3.7-flash",):
+        body["reasoning_effort"] = reasoning_effort or "high"
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 32768)
+    elif config.api_model == "step-5-preview":
+        # Tokendebiterat — 16392 räcker (reasoning ~2.5k + svar på en DM-prompt).
+        body["reasoning_effort"] = reasoning_effort or "high"
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 16392)
+
+    # DeepSeek V4: reasoning_effort om anroparen vill styra
+    if config.provider == "deepseek" and reasoning_effort:
+        body["reasoning_effort"] = reasoning_effort
+
+    # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med utrymme.
+    # qwen3.8-flash/qwen3.6-flash stödjer enable_thinking i båda riktningarna.
+    if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
+        if thinking == "disabled" or reasoning_effort == "off":
+            body["enable_thinking"] = False
+        else:
+            # Thinking på → rejäl budget (tanke + svar)
+            body["max_tokens"] = max(body.get("max_tokens", 1024), thinking_cap)
+
+    url = f"{config.base_url.rstrip('/')}/chat/completions"
+
+    logger.debug("🤖 LLM stream: model=%s (%s), max_tokens=%d, temp=%.1f", model_id, config.api_model, body.get("max_tokens", max_tokens), temperature)
+    _llm_t0 = time.time()
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        async with client.stream("POST", url, headers=headers, json=body) as resp:
+            if resp.status_code != 200:
+                err_body = (await resp.aread()).decode(errors="replace")
+                logger.error("🤖 LLM stream error: model=%s (%s) → HTTP %d", model_id, config.api_model, resp.status_code)
+                raise HTTPException(
+                    502, f"LLM-fel ({resp.status_code}): {err_body[:300]}"
+                )
+            usage: dict | None = None
+            async for line in resp.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                payload = line[6:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    d = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                if d.get("usage"):
+                    usage = d["usage"]
+                ch = (d.get("choices") or [{}])[0]
+                delta = ch.get("delta") or {}
+                r = delta.get("reasoning_content") or ""
+                c = delta.get("content") or ""
+                if r or c:
+                    yield r, c, None
+            # Sista yielden bär usage (tokens) om providern rapporterade det
+            _elapsed = time.time() - _llm_t0
+            if usage:
+                logger.info("🤖 LLM stream done: model=%s, %d tkn in / %d tkn out (%.1fs)", config.api_model, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0), _elapsed)
+            else:
+                logger.info("🤖 LLM stream done: model=%s, no usage reported (%.1fs)", config.api_model, _elapsed)
+            yield "", "", usage
+
+
+def _extract_json(text: str) -> dict:
+    """Extrahera JSON från LLM-svar (kan vara inbäddat i markdown eller reasoning-taggar)."""
+    if not text or not text.strip():
+        raise ValueError("Tomt svar från modellen")
+
+    # Ta bort reasoning-taggar (deepseek-v4-flash: <think>, Qwen3: )
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE).strip()
+    text = re.sub(r"", "", text, flags=re.DOTALL | re.IGNORECASE).strip()
+
+    # Prova direkt
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # Prova ```json ... ``` block
+    m = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
+    if m:
+        try:
+            return json.loads(m.group(1))
+        except json.JSONDecodeError:
+            pass
+    # Hitta första { ... } (balanserat)
+    start = text.find("{")
+    if start != -1:
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start : i + 1])
+                    except json.JSONDecodeError:
+                        break
+    # Fallback: första { till sista }
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        try:
+            return json.loads(text[start : end + 1])
+        except json.JSONDecodeError:
+            pass
+    raise ValueError("Kunde inte extrahera JSON ur LLM-svaret")
+
+
+def _parse_threads(raw: str, turn_count: int) -> list[dict]:
+    """Parsa ACTIVE THREADS-array ur LLM-svar. Tolerant: accept JSON-array
+    direkt eller inbäddad i en dict ({"threads": [...]}). Returnerar
+    normaliserade trådar: {name, status, last_turn, summary} (max 5)."""
+    if not raw or not raw.strip():
+        return []
+    text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL | re.IGNORECASE).strip()
+    # Prova direkt som lista
+    arr = None
+    try:
+        parsed = json.loads(text)
+        arr = parsed if isinstance(parsed, list) else parsed.get("threads")
+    except json.JSONDecodeError:
+        arr = None
+    if not isinstance(arr, list):
+        # Inbäddad i ```json ... ``` eller hitta [ ... ]
+        m = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
+        if m:
+            try:
+                parsed = json.loads(m.group(1))
+                arr = parsed if isinstance(parsed, list) else parsed.get("threads")
+            except json.JSONDecodeError:
+                arr = None
+    if not isinstance(arr, list):
+        return []
+    out = []
+    for t in arr[:5]:
+        if not isinstance(t, dict):
+            continue
+        name = str(t.get("name") or t.get("tråd") or "").strip()[:60]
+        if not name:
+            continue
+        status = str(t.get("status") or "active").strip()[:16]
+        summary = str(t.get("summary") or t.get("kort") or "").strip()[:140]
+        last = t.get("last_turn") or t.get("turn") or turn_count
+        try:
+            last = int(last)
+        except (TypeError, ValueError):
+            last = turn_count
+        out.append({"name": name, "status": status, "last_turn": last, "summary": summary})
+    return out
+
+
+# ═══════════════════════════════════════
+# AUTH ENDPOINTS
+# ═══════════════════════════════════════
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    email: str | None = None
+
+
+def _set_auth_cookie(response: Response, token: str, max_age: int = 86400) -> None:
+    # Sessionslängd (2026-08-07): default 24h; "Keep me logged in" → 30 dagar.
+    # Cookie-max_age matchar JWT-expiry (auth.create_token).
+    # secure (2026-08-04, security audit P1): sätts via COOKIE_SECURE=1 i
+    # docker-compose (prod körs enbart bakom HTTPS). Default av — TestClient
+    # och lokal http-dev vägrar annars spara Secure-cookies.
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=_COOKIE_SECURE,
+        max_age=max_age,
+        samesite="lax",
+        path="/",
+    )
+
+
+@app.post("/api/register")
+async def register(req: RegisterRequest, response: Response, request: Request):
+    """Skapa ett spelarkonto (publik självregistrering). Iteration 1:
+    ingen SMTP/verifiering — direkt inloggning. Dublettskydd + validering."""
+    username = normalize_username(req.username)
+
+    err = validate_username(username)
+    if err:
+        raise HTTPException(400, err)
+    err = validate_password(req.password)
+    if err:
+        raise HTTPException(400, err)
+    email = (req.email or "").strip().lower()
+    if email and ("@" not in email or "." not in email.split("@")[-1] or len(email) > 120):
+        raise HTTPException(400, "That email does not look right.")
+    if not _register_allowed():
+        raise HTTPException(429, "Too many new adventurers right now — try again in about an hour.")
+
+    # IP-lås BORTTAGET (rostad 2026-08-06): tidigare blockerade vi mer än
+    # ett konto per publik IP här. reg_ip loggas fortfarande nedan för
+    # statistik, men ingen registrering stoppas längre av IP-skäl.
+    reg_ip = iplog.client_ip(request)
+
+    with _USER_LOCK:
+        users = load_users()
+        if username in users:
+            raise HTTPException(409, "That name is already taken — try another, or log in if it's yours.")
+
+        users[username] = {
+            "password_hash": hash_password(req.password),
+            "role": "player",
+            "created_at": _now_iso(),
+            "last_login": _now_iso(),
+            "turn_cap": DEFAULT_TURN_CAP,
+            # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
+            "turns_used": 0,
+            # Intro-promon borttagen 2026-09-06: nya konton får 0 promo.
+            # promo_bonus finns kvar som LEGACY-fält — befintliga konton som
+            # har oprövade intro-turns kvar spenderar dem (promo → cap → köpta).
+            "promo_bonus": 0,
+            "turn_bonus": 0,
+            "reset_date": _today_str(),
+            "subscription_status": "free",
+            "subscription_until": None,
+            "features": {},
+            "wan_used_today": 0,
+            "wan_reset_date": None,
+        }
+        if email:
+            users[username]["email"] = email
+        save_users(users)
+
+    if reg_ip:
+        iplog.record_ip(username, reg_ip)
+    token = create_token(username, "player")
+    _set_auth_cookie(response, token)
+    logger.info("✨ New account: %s", username)
+    return {"ok": True, "username": username, "role": "player", "created": True}
+
+
+class PasswordResetRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/api/auth/reset-password")
+async def reset_password(req: PasswordResetRequest, response: Response):
+    """Återställ lösenord för konton UTAN e-post (direkt-flödet).
+
+    Härdat 2026-08-04 (security audit, P0):
+      - admin-konton kan ALDRIG återställas via denna öppna endpoint
+      - konton med e-post dirigeras till e-postflödet (request-reset)
+      - per-användare rate limit (5 min) mot brute force
+    """
+    username = normalize_username(req.username)
+
+    err = validate_username(username)
+    if err:
+        raise HTTPException(400, err)
+    err = validate_password(req.password)
+    if err:
+        raise HTTPException(400, err)
+
+    now = datetime.now(timezone.utc)
+    with _USER_LOCK:
+        # Rate limit (per användare) — samma fönster som e-postflödet.
+        last = _DIRECT_RESET_TIMES.get(username)
+        if last and now - last < RESET_RATE_LIMIT:
+            raise HTTPException(429, "A raven is already on its way. Wait a few minutes.")
+        _DIRECT_RESET_TIMES[username] = now
+        # Trimma gamla poster så dict inte växer utan gräns.
+        stale = [u for u, t in _DIRECT_RESET_TIMES.items() if now - t > timedelta(hours=1)]
+        for u in stale:
+            _DIRECT_RESET_TIMES.pop(u, None)
+
+        users = load_users()
+        udata = users.get(username)
+        if not isinstance(udata, dict):
+            raise HTTPException(404, "No adventurer by that name. Check the spelling.")
+        # Security (2026-08-04): admin kan bara återställas från servern.
+        if udata.get("role") == "admin":
+            raise HTTPException(403, "Admin accounts are reset from the server only.")
+        # Konton med e-post ska använda reset-länken (request-reset).
+        if (udata.get("email") or "").strip():
+            raise HTTPException(403, "This account uses email-based reset — request a reset link instead.")
+
+        users[username]["password_hash"] = hash_password(req.password)
+        users[username]["last_login"] = _now_iso()
+        save_users(users)
+
+    token = create_token(username, users[username].get("role", "player"))
+    _set_auth_cookie(response, token)
+    logger.info("🔑 Password reset: %s", username)
+    return {"ok": True, "username": username, "role": users[username].get("role", "player")}
+
+
+@app.post("/api/login")
+async def login(req: LoginRequest, response: Response):
+    username = normalize_username(req.username)
+    # ── Brute-force-lås (2026-08-04, security audit P1): 10 misslyckade
+    # försök inom 5 min → 429. Per användarnamn (proxy/IP-säkert). ──
+    now = datetime.now(timezone.utc)
+    fails = [t for t in _LOGIN_FAILS.get(username, []) if now - t < _LOGIN_FAIL_WINDOW]
+    if len(fails) >= _LOGIN_FAIL_MAX:
+        raise HTTPException(429, "Too many login attempts. Wait a few minutes.")
+    _LOGIN_FAILS[username] = fails
+    with _USER_LOCK:
+        users = load_users()
+        user = users.get(username)
+        if not user or not isinstance(user, dict) or not verify_password(req.password, user["password_hash"]):
+            _LOGIN_FAILS.setdefault(username, []).append(now)
+            # Trimma gamla poster så dict inte växer utan gräns.
+            _LOGIN_FAILS[username] = [t for t in _LOGIN_FAILS[username] if now - t < timedelta(hours=1)]
+            raise HTTPException(401, "Fel användarnamn eller lösenord")
+        _LOGIN_FAILS.pop(username, None)
+        # Om gamla konton saknar fält — backfilla utan att krascha
+        user.setdefault("created_at", _now_iso())
+        user["last_login"] = _now_iso()
+        user.setdefault("turn_cap", 0)
+        save_users(users)
+
+    token = create_token(username, user["role"], keep_logged_in=bool(req.remember))
+    # "Keep me logged in" → cookie + JWT i 30 dagar (matchar auth.py).
+    _max_age = KEEP_LOGGED_IN_DAYS * 86400 if req.remember else 86400
+    _set_auth_cookie(response, token, max_age=_max_age)
+    return {"ok": True, "username": username, "role": user["role"]}
+
+
+class RequestResetRequest(BaseModel):
+    username: str
+
+
+class ResetWithTokenRequest(BaseModel):
+    token: str
+    password: str
+
+
+RESET_TOKEN_TTL = timedelta(minutes=30)
+RESET_RATE_LIMIT = timedelta(minutes=5)
+# In-memory rate limit för direkt-flödet (reset-password) — per användarnamn.
+_DIRECT_RESET_TIMES: dict[str, datetime] = {}
+# Brute-force-lås för /api/login: per användarnamn, 10 misslyckade / 5 min → 429.
+_LOGIN_FAILS: dict[str, list] = {}
+_LOGIN_FAIL_WINDOW = timedelta(minutes=5)
+_LOGIN_FAIL_MAX = 10
+
+
+@app.post("/api/auth/request-reset")
+async def request_reset(req: RequestResetRequest):
+    """Skicka en engångs-återställningslänk till kontots e-post (om det finns).
+
+    Svaret är ALLTID ok:true — vi avslöjar inte vilka konton som har e-post.
+    Konton utan e-post använder det gamla direkt-flödet (reset-password).
+    Länken skrivs som en outbox-fil som hostens cauldron-mailer skickar via
+    Proton Bridge (backend körs i Docker och når inte hostens SMTP).
+    """
+    username = normalize_username(req.username)
+    if not username:
+        raise HTTPException(400, "Write your adventurer's name.")
+
+    with _USER_LOCK:
+        users = load_users()
+        udata = users.get(username)
+        if isinstance(udata, dict) and udata.get("email"):
+            last = udata.get("reset_requested_at")
+            if last:
+                try:
+                    last_dt = datetime.fromisoformat(last)
+                    if datetime.now(timezone.utc) - last_dt < RESET_RATE_LIMIT:
+                        raise HTTPException(429, "A raven is already on its way. Check your inbox.")
+                except ValueError:
+                    pass
+            token = secrets.token_urlsafe(32)
+            udata["reset_token"] = token
+            udata["reset_token_expiry"] = (datetime.now(timezone.utc) + RESET_TOKEN_TTL).isoformat()
+            udata["reset_requested_at"] = datetime.now(timezone.utc).isoformat()
+            save_users(users)
+            try:
+                OUTBOX_DIR.mkdir(parents=True, exist_ok=True)
+                try:
+                    os.chmod(OUTBOX_DIR, 0o777)  # hostens mailer måste kunna radera filer (Docker=root)
+                except OSError:
+                    pass
+                link = f"https://dnd.rostad.cc/reset.html?token={token}"
+                body = (
+                    "The Lore Weaver's Cauldron — re-forge your word.\n\n"
+                    "Click the link below to set a new password. It works once and "
+                    "expires in 30 minutes.\n\n"
+                    f"{link}\n\n"
+                    "If you did not ask for this, you can safely ignore this raven."
+                )
+                outbox = OUTBOX_DIR / f"reset-{token[:8]}-{int(time.time())}.json"
+                outbox.write_text(json.dumps({
+                    "to": udata["email"],
+                    "subject": "Re-forge your word — The Lore Weaver's Cauldron",
+                    "body": body,
+                }, ensure_ascii=False), encoding="utf-8")
+                logger.info("🔑 Reset link requested for %s (email outbox)", username)
+            except Exception as e:
+                logger.warning("Reset outbox write failed for %s: %s", username, e)
+    return {"ok": True}
+
+
+@app.post("/api/auth/reset-with-token")
+async def reset_with_token(req: ResetWithTokenRequest, response: Response):
+    """Sätt nytt lösenord med engångs-token från reset-länken.
+
+    Token verifieras + raderas (one-time-use). Expirerar efter 30 min.
+    Sätter session-cookie så spelaren är inloggad direkt.
+    """
+    err = validate_password(req.password)
+    if err:
+        raise HTTPException(400, err)
+    token = (req.token or "").strip()
+    if not token:
+        raise HTTPException(400, "That reset link looks broken.")
+
+    with _USER_LOCK:
+        users = load_users()
+        found = None
+        for uname, udata in users.items():
+            if isinstance(udata, dict) and udata.get("reset_token") == token:
+                found = (uname, udata)
+                break
+        if not found:
+            raise HTTPException(400, "That reset link is invalid or already used.")
+        uname, udata = found
+        expiry = udata.get("reset_token_expiry")
+        if expiry:
+            try:
+                if datetime.now(timezone.utc) > datetime.fromisoformat(expiry):
+                    raise HTTPException(400, "That reset link has expired. Ask for a new one.")
+            except ValueError:
+                raise HTTPException(400, "That reset link is invalid.")
+        # One-time-use: radera token oavsett utfall
+        udata.pop("reset_token", None)
+        udata.pop("reset_token_expiry", None)
+        udata["password_hash"] = hash_password(req.password)
+        udata["last_login"] = _now_iso()
+        save_users(users)
+
+    token = create_token(uname, users[uname].get("role", "player"))
+    _set_auth_cookie(response, token)
+    logger.info("🔑 Password re-forged via token: %s", uname)
+    return {"ok": True, "username": uname, "role": users[uname].get("role", "player")}
+
+
+@app.post("/api/logout")
+async def logout(response: Response):
+    response.delete_cookie(COOKIE_NAME, path="/")
+    return {"ok": True}
+
+
+@app.get("/api/me")
+async def me(morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    udata = load_users().get(username, {})
+    if not isinstance(udata, dict):
+        udata = {}
+    # FAS A: periodbaserad turn-info (turns_used nollställs vid reset_date)
+    free_info = _user_free_info(username)
+    # Token-stats (alla kampanjer, alla roller — DM + Guardian + extraction)
+    try:
+        scan = _scan_user_transcripts(username)
+        total_tokens = scan.get("total_tokens", 0)
+    except Exception:
+        total_tokens = 0
+    # Räkna kampanjer
+    _ucamp = CAMPAIGNS_DIR / username
+    total_campaigns = sum(1 for d in _ucamp.iterdir() if d.is_dir()) if _ucamp.exists() else 0
+    return {
+        "username": username,
+        "role": payload.get("role", "player"),
+        "created_at": udata.get("created_at"),
+        "last_login": udata.get("last_login"),
+        "turn_cap": _turn_cap_for(username),
+        # FAS A: periodbaserad turn-räkning + tier
+        "turns_used": free_info["turns_used"],
+        "turn_bonus": free_info["turn_bonus"],
+        "promo_bonus": free_info["promo_bonus"],
+        "promo_bonus_legacy": free_info["promo_bonus_legacy"],
+        "reset_date": free_info["reset_date"],
+        "subscription_status": free_info["subscription_status"],
+        "subscription_until": free_info["subscription_until"],
+        "turns_available": free_info["turns_available"],
+        "period_hours": free_info["period_hours"],
+        "reset_ts": free_info.get("reset_ts"),
+        "features": free_info.get("features", {}),
+        "total_tokens": total_tokens,
+        "total_campaigns": total_campaigns,
+        # E-post — krävs innan köp (rostad 2026-08-04). Maskerad i /api/me
+        # (admin-vyn ser hela via /api/admin/stats).
+        "has_email": bool((udata.get("email") or "").strip()),
+        # Spelarprofilens avatar (konto — separat från äventyraren)
+        "has_avatar": bool(_load_user_avatar_gallery(username).get("gallery")),
+    }
+
+
+class EmailRequest(BaseModel):
+    email: str
+
+
+@app.put("/api/me/email")
+async def save_email(req: EmailRequest, morkrets_token: str | None = Cookie(None)):
+    """Lägg till/uppdatera e-postadress på kontot (krävs före köp)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    email = (req.email or "").strip().lower()
+    if not email or "@" not in email or "." not in email.split("@")[-1] or len(email) > 120:
+        raise HTTPException(400, "That email does not look right.")
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if not isinstance(u, dict):
+            raise HTTPException(404, "User not found")
+        u["email"] = email
+        users[username] = u
+        save_users(users)
+    return {"ok": True, "email": email}
+
+
+# ═══════════════════════════════════════
+# MODELS
+# ═══════════════════════════════════════
+
+
+@app.get("/api/models")
+async def models(morkrets_token: str | None = Cookie(None)):
+    _get_current_user(morkrets_token)
+    if selfhost.enabled():
+        return selfhost.roster()
+    return list_models_for_frontend()
+
+
+@app.get("/api/models/free-openrouter")
+async def free_openrouter_models(morkrets_token: str | None = Cookie(None)):
+    """🆓 Returnera curated + live-verified OpenRouter free text-models.
+
+    Används av DM-gate:n för att visa en 'Experiment'-sektion. Kräver inloggad
+    spelare (så vi inte exponerar nyckeln-existens öppet). Listan innehåller
+    EJ nyckeln — bara modell-id + displaynamn.
+    """
+    _get_current_user(morkrets_token)
+    if selfhost.enabled():
+        return []
+    try:
+        from or_free import get_free_models
+        return await get_free_models()
+    except Exception as e:
+        logger.error("🆓 free-openrouter list failed: %s", e)
+        return []
+
+
+# ═══════════════════════════════════════
+# DICE
+# ═══════════════════════════════════════
+
+
+@app.post("/api/dice")
+async def dice(req: DiceRequest, morkrets_token: str | None = Cookie(None)):
+    _get_current_user(morkrets_token)
+    try:
+        return dice_roll(req.notation)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+# ═══════════════════════════════════════
+# FEEDBACK — spelarfeedback till JSONL (backend/data/feedback.jsonl)
+# ═══════════════════════════════════════
+
+# Sökväg till feedback-filen (monkeypatchbar i tester)
+_FEEDBACK_DIR = Path(__file__).resolve().parent / "data"
+OUTBOX_DIR = Path(__file__).resolve().parent / "data" / "outbox"
+
+
+class FeedbackRequest(BaseModel):
+    """POST /api/feedback — {email: string|null, message: string}."""
+    email: str | None = None
+    message: str = ""
+
+
+@app.post("/api/feedback")
+async def feedback(req: FeedbackRequest, morkrets_token: str | None = Cookie(None)):
+    """Ta emot spelarfeedback (cookie-auth) och lägg till feedback.jsonl."""
+    _get_current_user(morkrets_token)
+    if not isinstance(req.message, str) or not req.message.strip():
+        raise HTTPException(400, "Message is required")
+    try:
+        feedback_dir = _FEEDBACK_DIR
+        feedback_dir.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "email": str(req.email or "").strip() or None,
+            "message": req.message.strip(),
+        }
+        with open(feedback_dir / "feedback.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError as e:
+        logger.error("Feedback write failed: %s", e)
+        raise HTTPException(500, "Could not store feedback")
+    return {"ok": True}
+
+
+# ═══════════════════════════════════════
+# TTS — Qwen-Audio-3.0-TTS-Plus (Alibaba Token Plan) + StepFun (Step Plan)
+# ═══════════════════════════════════════
+
+# Två fördefinierade berättarröster (systemröster på Token Plan)
+TTS_VOICE_MALE = os.getenv("TTS_VOICE_MALE", "qwen-audio-3.0-tts-plus-loongjameszhao")  # James (EN) — auktoritativ (vald 2026-08-06, ersatte longanlufeng)
+TTS_VOICE_FEMALE = os.getenv("TTS_VOICE_FEMALE", "longanlingxin") # Long An Ling Xin — kvinnlig
+
+# TTS-leverantörer: qwen (Alibaba Token Plan) + stepfun (StepFun Step Plan).
+# StepFun körs via /step_plan/v1/audio/speech med officiella systemröster —
+# inga snippet-uppladdningar krävs (fix 2026-08-02).
+TTS_PROVIDERS = {
+    "qwen": {
+        "name": "Qwen (Token Plan)",
+        "voices": [
+            {"id": TTS_VOICE_MALE, "gender": "male", "name": "James (EN)", "desc": "Male English voice — authoritative & crisp, dark fantasy narration"},
+            {"id": TTS_VOICE_FEMALE, "gender": "female", "name": "Berättaren (kvinna)", "desc": "Varm och empatisk kvinnlig berättarröst (kinesisk/engelska)"},
+            {"id": "qwen-audio-3.0-tts-plus-loongadriangao", "gender": "male", "name": "Adrian (EN)", "desc": "Male English voice — calm & dignified, audio reading"},
+            {"id": "qwen-audio-3.0-tts-plus-loongalexanderhu", "gender": "male", "name": "Alexander (EN)", "desc": "Male English voice — retro cassette tone"},
+            {"id": "qwen-audio-3.0-tts-plus-loongryanma", "gender": "male", "name": "Ryan (EN)", "desc": "Male English voice — electronic & trendy"},
+        ],
+    },
+    "stepfun": {
+        "name": "StepFun (Step Plan)",
+        "voices": [
+            {"id": "magnetic-voiced-male", "gender": "male", "name": "Magnetic Male (EN)", "desc": "Male English voice — deep and commanding"},
+            {"id": "vibrant-youth", "gender": "male", "name": "Vibrant Youth (EN)", "desc": "Male English voice — warm and gentle (docs: 男，英文音色)"},
+            {"id": "soft-spoken-gentleman", "gender": "male", "name": "Soft Gentleman (EN)", "desc": "Male English voice — calm and soft"},
+            {"id": "elegantgentle-female", "gender": "female", "name": "Elegant Female (EN)", "desc": "Female English voice — elegant and warm"},
+            {"id": "livelybreezy-female", "gender": "female", "name": "Lively Breezy (EN)", "desc": "Female English voice — lively and bright"},
+        ],
+    },
+}
+TTS_DEFAULT_PROVIDER = os.getenv("TTS_PROVIDER", "stepfun")
+
+TTS_INSTRUCTIONS = {
+    # OBS: instruktionen får vara MAX 128 tecken — längre ger "Instruction is invalid!"
+    # Hastighet: rate=1.1 i _synth_qwen_tts (snabbare än default), inga "slow"-ord här.
+    # TTS_VOICE_MALE = James (EN): auktoritativ dark fantasy-instruktion.
+    TTS_VOICE_MALE: "Authoritative news-style narration, dark fantasy atmosphere, crisp delivery.",
+    TTS_VOICE_FEMALE: "Speak Swedish with Standard Swedish pronunciation, natural rhythm. Warm expressive storytelling, rich and inviting.",
+    "qwen-audio-3.0-tts-plus-loongadriangao": "Calm dignified British-style narration, dark fantasy atmosphere, steady measured pace.",
+    "qwen-audio-3.0-tts-plus-loongalexanderhu": "Warm retro storyteller tone, dark fantasy narration, clear and friendly.",
+    "qwen-audio-3.0-tts-plus-loongryanma": "Modern engaging storyteller voice, dark fantasy narration, vivid and clear.",
+}
+
+# StepFun-instruktion per röst — styr stil/emfas (kort; stöds av stepaudio-2.5-tts).
+# Hastighet: speed=1.1 i _synth_stepfun_tts (snabbare än default), inga "slow"-ord.
+STEPFUN_INSTRUCTIONS = {
+    "vibrant-youth": "Calm Germanic storytelling voice, atmospheric dark fantasy narration.",
+    "magnetic-voiced-male": "Deep commanding Germanic voice, atmospheric dark fantasy narration.",
+    "soft-spoken-gentleman": "Soft calm voice, atmospheric dark fantasy narration.",
+    "elegantgentle-female": "Warm elegant voice, atmospheric dark fantasy narration.",
+    "livelybreezy-female": "Lively warm voice, expressive storytelling.",
+}
+
+# Premium: berättar-stil (customize narrator voice). Korta fraser som läggs
+# FÖRE basinstruktionen så tonen styr. Qwen-instruktion max 128 tecken totalt
+# → basen kapas vid ordgräns för att ge plats åt stilen.
+TTS_STYLE_FRASES = {
+    "happy": "Bright cheerful warm tone.",
+    "calm": "Slow calm soothing unhurried tone.",
+    "scary": "Low ominous eerie tone, tense and creeping.",
+}
+
+def _tts_instruction(base: str, style: str, max_len: int = 128,
+                     pronunciation: str = "") -> str:
+    """Bygg TTS-instruktion = [style-fras] + bas + [uttalshint], kapad vid ordgräns.
+
+    style = preset (happy/calm/scary) eller godtycklig kort fras (custom).
+    pronunciation = valfri språklig uttalshint (EU-kampanjer, se
+    languages.TTS_PRONUNCIATION_HINTS) — appenderas EFTER basen; basen
+    trunkeras först så hook+bas+hint ryms inom max_len (128-teckensgränsen,
+    pitfall: längre instruktion ger "Instruction is invalid!").
+    Free-konton skickar aldrig style hit (backend-gate i /api/tts).
+    """
+    hook = (TTS_STYLE_FRASES.get(style) or style or "").strip()
+    pron = (pronunciation or "").strip()
+    if not hook and not pron:
+        return base
+    base = (base or "").strip()
+    overhead = (len(hook) + 1 if hook else 0) + (len(pron) + 1 if pron else 0)
+    budget = max_len - overhead
+    short = base
+    if budget < 0:
+        # Patologiskt fall: hook+hint ensam över stegen — spara vad som ryms.
+        return (hook + " " + pron).strip()[:max_len]
+    if len(short) > budget:
+        cut = short[:budget]
+        sp = cut.rfind(" ")
+        short = cut[:sp] if sp > 0 else cut
+    return " ".join(p for p in (hook, short, pron) if p)[:max_len]
+
+# Token Plan TTS: REST-endpoint (dokumenterad för Token Plan, 2026-08-03).
+# WS-vägen (dashscope SDK) slutade fungera — se _synth_qwen_tts. REST:
+#   POST /api/v1/services/audio/tts/SpeechSynthesizer
+#   {"model": "qwen-audio-3.0-tts-plus",
+#    "input": {"text", "voice", "format": "mp3", "sample_rate": 24000, "instruction"?}}
+# → svar innehåller output.audio.url (signerad OSS-URL) → ladda ner MP3.
+TTS_DASHSCOPE_REST_URL = os.getenv(
+    "TTS_DASHSCOPE_REST_URL",
+    "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/audio/tts/SpeechSynthesizer",
+)
+TTS_DASHSCOPE_KEY_ENV = os.getenv("TTS_DASHSCOPE_KEY_ENV", "DASHSCOPE_API_KEY")
+
+# Enkel minnescache — samma (röst, text) kostar bara ett API-anrop.
+# Värde = (monotonic-tid, bytes). Poster äldre än TTL rensas vid hämtning
+# (spelare som spelar om DM-meddelanden inom 10 min sparar tokens).
+_TTS_CACHE: dict = {}
+_TTS_CACHE_MAX = 64
+_TTS_CACHE_TTL = 600  # sekunder (10 min)
+
+
+def _tts_cache_get(key):
+    """Hämta cache-post med TTL-koll (äldre än 10 min = miss + rensa)."""
+    hit = _TTS_CACHE.get(key)
+    if hit is None:
+        return None
+    ts, data = hit
+    if time.monotonic() - ts > _TTS_CACHE_TTL:
+        _TTS_CACHE.pop(key, None)
+        return None
+    return data
+
+
+def _tts_cache_set(key, data):
+    if len(_TTS_CACHE) >= _TTS_CACHE_MAX:
+        # Rensa äldsta posten (heuristic: första — dict behåller insertion order)
+        try:
+            _TTS_CACHE.pop(next(iter(_TTS_CACHE)))
+        except (StopIteration, KeyError):
+            pass
+    _TTS_CACHE[key] = (time.monotonic(), data)
+
+
+class TTSRequest(BaseModel):
+    text: str
+    voice: str = ""  # kön ('male'/'female') eller voice-id
+    provider: str = ""  # 'qwen' | 'stepfun' — tomt = kampanjens val / default
+    style: str = ""  # premium: happy/calm/scary eller egen fras (customize narrator voice)
+
+
+def _split_tts_segments(text: str, limit: int = 900) -> list[str]:
+    """Dela text i segment om max ~`limit` tecken vid meningsgränser.
+
+    Qwen TTS kapar/kräver kortare texter — långa DM-meddelanden (2000+ tecken)
+    syntetiseras därför i segment som sys ihop till en MP3 (frame-stream,
+    b"".join fungerar för samma format). Fix 2026-08-01: "TTS kapas vid
+    längre meddelanden" — _truncate_tts (1000-char hard cut) ersatt.
+    """
+    if len(text) <= limit:
+        return [text]
+    segments = []
+    while len(text) > limit:
+        cut = text[:limit]
+        last = None
+        for m in re.finditer(r"[.!?…]\s", cut):
+            last = m
+        if last:
+            split_at = last.end()
+        else:
+            sp = cut.rfind(" ")
+            split_at = sp if sp > 0 else limit
+        segments.append(cut[:split_at].strip())
+        text = text[split_at:].strip()
+    if text:
+        segments.append(text)
+    return segments
+
+
+# ── TTS-förbrukning: tokens / sekunder / minuter renderat ──
+def _tts_token_estimate(chars: int) -> int:
+    """Token-estimat för TTS (~4 tecken/token, standardheuristic).
+
+    DashScope fakturerar TTS per tecken; estimatet gör att förbrukningen
+    går att jämföra med LLM-tokenförbrukningen i usage-vyn.
+    """
+    return max(1, -(-chars // 4))  # integer-ceil av chars/4
+
+
+def _mp3_duration_seconds(data: bytes) -> float:
+    """Räkna MP3-längd i sekunder genom att räkna ramar — ingen ffmpeg behövs.
+
+    DashScope producerar MP3_22050HZ_MONO (CBR). Parsar MPEG1/2/2.5
+    Layer III-ramar: total_samples / sample_rate.
+    """
+    n = len(data)
+    if n < 4:
+        return 0.0
+    BITRATES_V1 = (0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320)
+    BITRATES_V2 = (0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160)
+    SR_V1 = (44100, 48000, 32000)
+    SR_V2 = (22050, 24000, 16000)
+    SR_V25 = (11025, 12000, 8000)
+    frames = 0
+    total_samples = 0
+    sr_last = 22050
+    i = 0
+    while i < n - 4:
+        if data[i] != 0xFF or (data[i + 1] & 0xE0) != 0xE0:
+            i += 1
+            continue
+        b1, b2 = data[i + 1], data[i + 2]
+        ver = (b1 >> 3) & 0x3
+        layer = (b1 >> 1) & 0x3
+        if ver == 1 or layer != 1:          # reserverad version / ej Layer III
+            i += 1
+            continue
+        br_idx = (b2 >> 4) & 0xF
+        sr_idx = (b2 >> 2) & 0x3
+        pad = (b2 >> 1) & 0x1
+        if br_idx in (0, 15) or sr_idx == 3:
+            i += 1
+            continue
+        if ver == 3:                        # MPEG1 Layer III
+            bitrate = BITRATES_V1[br_idx] * 1000
+            sr = SR_V1[sr_idx]
+            spf = 1152
+            flen = 144 * bitrate // sr + pad
+        else:                               # MPEG2 / MPEG2.5 Layer III
+            bitrate = BITRATES_V2[br_idx] * 1000
+            sr = (SR_V2 if ver == 2 else SR_V25)[sr_idx]
+            spf = 576
+            flen = 72 * bitrate // sr + pad
+        if sr == 0:
+            i += 1
+            continue
+        total_samples += spf
+        frames += 1
+        sr_last = sr
+        i += max(flen, 4)
+    if frames == 0 or total_samples == 0:
+        return 0.0
+    return total_samples / sr_last
+
+
+def _record_tts_usage(username: str, chars: int, seconds: float, api_call: bool, provider: str = "") -> None:
+    """Bokför TTS-förbrukning i aktiva kampanjens state.meta.tts_usage.
+
+    Rullas upp i /api/campaign/usage och admin-vyn så man ser om spelare
+    använder TTS-funktionen (och hur mycket det kostar). `tokens` är ett
+    estimat (≈ chars/4) — TTS faktureras per tecken av DashScope.
+    by_model (2026-08-06): per-modell-uppdelning för admin-vyns
+    "Calls by provider" (qwen-audio-3.0-tts-plus vs stepaudio-2.5-tts).
+    """
+    try:
+        state = store.get(username)
+        if not state:
+            return
+        meta = state.setdefault("meta", {})
+        tts = meta.setdefault("tts_usage", {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0})
+        tts["calls"] = (tts.get("calls", 0) or 0) + 1
+        if api_call:
+            tts["api_calls"] = (tts.get("api_calls", 0) or 0) + 1
+        tts["chars"] = (tts.get("chars", 0) or 0) + chars
+        tts["tokens"] = (tts.get("tokens", 0) or 0) + _tts_token_estimate(chars)
+        tts["seconds"] = (tts.get("seconds", 0) or 0) + seconds
+        if provider:
+            by_model = tts.setdefault("by_model", {})
+            label = _tts_model_label(provider)
+            by_model[label] = (by_model.get(label, 0) or 0) + 1
+        store.save(state)
+    except Exception:
+        logger.exception("🔊 Kunde inte bokföra TTS-usage")
+
+
+# ── Beständig per-konto usage-ackumulator ──────────────────────────────
+# Kontots förbrukning som INTE ska försvinna när en kampanj raderas/rollas
+# om, eller som inte alls hör till en kampanj:
+#   deleted            — LLM-tokens + turns + TTS från RADERADE kampanjer
+#   character_creation — LLM-tokens spenderade på karaktärsgenerering
+#   image_gen          — antal AI-bilder genererade (iterations)
+# Filen ligger direkt i användarmappen (CAMPAIGNS_DIR/<user>/_account_usage.json)
+# och rörs aldrig av store.delete (som bara tar bort kampanj-underkatalogen).
+# Rullas upp i _scan_user_transcripts → account_total + admin-vyn.
+_USAGE_LOCK = threading.Lock()
+
+
+def _empty_account_usage() -> dict:
+    return {
+        "deleted": {
+            "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0,
+            "tts": {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0, "by_model": {}},
+        },
+        "character_creation": {"tokens": 0, "calls": 0},
+        "image_gen": {"calls": 0, "by_model": {}},
+    }
+
+
+def _account_usage_path(username: str) -> Path:
+    return CAMPAIGNS_DIR / username / "_account_usage.json"
+
+
+def _load_account_usage(username: str) -> dict:
+    """Läs kontots beständiga usage-ackumulator (med defaults + migration)."""
+    base = _empty_account_usage()
+    raw = None
+    try:
+        p = _account_usage_path(username)
+        if p.exists():
+            with open(p) as f:
+                raw = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        logger.exception("📊 Kunde inte läsa per-konto usage-ackumulator")
+    if not isinstance(raw, dict):
+        raw = {}
+    # Migrera gammal _deleted_tts.json → deleted.tts (2026-08-03)
+    if not raw.get("deleted"):
+        try:
+            old = CAMPAIGNS_DIR / username / "_deleted_tts.json"
+            if old.exists():
+                with open(old) as f:
+                    old_tts = json.load(f)
+                raw["deleted"] = {"prompt_tokens": 0, "completion_tokens": 0,
+                                  "total_tokens": 0, "turns": 0,
+                                  "tts": {"calls": 0, "api_calls": 0, "chars": 0,
+                                          "tokens": 0, "seconds": 0.0}}
+                for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
+                    raw["deleted"]["tts"][k] += old_tts.get(k, 0) or 0
+        except (OSError, json.JSONDecodeError):
+            pass
+    # Fyll saknade nycklar med defaults
+    for k, v in base.items():
+        if not isinstance(raw.get(k), dict):
+            raw[k] = v
+    d = raw.setdefault("deleted", {})
+    for k, v in base["deleted"].items():
+        if k == "tts":
+            d.setdefault("tts", dict(v))
+        else:
+            d.setdefault(k, v)
+    cc = raw.setdefault("character_creation", {})
+    cc.setdefault("tokens", 0); cc.setdefault("calls", 0)
+    ig = raw.setdefault("image_gen", {})
+    ig.setdefault("calls", 0)
+    return raw
+
+
+def _save_account_usage(username: str, acc: dict) -> None:
+    try:
+        p = _account_usage_path(username)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".tmp")
+        with open(tmp, "w") as f:
+            json.dump(acc, f, ensure_ascii=False)
+        tmp.replace(p)
+    except OSError:
+        logger.exception("📊 Kunde inte spara per-konto usage-ackumulator")
+
+
+def _mutate_account_usage(username: str, fn) -> None:
+    """Lås + läs + mutera + skriv kontots usage-ackumulator atomiskt."""
+    with _USAGE_LOCK:
+        acc = _load_account_usage(username)
+        fn(acc)
+        _save_account_usage(username, acc)
+
+
+def _add_character_creation(username: str, usage: dict | None) -> None:
+    """Bokför LLM-tokens för en karaktärsgenerering (livstid, alla rerolls)."""
+    t = (usage or {}).get("total_tokens", 0) or 0
+    if not t:
+        return
+    def fn(acc):
+        cc = acc["character_creation"]
+        cc["tokens"] = (cc.get("tokens", 0) or 0) + t
+        cc["calls"] = (cc.get("calls", 0) or 0) + 1
+    _mutate_account_usage(username, fn)
+
+
+def _add_image_gen(username: str, model: str = "") -> None:
+    """Bokför en AI-bildgenerering (iteration).
+
+    model (2026-08-06): bildmodellen (t.ex. wan2.7-image / qwen-image-3.0-pro)
+    för admin-vyns "Calls by provider" — alla anropade modeller ska synas,
+    inte bara LLM:erna.
+    """
+    def fn(acc):
+        ig = acc["image_gen"]
+        ig["calls"] = (ig.get("calls", 0) or 0) + 1
+        if model:
+            by_model = ig.setdefault("by_model", {})
+            by_model[model] = (by_model.get(model, 0) or 0) + 1
+    _mutate_account_usage(username, fn)
+
+
+def _add_deleted_campaign(username: str, snap: dict) -> None:
+    """Lägg en raderad/rollad kampanjs totala förbrukning till ackumulatorn."""
+    if not snap:
+        return
+    def fn(acc):
+        d = acc["deleted"]
+        d["prompt_tokens"] = (d.get("prompt_tokens", 0) or 0) + (snap.get("prompt_tokens", 0) or 0)
+        d["completion_tokens"] = (d.get("completion_tokens", 0) or 0) + (snap.get("completion_tokens", 0) or 0)
+        d["total_tokens"] = (d.get("total_tokens", 0) or 0) + (snap.get("total_tokens", 0) or 0)
+        d["turns"] = (d.get("turns", 0) or 0) + (snap.get("turns", 0) or 0)
+        tt = snap.get("tts") or {}
+        for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
+            d["tts"][k] = (d["tts"].get(k, 0) or 0) + (tt.get(k, 0) or 0)
+        # Per-modell-uppdelning överlever kampanjradering (2026-08-06)
+        for m, n in (tt.get("by_model") or {}).items():
+            d["tts"].setdefault("by_model", {})[m] = (d["tts"]["by_model"].get(m, 0) or 0) + n
+    _mutate_account_usage(username, fn)
+
+
+def _campaign_usage_snapshot(user: str, campaign_id: str) -> dict:
+    """Ögonblicksbild av en kampanjs totala förbrukning (transcripts + state).
+
+    Används för att bevara förbrukningen när en kampanj raderas/rollas om.
+    Speglar logiken i _scan_user_transcripts fast för EN kampanj."""
+    prompt = completion = turns = 0
+    tts = {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0}
+    cdir = CAMPAIGNS_DIR / user / campaign_id
+    transcript_dir = cdir / "transcripts"
+    if transcript_dir.exists():
+        for ts_file in sorted(transcript_dir.glob("session-*.jsonl")):
+            try:
+                with open(ts_file) as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            entry = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        if entry.get("role") == "assistant":
+                            turns += 1
+                        meta = entry.get("meta", {})
+                        tokens = meta.get("tokens", {})
+                        p = tokens.get("prompt_tokens", 0) or 0
+                        c = tokens.get("completion_tokens", 0) or 0
+                        gpd = meta.get("guardian_pre_dm_tokens", {}) or {}
+                        p += gpd.get("prompt_tokens", 0) or 0
+                        c += gpd.get("completion_tokens", 0) or 0
+                        prompt += p
+                        completion += c
+            except OSError:
+                continue
+    try:
+        st_file = cdir / "state.json"
+        if st_file.exists():
+            with open(st_file) as f:
+                st = json.load(f)
+            ut = st.get("meta", {}).get("unguarded_tokens", {}) or {}
+            prompt += ut.get("prompt_tokens", 0) or 0
+            completion += ut.get("completion_tokens", 0) or 0
+            tt = st.get("meta", {}).get("tts_usage") or {}
+            for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
+                tts[k] += tt.get(k, 0) or 0
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {
+        "prompt_tokens": prompt, "completion_tokens": completion,
+        "total_tokens": prompt + completion, "turns": turns, "tts": tts,
+    }
+
+
+def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True, style: str = "",
+                    pronunciation: str = "") -> bytes:
+    """Token Plan TTS via REST (2026-08-03).
+
+    WebSocket-vägen (dashscope SDK) blev trasig: servern svarade task-failed
+    "request timeout after 23 seconds" på ALLA anrop, och en engine-pod
+    avvisade dessutom sample_rate 22050 ("Invalid sample rate parameter").
+    Token Plan-dokumentationen visar en REST-endpoint som fungerar:
+      POST {TTS_DASHSCOPE_REST_URL}
+      {"model": "qwen-audio-3.0-tts-plus",
+       "input": {"text", "voice", "format": "mp3", "sample_rate": 24000, "instruction"?}}
+    → svar innehåller output.audio.url (signerad OSS-URL) → ladda ner MP3.
+    """
+    import base64
+    import urllib.error as _uer
+    import urllib.request as _ur
+
+    api_key = os.getenv(TTS_DASHSCOPE_KEY_ENV)
+    if not api_key:
+        raise RuntimeError("TTS-nyckel saknas")
+
+    inp = {"text": text, "voice": voice, "format": "mp3", "sample_rate": 24000, "rate": 1.1}
+    if use_instruction:
+        instr = _tts_instruction(TTS_INSTRUCTIONS.get(voice, ""), style,
+                                 pronunciation=pronunciation)
+        if instr:
+            inp["instruction"] = instr
+
+    body = json.dumps({"model": "qwen-audio-3.0-tts-plus", "input": inp}).encode()
+    req = _ur.Request(
+        TTS_DASHSCOPE_REST_URL,
+        data=body,
+        headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
+    )
+    try:
+        with _ur.urlopen(req, timeout=120) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+    except _uer.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")[:300]
+        raise RuntimeError(f"Qwen TTS HTTP {e.code}: {detail}")
+    except Exception as e:
+        raise RuntimeError(f"Qwen TTS fel: {e}")
+
+    audio = resp.get("output", {}).get("audio", {}) or {}
+    data = audio.get("data") or ""
+    if data:
+        try:
+            return base64.b64decode(data)
+        except Exception:
+            return data.encode("latin1")
+    dl_url = audio.get("url") or ""
+    if not dl_url:
+        raise RuntimeError(f"Qwen TTS: inget ljud i svar — {json.dumps(resp)[:200]}")
+    try:
+        with _ur.urlopen(dl_url, timeout=120) as ar:
+            return ar.read()
+    except Exception as e:
+        raise RuntimeError(f"Qwen TTS nedladdning fel: {e}")
+
+
+def _synth_qwen_tts_retry(voice: str, text: str, style: str = "",
+                          pronunciation: str = "") -> bytes:
+    """Qwen TTS med retry — token-plan-servern är flaky med instruction.
+
+    1) Försök med instruction (styr accent/stil)
+    2) Vid "request timeout"-fel → retry UTAN instruction
+    3) Vid kvarvarande fel → kasta vidare
+    """
+    try:
+        return _synth_qwen_tts(voice, text, use_instruction=True, style=style,
+                               pronunciation=pronunciation)
+    except Exception as e:
+        msg = str(e)
+        if "request timeout" in msg:
+            logger.warning("🔊 Qwen TTS request timeout — retry without instruction")
+            return _synth_qwen_tts(voice, text, use_instruction=False)
+        raise
+
+
+def _synth_stepfun_tts(voice: str, text: str, style: str = "",
+                       pronunciation: str = "") -> bytes:
+    """StepFun TTS via Step Plan (/step_plan/v1/audio/speech).
+
+    OpenAI-kompatibel REST — officiella systemröster, inga snippet-
+    uppladdningar. Model: stepaudio-2.5-tts. Max 1000 tecken per anrop
+    (segmentering sker i /api/tts). ( ) tolkas som instruktioner av
+    stepaudio — byts till fullwidth så allt talas.
+    """
+    import urllib.request as _ur
+    import urllib.error as _uer
+
+    api_key = os.getenv("STEPFUN_API_KEY")
+    if not api_key:
+        raise RuntimeError("StepFun-nyckel saknas (STEPFUN_API_KEY)")
+    base = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
+    text = text.replace("(", "（").replace(")", "）")
+    body = {
+        "model": "stepaudio-2.5-tts",
+        "input": text,
+        "voice": voice,
+        "response_format": "mp3",
+        "speed": 1.2,  # stepaudio: 1.1 försvinner i modellbrus, 1.2 ger tydlig ~14% ökning
+    }
+    inst = _tts_instruction(STEPFUN_INSTRUCTIONS.get(voice, ""), style,
+                            pronunciation=pronunciation)
+    if inst:
+        body["instruction"] = inst
+    req = _ur.Request(
+        base.rstrip("/") + "/audio/speech",
+        data=json.dumps(body).encode(),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with _ur.urlopen(req, timeout=120) as r:
+            data = r.read()
+    except _uer.HTTPError as e:
+        msg = e.read().decode("utf-8", "replace")[:300]
+        if e.code == 429:
+            raise RuntimeError("StepFun TTS kvot slut just nu — försök igen om en stund")
+        raise RuntimeError(f"StepFun TTS HTTP {e.code}: {msg}")
+    except Exception as e:
+        raise RuntimeError(f"StepFun TTS fel: {e}")
+    if not data:
+        raise RuntimeError("StepFun TTS returnerade inget ljud")
+    return data
+
+
+def _parse_tts_error(msg: str):
+    """Extrahera (error_code, error_message) från SDK-fel.
+
+    Hanterar både 'TaskFailed: {...}' (sync-call) och ren JSON '{...}'
+    (async-callback). Returnerar (None, msg) om det inte är JSON.
+    """
+    s = msg
+    if s.startswith("TaskFailed:"):
+        s = s[len("TaskFailed:"):].strip()
+    try:
+        data = json.loads(s)
+    except (json.JSONDecodeError, ValueError):
+        return None, msg
+    hdr = data.get("header", {})
+    return hdr.get("error_code"), hdr.get("error_message", msg)
+
+
+@app.get("/api/tts/voices")
+async def tts_voices(morkrets_token: str | None = Cookie(None)):
+    """Tillgängliga TTS-leverantörer + röster (qwen + stepfun).
+
+    2026-09-27 (ny prissättning): ALL TTS ligger bakom 10€-unlåset — båda
+    leverantörerna listas för alla (frontend visar 🔒 10€ unlock för free),
+    och grinden speglar anropet: /api/tts ger 403 feature_locked för free.
+    Ingen hemlig röstlista behövs längre — det finns ingen gratis TTS alls.
+    """
+    _get_current_user(morkrets_token)
+    if selfhost.enabled():
+        # Self-host build: no cloud TTS. Empty roster keeps the UI honest.
+        return {"providers": [], "default_provider": None}
+    return {
+        "providers": [
+            {"id": pid, "name": p["name"], "voices": p["voices"]}
+            for pid, p in TTS_PROVIDERS.items()
+        ],
+        "default_provider": TTS_DEFAULT_PROVIDER,
+    }
+
+
+@app.post("/api/tts")
+async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
+    """Generera tal från text via vald TTS-leverantör (qwen eller stepfun).
+
+    TIERS (2026-09-27, ny prissättning): ALL TTS bakom 10€-unlåset.
+    Free/tier1 får 403 feature_locked — ingen tyst fallback. Varje
+    ny syntes drar 1 turn (cache-träff gratis).
+    """
+    if selfhost.enabled():
+        _selfhost_absent("Voice narration")
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(400, "Ingen text att läsa upp")
+
+    # ── Leverantör: request → kampanjens val → default ──
+    state = store.get(username)
+    campaign_provider = (state.get("meta", {}).get("tts_provider") or "") if state else ""
+    provider = (req.provider or campaign_provider or TTS_DEFAULT_PROVIDER).strip().lower()
+    if provider not in TTS_PROVIDERS:
+        raise HTTPException(400, f"Okänd TTS-leverantör: {provider}")
+
+    # ── Kampanjspråk → uttalshint (EU-vågen 2026-10) ──
+    # en/sv har tom hint → betende oförändrat; de/fr/es/it får en
+    # uttalsinstruktion (TTS_PRONUNCIATION_HINTS) som klistras ihop med
+    # stil+bas inom 128-teckensgränsen.
+    _tts_lang = (_get_lang(state) if state else "en")
+    pronunciation = TTS_PRONUNCIATION_HINTS.get(_tts_lang, "") or ""
+
+    # ── TIERS (2026-09-27, ny prissättning): ALL TTS ligger bakom 10€-unlåset.
+    # Free tier = ren text. Ingen tyst fallback — 403 med feature_locked så
+    # frontend kan visa unlock-popup. Lifetime/admin = allt.
+    tier = _tier_for(username)
+    if payload.get("role") != "admin" and tier not in ("tier2", "lifetime"):
+        raise HTTPException(403, detail={
+            "feature_locked": "tts",
+            "message": "Voice narration is part of the 10€ unlock (+100 turns, all Dungeon Masters, voice & images). Each narration costs 1 turn.",
+        })
+    pvoices = TTS_PROVIDERS[provider]["voices"]
+
+    # ── Röst: kön ('male'/'female') → första rösten med könet; annars voice-id ──
+    if req.voice in ("male", "female"):
+        voice = next((v["id"] for v in pvoices if v["gender"] == req.voice), None)
+        if not voice:
+            raise HTTPException(400, f"Ingen {req.voice}-röst hos {provider}")
+    else:
+        voice = req.voice or (pvoices[0]["id"] if pvoices else "")
+    if not voice or not any(v["id"] == voice for v in pvoices):
+        raise HTTPException(400, f"Okänd röst för {provider}: {voice}")
+
+    # ── Berättar-stil (tier2+: customize narrator voice) ──
+    # free/tier1: style ignoreras tyst (premium-feature). Presets + egen fras.
+    style = (req.style or "").strip()[:120]
+    if style and tier not in ("tier2", "lifetime"):
+        style = ""
+
+    # Ta bort maskinella taggar ([KAST:...], [SKADA:...] etc.) om de finns kvar
+    text = re.sub(r"\[[A-Z_]+:[^\]]*\]", "", text).strip()
+    # Långa meddelanden kapas INTE längre (fix 2026-08-01) — texten delas i
+    # segment som syntetiseras var för sig och sys ihop till en MP3.
+    segments = _split_tts_segments(text)
+
+    cache_key = (provider, voice, style, _tts_lang, text)
+    cached = _tts_cache_get(cache_key)
+    if cached is not None:
+        logger.info("🔊 TTS cache hit: provider=%s voice=%s, %d chars, %d bytes", provider, voice, len(text), len(cached))
+        _record_tts_usage(username, len(text), _mp3_duration_seconds(cached), api_call=False, provider=provider)
+        return StreamingResponse(io.BytesIO(cached), media_type="audio/mpeg")
+
+    # TTS-kostnad (1 turn per prompt sedan revert eded88a): chatten kostar
+    # 1 turn/meddelande, men varje NY TTS-syntes kostar en EGEN turn.
+    # Cache-träffar är gratis (inget externt anrop). Misslyckade synteser
+    # RÄKNAS också (business rule 2026-08-07 — ingen turn-återbetalning).
+    _gate_turn_quota(username)
+    _consume_turn(username, action="tts", model=_tts_model_label(provider))
+
+    logger.info("🔊 TTS synth: provider=%s model=%s, voice=%s, %d chars, %d segments", provider, _tts_model_label(provider), voice, len(text), len(segments))
+    synth = _synth_qwen_tts_retry if provider == "qwen" else _synth_stepfun_tts
+    _t0 = time.time()
+    # Uttalshinten bara som KEYWORD och BARA när den finns: gamla test-dubbar
+    # med signatur (voice, text, style) och en/sv-flödet (hint = '') hålls
+    # därmed exakt oförändrade.
+    _pron_kw = {"pronunciation": pronunciation} if pronunciation else {}
+    try:
+        if len(segments) == 1:
+            audio = await asyncio.to_thread(synth, voice, segments[0], style, **_pron_kw)
+        else:
+            # Syntetisera varje segment sekventiellt (rate limits) och sy ihop
+            parts = []
+            for seg in segments:
+                parts.append(await asyncio.to_thread(synth, voice, seg, style, **_pron_kw))
+            audio = b"".join(parts)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("🔊 TTS error: provider=%s voice=%s, %d chars — %s", provider, voice, len(text), e, exc_info=True)
+        msg = str(e)
+        code, emsg = _parse_tts_error(msg)
+        if code:
+            if "Throttling" in code or "Quota" in code:
+                raise HTTPException(
+                    429,
+                    f"Token Plan TTS quota exhausted right now ({code}) — it resets automatically, try again in a moment.",
+                )
+            raise HTTPException(502, f"TTS misslyckades ({code}): {emsg}")
+        if "kvot slut" in msg:
+            raise HTTPException(429, msg)
+        raise HTTPException(502, f"Kunde inte generera ljud — {msg}")
+
+    logger.info("🔊 TTS done: provider=%s voice=%s, %d chars (%d seg) → %d bytes (%.1fs)", provider, voice, len(text), len(segments), len(audio), time.time() - _t0)
+    _record_tts_usage(username, len(text), _mp3_duration_seconds(audio), api_call=True, provider=provider)
+    _tts_cache_set(cache_key, audio)
+    return StreamingResponse(io.BytesIO(audio), media_type="audio/mpeg")
+
+
+def _tts_model_label(provider: str) -> str:
+    """Modellnamn för loggning."""
+    return "qwen-audio-3.0-tts-plus" if provider == "qwen" else "stepaudio-2.5-tts"
+
+
+# ═══════════════════════════════════════
+# ASR — röstinmatning (StepFun stepaudio-2.5-asr via Step Plan)
+# ═══════════════════════════════════════
+# Spelaren trycker på 🎤 i chatten, pratar (EN — modellen stödjer bara
+# kinesiska + engelska, verifierat 2026-08-10), och transkriptet fyller
+# chat-input så hen kan redigera innan ⚔ Act. Kostar INGEN turn (ren
+# UI-hjälp) men bokförs i state.meta.asr_usage för transparens.
+# Endpoint verifierad live 2026-08-10: POST {base}/audio/asr/sse med
+# base64-audio → SSE delta-events → transcript.text.done med `text`.
+
+ASR_MODEL = "stepaudio-2.5-asr"
+ASR_MAX_AUDIO_BYTES = 10 * 1024 * 1024
+ASR_MAX_SECONDS = 60
+
+
+def _to_wav_16k(data: bytes) -> bytes:
+    """Konvertera valfritt ljud (webm/opus från MediaRecorder) → WAV 16 kHz mono.
+
+    StepFun ASR stödjer PCM/OGG/MP3/WAV — INTE webm/opus. ffmpeg finns på
+    servern (/usr/bin/ffmpeg). Returnerar b"" vid avkodningsfel.
+    """
+    import subprocess
+    import tempfile
+    import os as _os
+
+    with tempfile.NamedTemporaryFile(suffix=".in", delete=False) as f:
+        f.write(data)
+        inp = f.name
+    out = inp + ".wav"
+    try:
+        proc = subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", inp,
+             "-ar", "16000", "-ac", "1", "-f", "wav", out],
+            capture_output=True, timeout=30,
+        )
+        if proc.returncode != 0 or not _os.path.exists(out):
+            return b""
+        with open(out, "rb") as f:
+            return f.read()
+    finally:
+        for p in (inp, out):
+            try:
+                _os.unlink(p)
+            except OSError:
+                pass
+
+
+def _asr_stepfun(wav_bytes: bytes) -> str:
+    """Transkribera WAV via StepFun Step Plan (one-shot SSE).
+
+    POST {base}/audio/asr/sse → server streamar transcript.text.delta
+    och avslutar med transcript.text.done som bär färdig `text`.
+    """
+    import urllib.request as _ur
+    import urllib.error as _uer
+
+    api_key = os.getenv("STEPFUN_API_KEY")
+    if not api_key:
+        raise RuntimeError("StepFun-nyckel saknas (STEPFUN_API_KEY)")
+    base = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
+    body = {
+        "audio": {
+            "data": base64.b64encode(wav_bytes).decode(),
+            "input": {
+                # StepFun ASR stödjer endast en/zh — röstinput är engelskt för
+                # ALLA kampanjspråk (de/fr/es/it inkluderade): spelaren pratar
+                # EN, DM:n svarar på kampanjens språk. (Kontract A4.)
+                "transcription": {"model": ASR_MODEL, "language": "en", "enable_itn": True},
+                "format": {"type": "wav"},
+            },
+        }
+    }
+    req = _ur.Request(
+        base.rstrip("/") + "/audio/asr/sse",
+        data=json.dumps(body).encode(),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
+                 "Accept": "text/event-stream"},
+        method="POST",
+    )
+    try:
+        with _ur.urlopen(req, timeout=120) as r:
+            raw = r.read()
+    except _uer.HTTPError as e:
+        msg = e.read().decode("utf-8", "replace")[:300]
+        if e.code == 429:
+            raise RuntimeError("StepFun ASR kvot slut just nu — försök igen om en stund")
+        raise RuntimeError(f"StepFun ASR HTTP {e.code}: {msg}")
+    except Exception as e:
+        raise RuntimeError(f"StepFun ASR fel: {e}")
+
+    # SSE: hitta transcript.text.done → {"text": "..."}
+    for chunk in raw.split(b"\n\n"):
+        if b"transcript.text.done" in chunk:
+            for line in chunk.split(b"\n"):
+                if line.startswith(b"data:"):
+                    try:
+                        obj = json.loads(line[5:].strip())
+                        return (obj.get("text") or "").strip()
+                    except (json.JSONDecodeError, AttributeError):
+                        pass
+    # Fallback: inget done-event → samla delta-paketen (t.ex. avbruten ström)
+    parts = []
+    for chunk in raw.split(b"\n\n"):
+        if b"transcript.text.delta" in chunk:
+            for line in chunk.split(b"\n"):
+                if line.startswith(b"data:"):
+                    try:
+                        obj = json.loads(line[5:].strip())
+                        parts.append(obj.get("delta") or "")
+                    except (json.JSONDecodeError, AttributeError):
+                        pass
+    return "".join(parts).strip()
+
+
+def _record_asr_usage(username: str, seconds: float) -> None:
+    """Bokför ASR-förbrukning i state.meta.asr_usage (rullas upp i usage-vyn)."""
+    try:
+        state = store.get(username)
+        if not state:
+            return
+        meta = state.setdefault("meta", {})
+        asr = meta.setdefault("asr_usage", {"calls": 0, "api_calls": 0, "seconds": 0.0})
+        asr["calls"] = (asr.get("calls", 0) or 0) + 1
+        asr["api_calls"] = (asr.get("api_calls", 0) or 0) + 1
+        asr["seconds"] = (asr.get("seconds", 0) or 0) + seconds
+        store.save(state)
+    except Exception:
+        logger.exception("🎤 Kunde inte bokföra ASR-usage")
+
+
+@app.post("/api/voice")
+async def voice_asr(file: UploadFile = File(...), morkrets_token: str | None = Cookie(None)):
+    """Transkribera spelarens röst (EN) via StepFun stepaudio-2.5-asr.
+
+    Ingen turn-förbrukning — transkriptet fyller bara chat-input (redigerbart).
+    GRATIS sedan 2026-08-15 (följer StepFun TTS — free tier får tala fritt).
+    """
+    if selfhost.enabled():
+        _selfhost_absent("Voice input (speech-to-text)")
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(400, "Inget ljud mottaget")
+    if len(content) > ASR_MAX_AUDIO_BYTES:
+        raise HTTPException(400, "Ljudet är för stort (max 10 MB)")
+
+    wav = await asyncio.to_thread(_to_wav_16k, content)
+    if not wav:
+        raise HTTPException(400, "Kunde inte avkoda ljudet — försök igen (annan webbläsare?)")
+    seconds = len(wav) / 32000.0  # 16 kHz mono 16-bit = 32 000 B/s
+    if seconds > ASR_MAX_SECONDS:
+        raise HTTPException(400, "Inspelningen är för lång (max 60 sekunder)")
+
+    try:
+        text = await asyncio.to_thread(_asr_stepfun, wav)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("🎤 ASR error: user=%s — %s", username, e, exc_info=True)
+        raise HTTPException(502, f"Kunde inte transkribera — {e}")
+
+    if not text:
+        raise HTTPException(422, "Ingen transkription — tala tydligare och försök igen?")
+    _record_asr_usage(username, seconds)
+    logger.info("🎤 ASR ok: user=%s, %.1fs → %d chars", username, seconds, len(text))
+    return {"text": text}
+
+
+@app.post("/api/campaign/tts-settings")
+async def set_tts_settings(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Spara TTS-inställningar per kampanj (state.meta.tts_*) — provider,
+    röst (kön), berättar-stil, egen stil-fras, autoplay och hastighet.
+    Valen följer med när spelaren återvänder till kampanjen, på alla enheter."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    provider = str((req or {}).get("provider", "") or "").strip().lower()
+    if provider and provider not in TTS_PROVIDERS:
+        raise HTTPException(400, "Okänd TTS-leverantör")
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    meta = state.setdefault("meta", {})
+    if provider:
+        meta["tts_provider"] = provider
+    # Röst (kön) — male/female
+    voice = str((req or {}).get("voice", "") or "").strip().lower()
+    if voice in ("male", "female"):
+        meta["tts_voice"] = voice
+    # Berättar-stil: '' | happy | calm | scary | custom
+    style = str((req or {}).get("style", "") or "").strip()
+    if style in ("", "happy", "calm", "scary", "custom"):
+        meta["tts_style"] = style
+    # Egen stil-fras (max 120 tecken — backend gate-ar på tier i /api/tts)
+    style_custom = str((req or {}).get("style_custom", "") or "").strip()[:120]
+    if "style_custom" in (req or {}):
+        meta["tts_style_custom"] = style_custom
+    # Autoplay ('1'/'0')
+    autoplay = str((req or {}).get("autoplay", "") or "").strip()
+    if autoplay in ("0", "1"):
+        meta["tts_autoplay"] = autoplay
+    # Hastighets-index (0..4)
+    try:
+        speed = int((req or {}).get("speed", -1))
+    except (TypeError, ValueError):
+        speed = -1
+    if 0 <= speed <= 4:
+        meta["tts_speed"] = speed
+    store.save(state)
+    return {"ok": True, "provider": provider, "saved": {k: meta.get(k) for k in ("tts_provider", "tts_voice", "tts_style", "tts_style_custom", "tts_autoplay", "tts_speed")}}
+
+
+# ═══════════════════════════════════════
+# CAMPAIGN CRUD
+# ═══════════════════════════════════════
+
+
+@app.post("/api/campaign")
+async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    language = ((body.language if body else "en") or "en").strip().lower()
+    # API-gate (CONTRACT A4): okänt språk → 400; interno fallback för OKända
+    # koder är engelska (languages.py), men skapelse nekas hårdt.
+    if not is_supported(language):
+        raise HTTPException(400, "Unsupported campaign language")
+    # Fix 2026-09-07 (feedback): default-namn följer kampanjspråket
+    name = (body.name if body else "") or DEFAULT_CAMPAIGN_NAMES.get(
+        language, DEFAULT_CAMPAIGN_NAMES["en"])
+
+    state = store.create(username, name=name, language=language)
+    # Admin kan välja Guardian-modell per kampanj
+    guardian_model = (body.guardian_model if body else "") or ""
+    if guardian_model and payload.get("role") == "admin":
+        state["meta"]["guardian_model"] = guardian_model
+    # Extraction-modell (bakgrund: fakta, dagbok, summaries) — alla kan välja
+    extraction_model = (body.extraction_model if body else "") or ""
+    if extraction_model and _validate_model_id(extraction_model):
+        state["meta"]["extraction_model"] = extraction_model
+    # Slumpa en äventyrsöppning (språkmedveten — get_opening_styles fallback en)
+    style_key, style_desc = random.choice(get_opening_styles(language))
+    state["meta"]["opening_style"] = style_desc
+    state["meta"]["opening_key"] = style_key
+    state["meta"]["awakening"] = True  # DM vaknar: frågor först, sen öppnas scenen
+    store.save(state)
+    return {"ok": True, "campaign_id": state["meta"]["campaign_id"], "opening": style_key}
+
+
+# ── QUICK START (2026-10-27) — färdig hjälte, ingen intervju, rakt in i scenen ──
+# Målet är första turen på under en minut: kampanjen skapas med en förberedd
+# level-1-hjälte ur backend/data/pregens/heroes.json och awakening=False, så DM
+# hoppar över sina 2-3 frågor och öppnar handlingen direkt (in medias res).
+# Kostar inga turer — det här är onboarding, inte spel.
+_PREGENS: dict | None = None
+
+
+def _load_pregens() -> list[dict]:
+    """Förberedda hjältar. Läses en gång; trasig/saknad fil → tom lista och
+    endpointen svarar 503 — spelet i övrigt påverkas inte."""
+    global _PREGENS
+    if _PREGENS is None:
+        path = Path(__file__).resolve().parent / "pregens" / "heroes.json"
+        try:
+            _PREGENS = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001 — aldrig en 500 för en saknad fil
+            logger.warning("Quickstart: kunde inte läsa %s (%s)", path, exc)
+            _PREGENS = {"heroes": []}
+    data = _PREGENS
+    if not isinstance(data, dict):
+        return []
+    heroes = data.get("heroes")
+    return heroes if isinstance(heroes, list) else []
+
+
+@app.get("/api/campaign/quickstart/heroes")
+async def quickstart_heroes(morkrets_token: str | None = Cookie(None)):
+    """Roster för quick start-knappen (id, label, blurb + klass/nivå)."""
+    _get_current_user(morkrets_token)
+    out = []
+    for h in _load_pregens():
+        ch = h.get("character") or {}
+        out.append({
+            "id": h.get("id"), "label": h.get("label"), "blurb": h.get("blurb"),
+            "name": ch.get("name"), "class": ch.get("class"), "race": ch.get("race"),
+            "level": ch.get("level", 1),
+        })
+    return {"ok": True, "heroes": out}
+
+
+@app.post("/api/campaign/quickstart")
+async def create_campaign_quickstart(body: QuickstartRequest | None = None,
+                                    morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    language = ((body.language if body else "en") or "en").strip().lower()
+    if not is_supported(language):
+        raise HTTPException(400, "Unsupported campaign language")
+    heroes = _load_pregens()
+    if not heroes:
+        raise HTTPException(503, "Quick start is not available right now")
+    wanted = ((body.hero if body else "") or "").strip()
+    hero = next((h for h in heroes if h.get("id") == wanted), None) or heroes[0]
+    name = hero.get("label") or DEFAULT_CAMPAIGN_NAMES.get(language, "Quick Start")
+    state = store.create(username, name=name, language=language)
+    # Ingen awakening-intervju: öppna i handlingen i stället.
+    styles = get_opening_styles(language)
+    style_key, style_desc = next(
+        ((k, d) for k, d in styles if str(k).startswith("in_")), styles[0])
+    state["meta"]["opening_style"] = style_desc
+    state["meta"]["opening_key"] = style_key
+    state["meta"]["awakening"] = False
+    state["meta"]["quickstart"] = hero.get("id")
+    # Samma normalisering som char-gen: items får lore, inventory skrivs.
+    ch = copy.deepcopy(hero.get("character") or {})
+    if isinstance(ch.get("gear"), list):
+        # gear är en STRING i schemat (_finalize_character_data re.split:ar den);
+        # föremålen hör i inventory. En handskriven pregen ska aldrig 500:a —
+        # och aldrig tappa sina items på vägen.
+        gear_items = [g for g in ch["gear"] if isinstance(g, dict) and g.get("name")]
+        if not (ch.get("inventory") or []):
+            ch["inventory"] = gear_items
+        ch["gear"] = " · ".join(g["name"] for g in gear_items)
+    _finalize_character(ch, state, language)
+    return {"ok": True, "campaign_id": state["meta"]["campaign_id"],
+            "hero": hero.get("id"), "opening": style_key}
+
+
+# ── Live-aktivitet: pipeline-status för loading-animationen ──
+# In-memory ring-buffer per användare med de senaste stegen i DM/Lorekeeper-
+# pipelinen (pre-DM, DM, mekanik, post-DM, stridslogg, dagar). Frontenden
+# pollar /api/debug/logs medan DM/Lorekeeper-statusen visas och
+# renderar den senaste entryn — "se vad som arbetar i bakgrunden".
+_ACTIVITY: dict[str, list] = {}
+_ACTIVITY_MAX = 25
+
+
+def _log_activity(username: str, text: str) -> None:
+    """Pipeline-status → aktivitetsbuffert + live-debuglogg.
+
+    Skriver samma fas till DEBUG_LOGS (INFO) så loading-animationen —
+    som pollar /api/debug/logs — visar DM/Lorekeeper-faserna live.
+    Utan detta sitter loadern på den senaste tekniska loggen
+    ("◀ TURN done") medan Lorekeeper fortfarande jobbar i bakgrunden.
+    """
+    try:
+        ts = time.time()
+        entries = _ACTIVITY.setdefault(username, [])
+        entries.append({"ts": ts, "text": text})
+        del entries[:-_ACTIVITY_MAX]
+        ctx = _LOG_CTX.get()
+        DEBUG_LOGS.append({
+            "ts": ts,
+            "time": datetime.fromtimestamp(ts).strftime("%H:%M:%S"),
+            "level": "INFO",
+            "name": "lw.activity",
+            "msg": text,
+            "user": ctx.get("user") or username,
+            "campaign": ctx.get("campaign"),
+        })
+    except Exception:
+        pass
+
+
+@app.get("/api/campaign")
+async def get_campaign(morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    return state
+
+
+@app.get("/api/campaign/transcript")
+async def get_transcript(morkrets_token: str | None = Cookie(None)):
+    """Returnera kampanjens transkript (senaste 100 meddelandena).
+    Inkluderar även senaste tur's effekter + kastbegäran så att
+    transkript-fallbacken kan återställa föremål/kast som tappades
+    när HTTP-anslutningen timeout:ade."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    entries = store.load_transcript(state, last_n=100)
+    meta = state.get("meta", {})
+    active_cid = meta.get("campaign_id", "")
+    return {
+        "messages": entries,
+        "last_effects": meta.get("last_effects", []),
+        "last_roll_requests": meta.get("last_roll_requests", []),
+        "undo_available": store.undo_available(state),
+        # Tärningslås (2026-08-06): true medan Lorekeeper-jobben (guardian
+        # post-DM + faktextraktion) fortfarande körs i bakgrunden. Frontend
+        # håller tärningen låst tills detta är false OCH rapporten renderats.
+        "guardian_running": (payload["sub"], active_cid) in _RUNNING_BG,
+    }
+
+
+@app.get("/api/campaign/usage")
+async def get_campaign_usage(morkrets_token: str | None = Cookie(None)):
+    """Spelarens egen modellanvändning: per-modell tokens + anrop för den
+    aktiva kampanjen och totalt för kontot. Siffrorna kommer från transkripten
+    (DM + Guardian-poster) + state.meta.unguarded_tokens (bakgrundsanrop)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    active_cid = state.get("meta", {}).get("campaign_id", "")
+
+    scan = _scan_user_transcripts(username)
+
+    # Per-kampanj-aggregation (modell → tokens/anrop)
+    campaign_models: dict = {}
+    totals: dict = {}
+    bg_campaign = 0
+    bg_total = 0
+    for s in scan["sessions"]:
+        rt = (s.get("role_tokens") or {}).get("background", {})
+        b_p = rt.get("prompt_tokens", 0) or 0
+        b_c = rt.get("completion_tokens", 0) or 0
+        bg_total += b_p + b_c
+        if s["campaign_id"] == active_cid:
+            bg_campaign += b_p + b_c
+        for m, mt in (s.get("model_tokens") or {}).items():
+            tot = totals.setdefault(m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+            tot["prompt_tokens"] += mt.get("prompt_tokens", 0) or 0
+            tot["completion_tokens"] += mt.get("completion_tokens", 0) or 0
+            tot["calls"] += mt.get("calls", 0) or 0
+            if s["campaign_id"] == active_cid:
+                cm = campaign_models.setdefault(m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                cm["prompt_tokens"] += mt.get("prompt_tokens", 0) or 0
+                cm["completion_tokens"] += mt.get("completion_tokens", 0) or 0
+                cm["calls"] += mt.get("calls", 0) or 0
+
+    def _finalize(d: dict) -> dict:
+        out = {}
+        for m, v in d.items():
+            out[m] = {
+                "prompt_tokens": v["prompt_tokens"],
+                "completion_tokens": v["completion_tokens"],
+                "total_tokens": v["prompt_tokens"] + v["completion_tokens"],
+                "calls": v["calls"],
+            }
+        return out
+
+    return {
+        "campaign_id": active_cid,
+        "campaign_name": state.get("meta", {}).get("campaign_name", ""),
+        "turns": scan["turns"],
+        "active_campaign": {
+            "models": _finalize(campaign_models),
+            "background_tokens": bg_campaign,
+            "tts": state.get("meta", {}).get("tts_usage", {}),
+            "asr": state.get("meta", {}).get("asr_usage", {}),
+        },
+        "account_total": {
+            "models": _finalize(totals),
+            "background_tokens": bg_total,
+            "prompt_tokens": scan["prompt_tokens"],
+            "completion_tokens": scan["completion_tokens"],
+            "total_tokens": scan["total_tokens"],
+            "tts": scan.get("tts_usage", {}),
+            "character_creation": scan.get("character_creation", {}),
+            "image_gen": scan.get("image_gen", {}),
+            "deleted_campaigns": scan.get("deleted_campaigns", {}),
+        },
+    }
+
+
+@app.get("/api/campaigns")
+async def list_campaigns(morkrets_token: str | None = Cookie(None)):
+    """Lista alla kampanjer för användaren."""
+    payload = _get_current_user(morkrets_token)
+    campaigns = store.list_campaigns(payload["sub"])
+    return {"campaigns": campaigns}
+
+
+def _refresh_book_of_souls() -> None:
+    """Kör gen_gallery.py i containern (env-överstyrda sökvägar) så att
+    gallery.json + avatarkopior speglar nuvarande kampanjdata DIREKT.
+
+    Anropas vid kampanjradering: raderad kampanjs showcase/galleribilder
+    försvinner på en gång. Host-cronen (book-souls-refresh, 24h) gör samma
+    sak på disken + docker cp — den här håller containern färsk däremellan.
+    """
+    import subprocess
+    try:
+        script = os.path.join(os.path.dirname(__file__), "..", "frontend", "book-souls", "gen_gallery.py")
+        script = os.path.abspath(script)
+        if not os.path.isfile(script):
+            logger.debug("Book of Souls: gen_gallery.py saknas (%s)", script)
+            return
+        env = dict(os.environ)
+        env["DND_GALLERY_DATA_DIR"] = os.path.join(os.path.dirname(__file__), "data", "campaigns")
+        env["DND_GALLERY_OUT_DIR"] = os.path.dirname(script)
+        r = subprocess.run(
+            [sys.executable, script], env=env,
+            capture_output=True, text=True, timeout=120,
+        )
+        logger.info("Book of Souls refresh: rc=%d %s", r.returncode, (r.stdout or "").strip().splitlines()[-1:] )
+    except Exception as e:
+        logger.debug("Book of Souls refresh misslyckades: %s", e)
+
+
+@app.delete("/api/campaign")
+async def delete_campaign(
+    morkrets_token: str | None = Cookie(None),
+    campaign_id: str | None = None,
+):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    # Accept campaign_id from query param or body
+    cid = campaign_id
+    if not cid:
+        raise HTTPException(400, "campaign_id krävs för att radera en specifik kampanj")
+    # Sparar kampanjens FULLA förbrukning (LLM-tokens + turns + TTS) i den
+    # beständiga per-konto-ackumulatorn INNAN katalogen raderas, så kontots
+    # totala förbrukning överlever raderingen/roll-over.
+    _add_deleted_campaign(username, _campaign_usage_snapshot(username, cid))
+    deleted = store.delete(username, cid)
+    if not deleted:
+        raise HTTPException(404, "Ingen kampanj att radera")
+    # Fas 3: Rensa Qdrant-vektorer så inget långtidsminne läcker kvar
+    try:
+        await rag.purge_user(username)
+    except Exception as e:
+        logger.debug("Qdrant cleanup on campaign deletion: %s", e)
+    # Book of Souls: regenerera showcase-galleriet i containern direkt så
+    # raderad kampanjs kort + bilder försvinner på en gång (host-cronen 24h
+    # synkar disken + docker cp i bakgrunden).
+    try:
+        await asyncio.to_thread(_refresh_book_of_souls)
+    except Exception as e:
+        logger.debug("Book of Souls refresh on delete: %s", e)
+    return {"ok": True, "message": "Kampanjen har avslutats och raderats"}
+
+
+@app.post("/api/campaign/activate")
+async def activate_campaign(body: CampaignActivateRequest, morkrets_token: str | None = Cookie(None)):
+    """Sätt en specifik kampanj som aktiv."""
+    payload = _get_current_user(morkrets_token)
+    cid = (body.campaign_id or "").strip()
+    # Security (2026-08-04, P0): kampanj-id:n är uuid-hex (12). Utan checken
+    # kunde campaign_id peka på en annan användares katalog (path traversal).
+    if not re.fullmatch(r"[0-9a-f]{12}", cid):
+        raise HTTPException(404, "Kampanjen hittades inte")
+    state = store.set_active(payload["sub"], cid)
+    if not state:
+        raise HTTPException(404, "Kampanjen hittades inte")
+    return {"ok": True, "campaign_id": body.campaign_id}
+
+
+# ═══════════════════════════════════════
+# SAVE / LOAD / PIN / LORE / CHAPTER
+# ═══════════════════════════════════════
+
+
+@app.post("/api/campaign/save")
+async def save_checkpoint(body: SaveRequest, morkrets_token: str | None = Cookie(None)):
+    """Spara en snapshot av nuvarande kampanjtillstånd."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    user = state["meta"]["user"]
+    cid = state["meta"]["campaign_id"]
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    save_id = f"save-{ts}"
+
+    saves_dir = store._saves_dir(user, cid)
+    saves_dir.mkdir(parents=True, exist_ok=True)
+
+    snapshot = {
+        "save_id": save_id,
+        "description": body.description or f"Sparat vid tur {state['meta'].get('turn_count', 0)}",
+        "created": datetime.now(timezone.utc).isoformat(),
+        "turn_count": state["meta"].get("turn_count", 0),
+        "character": state.get("character", {}),
+        "inventory": state.get("inventory", []),
+        "currency": state.get("currency", {}),
+        "npcs": state.get("npcs", []),
+        "quests": state.get("quests", []),
+        "world": state.get("world", {}),
+        "lore": state.get("lore", []),
+        "pinned_facts": state.get("pinned_facts", []),
+    }
+    save_path = saves_dir / f"{save_id}.json"
+    with open(save_path, "w") as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
+
+    return {"ok": True, "save_id": save_id, "description": snapshot["description"], "turn_count": snapshot["turn_count"]}
+
+
+async def _reindex_after_undo(username: str, campaign_id: str) -> None:
+    """Efter undo: rensa kampanjens vektorer och indexera om senaste raderna.
+
+    Vektor-ID = uuid5(text+user+campaign) → re-indexering är idempotent och
+    läker de chunkar som pekade på den ångrade turen.
+    """
+    try:
+        if not await rag.qdrant_healthy():
+            return
+        await rag.purge_campaign(username, campaign_id)
+        st = store.get(username, campaign_id)
+        if not st:
+            return
+        recent = store.load_transcript(st, last_n=20)
+        msgs = [
+            {"role": e["role"], "content": e["content"], "turn": st["meta"].get("turn_count", 0)}
+            for e in recent if e.get("content") != "__VAKNA_DM__"
+        ]
+        if msgs:
+            await rag.index_transcript(msgs, username, campaign_id)
+        lore = st.get("lore", []) or []
+        for i, text in enumerate(lore):
+            try:
+                await rag.index_lore(f"Lore #{i + 1}", text, username, campaign_id)
+            except Exception:
+                pass
+        logger.info("↶ Re-indexed %d messages + %d lore after undo", len(msgs), len(lore))
+    except Exception as e:
+        logger.debug("Re-index after undo skipped: %s", e)
+
+
+def _undo_deltas(pre: dict, post: dict) -> dict:
+    """hp/gold-skillnaden som undo:t orsakade (before = läget vid undo-tillfället,
+    after = det återställda läget) — så frontend kan visa vad som rullades tillbaka."""
+    def _hp(st: dict):
+        try:
+            return int((st.get("character") or {}).get("hp", {}).get("current"))
+        except (TypeError, ValueError):
+            return None
+
+    def _gold(st: dict):
+        try:
+            return int((st.get("currency") or {}).get("gp", 0) or 0)
+        except (TypeError, ValueError):
+            return None
+
+    def _pack(before, after):
+        delta = (after - before) if (before is not None and after is not None) else None
+        return {"before": before, "after": after, "delta": delta}
+
+    return {"hp": _pack(_hp(pre), _hp(post)), "gold": _pack(_gold(pre), _gold(post))}
+
+
+@app.post("/api/campaign/undo")
+async def undo_last_turn(morkrets_token: str | None = Cookie(None)):
+    """Ångra senaste turen: spelarens prompt, DM-svaret och allt som
+    Guardian/faktextraktionen skrev från den.
+
+    Single-level (bara senaste turen) och kostar 1 turn (action="undo").
+    Ingen refund — undo är själv en tung action (beslut 2026-09-09).
+    Race-guard: vänta in det pågående bakgrundsjobbs-gruppen FÖRE restore
+    (undo-turn design 2026-09), sedan bumpas meta.epoch så ev. rester
+    avbryter innan de sparar.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    # Betalvägg (2026-10-01): undo kräver att kontot någonsin betalat (donation
+    # 1€+ räcker). Grinden ligger FÖRE allt annat — ett låst anrop får inte dra
+    # en turn, inte bumpa epoch, inte konsumera snapshoten och inte ens vänta in
+    # kampanjens bakgrundsjobb.
+    _require_supporter(username, payload, "undo",
+                       "Undo is part of the supporter unlock — any donation (1€ or more) "
+                       "unlocks it permanently. Your last turn is untouched either way.")
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+
+    # Drain in-flight post-turn tasks BEFORE taking the state lock — those
+    # tasks acquire the same lock, so waiting while holding it deadlocks.
+    # Their writes land first and are then rolled back by the restore.
+    await _wait_for_bg_tasks(username, campaign_id)
+
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        if not store.undo_available(state):
+            raise HTTPException(409, "Nothing to undo — no previous turn found.")
+        pre_state = state
+        # Kostar en turn, som alla tunga actions. Samma 403-shape som chatten
+        # så frontendens cap-modal fungerar.
+        _gate_turn_quota(username)
+        info = store.restore_turn(username, campaign_id)
+        if not info:
+            raise HTTPException(409, "Nothing to undo — no previous turn found.")
+        restored = store.get(username, campaign_id)
+        if not restored:
+            raise HTTPException(500, "The restore failed — the campaign file is gone")
+
+        # Ny epoch → bakgrundsuppgifter från den ångrade turen avbryter
+        # innan de sparar (annars skriver de zombiedata ovanpå läget).
+        restored["meta"]["epoch"] = int(restored["meta"].get("epoch", 0) or 0) + 1
+        # Token-statistiken läses ur transkriptet — bevara verklig förbrukning
+        # för de borttagna raderna så admin-siffrorna inte underskattar.
+        _voided = (info.get("removed") or {}).get("tokens") or {}
+        if _voided.get("total_tokens"):
+            _track_unguarded(restored, "undo-voided", _voided)
+        store.save(restored)
+        deltas = _undo_deltas(pre_state, restored)
+        _consume_turn(username, action="undo")
+        _log_activity(username, "↶ Undoing the last turn…")
+
+    # Qdrant-purge + re-index (beslut 2026-09): rensa kampanjens vektorer och
+    # indexera om senaste raderna + lore (uuid5-ID → idempotent). Registrerad
+    # i kampanjgruppen så en snabb dubbel-undo även väntar in den.
+    _register_bg_task(username, campaign_id, _reindex_after_undo(username, campaign_id))
+
+    return {
+        "ok": True,
+        "turn_count": restored["meta"].get("turn_count", 0),
+        "restored_turn": restored["meta"].get("turn_count", 0),
+        "removed_messages": info["removed"]["messages"],
+        "removed_summaries": info["removed"]["summaries"],
+        "undo_prompt": info["meta"].get("prompt", ""),
+        "turns_left": _turns_available(username),
+        "deltas": deltas,
+    }
+
+
+@app.post("/api/campaign/pin")
+async def pin_fact(body: PinRequest, morkrets_token: str | None = Cookie(None)):
+    """Fäst en fakta som permanent sanning."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        facts = state.setdefault("pinned_facts", [])
+        fact = body.fact.strip()
+        if fact and fact not in facts:
+            facts.append(fact)
+        store.save(state)
+        return {"ok": True, "pinned_facts": facts}
+
+
+@app.delete("/api/campaign/pin")
+async def unpin_fact(body: PinRequest, morkrets_token: str | None = Cookie(None)):
+    """Ta bort en fäst fakta."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        facts = state.setdefault("pinned_facts", [])
+        fact = body.fact.strip()
+        if fact in facts:
+            facts.remove(fact)
+        store.save(state)
+        return {"ok": True, "pinned_facts": facts}
+
+
+@app.post("/api/campaign/lore")
+async def add_lore(body: LoreRequest, morkrets_token: str | None = Cookie(None)):
+    """Lägg till en lore-post till kampanjen."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        lore = state.setdefault("lore", [])
+        text = body.text.strip()
+        if text:
+            lore.append(text)
+            # Fas 3: Indexera lore i Qdrant för semantisk sökning
+            try:
+                await rag.index_lore(f"Lore #{len(lore)}", text, username, campaign_id)
+            except Exception as e:
+                logger.debug("Lore indexing skipped: %s", e)
+        store.save(state)
+        return {"ok": True, "lore_count": len(lore)}
+
+
+@app.post("/api/campaign/consume-resource")
+async def consume_resource(body: LoreRequest, morkrets_token: str | None = Cookie(None)):
+    """Konsumera (ta bort) en roll_grant-resurs ur state.resources.
+
+    Anropas från frontend när spelaren använder en resursknapp i
+    karaktärsdragern — annars ligger resursen kvar för evigt och kan
+    trigga nya roll-requests i framtida turer (showstopper 2026-08-01).
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        label = (body.text or "").strip()
+        if label:
+            res = state.get("resources", [])
+            kept = [r for r in res if (r.get("label") or "").strip().lower() != label.lower()]
+            if len(kept) != len(res):
+                state["resources"] = kept
+                logger.info("🎲 Resource '%s' consumed via API", label)
+            store.save(state)
+        return {"ok": True}
+
+
+@app.get("/api/facts")
+async def get_facts(category: str | None = None, morkrets_token: str | None = Cookie(None)):
+    """Hämta faktaregistret (alla eller filtrerade per kategori)."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    campaign_id = state["meta"]["campaign_id"] if state else ""
+    try:
+        register = FactRegister(payload["sub"], campaign_id)
+        if category:
+            facts = register.get_facts_by_category(category)
+        else:
+            facts = [f for f in register._facts if not f.superseded_by and not f.archived]
+        # Rank-poäng per faktum (rörligt fönster) — frontend visar
+        # nedrankade entries tydligare än bara superseded.
+        facts_out = []
+        for f in facts:
+            d = f.model_dump()
+            d["rank_score"] = register.rank_score(f)
+            facts_out.append(d)
+        # Superseded-fakta (ersatta av nyare sanning) — frontend visar dem
+        # i en popup/filter så spelaren kan se VILKA som ersatts och varför.
+        by_id = {f.id: f for f in register._facts}
+        superseded_out = []
+        for f in register._facts:
+            if f.superseded_by is None:
+                continue
+            d = f.model_dump()
+            d["rank_score"] = register.rank_score(f)
+            repl = by_id.get(f.superseded_by)
+            d["replaced_by_text"] = repl.text if repl else None
+            d["replaced_by_turn"] = repl.source_turn if repl else None
+            superseded_out.append(d)
+        superseded_out.sort(key=lambda x: x.get("source_turn", 0), reverse=True)
+        return {
+            "facts": facts_out,
+            "superseded": superseded_out,
+            "stats": register.stats(),
+        }
+    except Exception:
+        return {"facts": [], "superseded": [], "stats": {}}
+
+
+@app.post("/api/campaign/chapter")
+async def trigger_chapter(body: ChapterRequest, morkrets_token: str | None = Cookie(None)):
+    """Manuellt utlös en kapitalsammanfattning via LLM."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+
+        # Bygg kontext från transkript + state
+        transcript = store.load_transcript(state, last_n=30)
+        t_text = "\n".join(f"{e['role']}: {e['content']}" for e in transcript[-20:])
+        char_name = state.get("character", {}).get("name", "Äventyraren" if _get_lang(state) == "sv" else "The Adventurer")
+        location = state.get("world", {}).get("current_location", "Okänd plats" if _get_lang(state) == "sv" else "Unknown place")
+        npcs = ", ".join(n.get("name", "?") for n in state.get("npcs", [])[:8])
+        quests = ", ".join(q.get("name", "?") for q in state.get("quests", []) if q.get("status") in ("aktiv", "active"))
+
+        if _get_lang(state) == "sv":
+            prompt = (
+                f"Du är en krönikör som sammanfattar ett kapitel i ett D&D-äventyr.\n"
+                f"Kapitelrubrik: {body.title}\n"
+                f"Karaktär: {char_name}, Plats: {location}\n"
+                f"NPCs: {npcs}\nAktiva uppdrag: {quests}\n\n"
+                f"Senaste händelser:\n{t_text}\n\n"
+                f"Skriv en stämningsfull kapitalsammanfattning (3-5 meningar) på svenska. "
+                f"Använd rubriken '{body.title}'. Beskriv vad som hände och vad som väntar."
+            )
+        else:
+            prompt = (
+                f"You are a chronicler summarizing a chapter of a D&D adventure.\n"
+                f"Chapter title: {body.title}\n"
+                f"Character: {char_name}, Location: {location}\n"
+                f"NPCs: {npcs}\nActive quests: {quests}\n\n"
+                f"Recent events:\n{t_text}\n\n"
+                f"Write an evocative chapter summary (3-5 sentences) in English. "
+                f"Use the title '{body.title}'. Describe what happened and what lies ahead."
+            )
+
+        # Kapitalsammanfattning är ett LLM-anrop — räknas som en turn (2026-08-08)
+        # 2026-08-14: använder kampanjens extraction-modell (state.meta.extraction_model
+        # → EXTRACTION_MODEL) i stället för den hårdkodade ATMOSPHERE_MODEL (qwen3.8-max)
+        # — bakgrundsgenerering ska följa spelarens modellval, inte en dold env-variabel.
+        _gate_turn_quota(username)
+        _chapter_model = _extraction_model_for(state)
+        _consume_turn(username, action="chapter", model=_chapter_model)
+
+        try:
+            summary = await _call_llm(
+                _chapter_model,
+                [{"role": "user", "content": prompt}],
+                temperature=0.5,
+                max_tokens=512,
+            )
+        except Exception:
+            summary = f"Kapitel {body.title}: Äventyret fortsätter i {location}. Mörkret väntar."
+
+        # Spara sammanfattning och öka kapitelräknaren
+        store.save_summary(state, summary)
+        state["meta"]["chapter_count"] = state["meta"].get("chapter_count", 0) + 1
+        store.save(state)
+
+        return {"ok": True, "title": body.title, "summary": summary, "chapter_count": state["meta"]["chapter_count"]}
+
+
+# ═══════════════════════════════════════
+# CHAT
+# ═══════════════════════════════════════
+
+
+def _status_names(statuses) -> str:
+    """Status-namn ur en lista som kan bära strängar ELLER dicts.
+
+    Stridsmotorn (combat.py) skriver statusar som dicts
+    ({"name": "blind", "duration": 3, ...}). Läsvägarna gjorde tidigare
+    `", ".join(listan)` rakt av → TypeError: sequence item 0: expected str
+    instance, dict found — kastat inuti systemprompten, alltså EFTER
+    Guardian men FÖRE svaret, vilket gjorde att hela POST /api/chat blev 500
+    och kampanjen blev ospelbar (incident 2026-10-04: 5 kampanjer, 4 spelare).
+    Tål båda formerna och skräp-innehåll.
+    """
+    names: list[str] = []
+    for s in statuses or []:
+        if isinstance(s, dict):
+            raw = s.get("name")
+        else:
+            raw = s
+        name = str(raw or "").strip()
+        if name:
+            names.append(name)
+    return ", ".join(names)
+
+
+def compact_state(state: dict, language: str = "sv") -> str:
+    """Kompakt naturligt-språk-sammanfattning av kampanjtillståndet.
+
+    Ersätter json.dumps i DM-prompten — ger LLM:n samma information
+    till en bråkdel av tokenkostnaden.
+    """
+    char = state.get("character", {})
+    name = char.get("name", "Okänd")
+    klass = char.get("class", "Äventyrare")
+    level = char.get("level", 1)
+    hp = char.get("hp", {})
+    hp_cur = hp.get("current", 0)
+    hp_max = hp.get("max", 0)
+    ac = char.get("ac", 10)
+    currency = state.get("currency", {})
+    wallet = currency_display(currency)
+    coin_wt = currency_weight(currency)
+
+    lines = [f"{name}, {klass} niv {level}. HP {hp_cur}/{hp_max}. AC {ac}. Plånbok: {wallet}. Myntvikt: {coin_wt} lb."]
+
+    # Darkvision (P2) — egen rad: "Darkvision: 60 ft" / "Darkvision: Ingen".
+    _dv = char.get("darkvision")
+    lines.append(f"Darkvision: {_dv}" if _dv else ("Darkvision: None" if language != "sv" else "Darkvision: Ingen"))
+
+    # Resistanser/sårbarheter (P2) — bara om icke-tomma.
+    res = [r for r in (char.get("resistances", []) or []) if r]
+    if res:
+        lines.append(("Resistances: " if language != "sv" else "Resistanser: ") + ", ".join(res))
+
+    # Exhaustion (P2) — "Exhaustion: L2 — speed halverad" vid nivå > 0.
+    exh = int(char.get("exhaustion", 0) or 0)
+    if exh > 0:
+        _EXH_PEN = (
+            {1: "ability checks med nackdel", 2: "speed halverad", 3: "attacks/saves med nackdel",
+             4: "HP max halverad", 5: "speed 0", 6: "död"}
+            if language == "sv" else
+            {1: "disadvantage ability checks", 2: "speed halved", 3: "disadvantage attacks/saves",
+             4: "HP max halved", 5: "speed 0", 6: "death"}
+        )
+        lines.append(f"Exhaustion: L{exh} — {_EXH_PEN.get(exh, '')}")
+    else:
+        lines.append("Exhaustion: 0")
+
+    # Villkor/statusar (2026-10-27) — motorn sparar statusar som dicts med
+    # duration, men compact_state visade dem ALDRIG för spelaren: DM:n kunde
+    # beskriva en blindad hjälte som om inget hänt och begära raka kast.
+    # Effekttexten är 5e:s regel, inte en gissning — fiende-sidan verkställs
+    # dessutom i koden (enemy_rolls → combat.attack_roll_mode).
+    _COND = (
+        {
+            "blind": "blindad — nackdel på egna attacker; fiender har fördel mot dig",
+            "stun": "bedövad — kan inte agera; fiender har fördel mot dig",
+            "poison": "förgiftad — nackdel på attacker och ability checks",
+            "prone": "liggande — nackdel på egna attacker (resa = halv rörelse)",
+            "restrain": "fasthållen — nackdel på attacker; fiender har fördel mot dig",
+            "frighten": "skrämd — nackdel på attacker medan källan syns",
+            "paralyze": "förlamad — kan inte agera; fiender har fördel mot dig",
+            "unconscious": "medvetslös — kan inte agera; fiender har fördel mot dig",
+            "burn": "brinnande — skada varje tur",
+            "bleed": "blödande — skada varje tur",
+            "charm": "förhäxad — kontrolleras av motståndaren",
+        }
+        if language == "sv" else
+        {
+            "blind": "blinded — disadvantage on your attacks; attackers have advantage against you",
+            "stun": "stunned — you cannot act; attackers have advantage against you",
+            "poison": "poisoned — disadvantage on attacks and ability checks",
+            "prone": "prone — disadvantage on your attacks (standing up costs half your movement)",
+            "restrain": "restrained — disadvantage on attacks; attackers have advantage against you",
+            "frighten": "frightened — disadvantage on attacks while the source is in sight",
+            "paralyze": "paralyzed — you cannot act; attackers have advantage against you",
+            "unconscious": "unconscious — you cannot act; attackers have advantage against you",
+            "burn": "burning — damage each turn",
+            "bleed": "bleeding — damage each turn",
+            "charm": "charmed — controlled by the opponent",
+        }
+    )
+    _conds = []
+    for s in (char.get("statuses") or []):
+        nm = s.get("name") if isinstance(s, dict) else s
+        nm = str(nm or "").strip().lower()
+        if not nm:
+            continue
+        dur = s.get("duration") if isinstance(s, dict) else None
+        eff = _COND.get(nm, nm)
+        _conds.append(f"{eff} ({dur}{'r' if language == 'sv' else ' rounds'})" if dur else eff)
+    if _conds:
+        lines.append(("ACTIVE CONDITIONS: " if language != "sv" else "AKTIVA VILLKOR: ") + "; ".join(_conds))
+
+    # Träning (P2) — "Träning: Stealth 4/10 dagar" om pågående.
+    training = char.get("training", []) or []
+    if training:
+        tr_parts = []
+        for t in training[:10]:
+            if isinstance(t, dict) and t.get("name"):
+                _dn = t.get("days_needed", 10) or 10
+                tr_parts.append(f"{t.get('name')} {t.get('days_spent', 0) or 0}/{_dn}{' dagar' if language == 'sv' else ' days'}")
+        if tr_parts:
+            lines.append(("Training: " if language != "sv" else "Träning: ") + ", ".join(tr_parts))
+
+    # Bakgrund / backstory
+    background = char.get("background", "")
+    if background:
+        lines.append(f"Bakgrund: {background}")
+
+    # Karaktärsutveckling (Guardian character_updates → character.updates)
+    char_updates = char.get("updates", [])
+    if char_updates:
+        upd_str = "; ".join(
+            u.get("text", "")[:120] if isinstance(u, dict) else str(u)[:120]
+            for u in char_updates[-5:]  # senaste 5
+        )
+        lines.append(f"Karaktärsutveckling: {upd_str}")
+
+    # Utrustade föremål
+    equipped = [it.get("name", "?") for it in state.get("inventory", []) if it.get("equipped")]
+    if equipped:
+        lines.append(f"Bär: {', '.join(equipped)}")
+
+    # Hela inventory — kompakt lista. Fix 2026-07-31: DM:n såg tidigare BARA
+    # utrustade föremål och kunde inte veta vad spelaren bar → sa "du har
+    # ingen sköld" trots att spelaren trodde sig ha en. Nu ser DM:n allt.
+    inv = state.get("inventory", [])
+    if inv:
+        inv_str = ", ".join(
+            f"{it.get('name', '?')}{(' ×' + str(it.get('qty', 1))) if it.get('qty', 1) > 1 else ''}{' [bärs]' if it.get('equipped') else ''}"
+            for it in inv[:40]
+        )
+        lines.append(f"Inventory: {inv_str}")
+    else:
+        lines.append("Inventory: empty" if language != "sv" else "Inventory: tomt")
+
+    # Bärvikt (D&D 5e: max = STR × 15). W3-M2: migrerad till
+    # weight_utils.compute_carry_weight() (single source of truth —
+    # audit-mechanics §2). DM-synligt outputformat oförändrat.
+    carry = compute_carry_weight(state)
+    grand_total = carry["total"]
+    max_w = carry["max"]
+    if max_w > 0:
+        lines.append(f"Bärvikt: {grand_total:.1f} / {max_w:.0f} lb ({carry['pct']}%)")
+    else:
+        lines.append(f"Bärvikt: {grand_total:.1f} lb")
+
+    # Besvärjelser + spell slots — fix 2026-08-02: Guardian påstod att state
+    # inte spårar spells (såg dem inte i truth_blocket). Nu visas de alltid.
+    spells = char.get("spells", []) or []
+    if spells:
+        sp_str = ", ".join(
+            f"{s.get('name', '?')}{' (niv ' + str(s.get('level', 0)) + ')' if int(s.get('level', 0) or 0) > 0 else ' (cantrip)'}"
+            for s in spells[:15]
+        )
+        lines.append(f"Besvärjelser: {sp_str}")
+    else:
+        lines.append("Spells: none" if language != "sv" else "Besvärjelser: inga")
+    slots = char.get("spell_slots", {})
+    # Slot-raden fick ALDRIG utelämnas tyst vid max=0: då såg DM:n ingen
+    # slot-info alls och hittade på "1 of 2" ur minnet medan arket stod på
+    # 0/0 (halvkastar-buggen). Känner karaktären besvärjelser ska raden synas
+    # även när den är 0/0 — då är avvikelsen synlig för både DM och admin.
+    _knows_spells = bool(char.get("spells"))
+    if isinstance(slots, dict) and ((slots.get("max") or 0) > 0 or _knows_spells):
+        _sl = f"Spell slots: {slots.get('current', 0)}/{slots.get('max', 0)}"
+        if (slots.get("max") or 0) <= 0:
+            # compact_state är svensk-etiketterad rakt igenom (resten av
+            # filen också) — håll parentesen i samma stil, ingen falsk EN-gren.
+            _sl += " — 0 slots: arkfel (klassen har besvärjelser men inga slots; påstå inte att kast är gratis)"
+        lines.append(_sl)
+
+    # Koncentration (5e) — DM:n måste veta om ett märke sitter, annars
+    # narrerar den Hunter's Mark som "aktiv" långt efter att den släppt.
+    _conc = char.get("concentration")
+    if isinstance(_conc, dict) and _conc.get("spell"):
+        _tgt = _conc.get("target")
+        lines.append(f"Concentration: {_conc.get('spell')}" + (f" → {_tgt}" if _tgt else ""))
+
+    # Färdigheter (skills) — kompakt: bara proficient + alla med bonus.
+    skills = char.get("skills", []) or []
+    if skills:
+        prof_bonus = int(char.get("proficiency", 2) or 2)
+        sk_parts = []
+        for s in skills[:25]:
+            if not isinstance(s, dict):
+                continue
+            ab = s.get("ability", "")
+            amod = 0
+            if ab and isinstance(char.get("abilities", {}).get(ab), dict):
+                amod = int(char.get("abilities", {}).get(ab, {}).get("mod", 0) or 0)
+            bonus = amod + (prof_bonus if s.get("proficient") else 0)
+            mark = "●" if s.get("proficient") else "○"
+            sk_parts.append(f"{s.get('name', '?')} {bonus:+d}{mark}")
+        lines.append("Skills: " + ", ".join(sk_parts))
+
+    # Klassförmågor (features)
+    features = char.get("features", []) or []
+    if features:
+        ft_str = ", ".join(
+            f"{f.get('name', '?')}{' (L' + str(f.get('level', '?')) + ')' if f.get('level') else ''}"
+            for f in features[:20] if isinstance(f, dict)
+        )
+        lines.append(f"Klassförmågor: {ft_str}")
+
+    # Inspiration (5e)
+    insp = char.get("inspiration", False)
+    lines.append("Inspiration: ja — spelaren kan spendera för fördel på ett kast" if insp
+                 else "Inspiration: nej")
+
+    # Plats, tid, dag
+    world = state.get("world", {})
+    loc = world.get("current_location", "Okänd")
+    tid = world.get("time", "okänd")
+    dag = world.get("day", 1)
+    lines.append(f"Plats: {loc}. Tid: {tid}. Dag: {dag}.")
+
+    # Fiender
+    enemies = [n for n in state.get("npcs", []) if n.get("relation") in ("fiende", "enemy") and n.get("alive", True)]
+    if enemies:
+        e_str = ", ".join(f"{n.get('name', '?')} ({n.get('hp', '?')})" for n in enemies)
+        lines.append(f"Fiender: {e_str}")
+    else:
+        lines.append("Fiender: inga")
+
+    # Stridsstatus (om combat aktiv)
+    combat = world.get("combat")
+    if combat and combat.get("active"):
+        lines.append(f"⚔ STRID AKTIV — Runda {combat.get('round', 1)}")
+        turn_order = combat.get("turn_order", [])
+        if turn_order:
+            order_str = ", ".join(
+                f"{'Du' if e.get('key') == 'player' else e.get('name', '?')} ({e.get('initiative', '?')})"
+                for e in turn_order
+            )
+            lines.append(f"Turordning: {order_str}")
+        for e in combat.get("enemies", []):
+            if e.get("alive", True):
+                status = _status_names(e.get("statuses"))
+                lines.append(f"  Fiende: {e.get('name', '?')} — HP {e.get('hp', '?')}/{e.get('max_hp', '?')}, AC {e.get('ac', '?')}{f', Status: {status}' if status else ''}")
+        # Spelarens action economy
+        pa = combat.get("player_actions", {})
+        if pa:
+            avail = [k for k, v in pa.items() if v is not False]
+            spent = [k for k, v in pa.items() if v is False]
+            if avail:
+                lines.append(f"  Tillgängliga: {', '.join(avail)}")
+            if spent:
+                lines.append(f"  Förbrukade: {', '.join(spent)}")
+        # Cover (P2) — combat.player_cover: half / three_quarters / full.
+        pcover = combat.get("player_cover")
+        if pcover:
+            _CB = {"half": "+2 AC", "three_quarters": "+5 AC", "full": "cannot be hit"}
+            _cb = _CB.get(pcover, "")
+            lines.append(f"  Cover: {pcover}{f' ({_cb})' if _cb else ''}")
+
+    # Aktiva uppdrag
+    active_quests = [q.get("name", "?") for q in state.get("quests", []) if q.get("status") == "aktiv"]
+    if active_quests:
+        lines.append(f"Aktiva uppdrag: {', '.join(active_quests)}")
+
+    # Kända NPCs (max 10)
+    npcs = state.get("npcs", [])
+    if npcs:
+        npc_strs = [
+            f"{n.get('name', '?')} ({n.get('role', '?')}, {n.get('relation', '?')})"
+            for n in npcs[:10]
+        ]
+        lines.append(f"Kända NPCs: {', '.join(npc_strs)}")
+
+    return "\n".join(lines)
+
+
+def truth_block(state: dict, language: str = "sv") -> str:
+    """Auktoritär sanning — LLM:n får ALDRIG motsäga detta."""
+    parts = ["## SANNING (auktoritär — motsäg ALDRIG detta)\n", compact_state(state, language)]
+
+    # (fix w2c) Döds-medvetenhet: vid 0 HP eller död måste DM:n veta det
+    # AUKTORITATIVT — audit §5: code-rolled fiendeskada landar asynkront
+    # EFTER DM-svaret, så DM:n kan ha missat att spelaren är nere. `dead`-
+    # flaggan (main.py _parse_result_tag) läses här — tidigare write-only.
+    _char = state.get("character", {}) or {}
+    _hp = _char.get("hp", {}) or {}
+    _ds = _char.get("death_saves", {}) or {}
+    _is_dead = bool(_ds.get("dead"))
+    _is_dying = (not _is_dead) and int(_hp.get("current", 0) or 0) <= 0
+    if _is_dead:
+        parts.insert(1, (
+            "**🩸 THE CHARACTER IS DEAD — 3 failed death saves. Do not continue as alive; "
+            "handle death explicitly (mourning, legacy, new character).**\n"
+            if language != "sv" else
+            "**🩸 KARAKTÄREN ÄR DÖD — 3 misslyckade dödsräddningar. Spela inte vidare som "
+            "levande; hantera döden explicit (sörjande, arv, ny karaktär).**\n"
+        ))
+    elif _is_dying:
+        parts.insert(1, (
+            "**🩸 THE CHARACTER IS DYING (0 HP) — require DEATH SAVES every turn; "
+            "do not continue normal play.**\n"
+            if language != "sv" else
+            "**🩸 KARAKTÄREN ÄR DÖENDE (0 HP) — kräv DÖDSRÄDDNINGAR varje tur; "
+            "fortsätt ej normalt spel.**\n"
+        ))
+
+    pinned = state.get("pinned_facts", [])
+    if pinned:
+        parts.append("\nPinmade fakta:")
+        for fact in pinned:
+            parts.append(f"- {fact}")
+
+    return "\n".join(parts)
+
+
+def _plan_pre_dm_enemy_rolls(state: dict, rng=None) -> list:
+    """Pre-DM-sömmen (P0): rulla och lagra rundans fiendeattacker INNAN DM:n
+    narrerar. Kallas i chat-turen när world.combat.active. Planerade utfall
+    hamnar i meta["enemy_attack_rolls"][str(round)] (samma form som
+    guardian._lookup_stored_roll konsumerar) och visas i DM-prompten så
+    narrationen blir konsekvent med tärningarna. Idempotent per runda —
+    plan_and_store rullar aldrig om befintliga planerade utfall."""
+    combat = (state.get("world") or {}).get("combat")
+    if not (combat and combat.get("active")):
+        return []
+    ch = state.get("character") or {}
+    try:
+        player_ac = int(ch.get("ac") or 10)
+    except (TypeError, ValueError):
+        player_ac = 10
+    from enemy_rolls import plan_and_store
+    return plan_and_store(combat, player_ac, state.setdefault("meta", {}), rng=rng,
+                          player_statuses=list(ch.get("statuses") or []))
+
+
+def _build_system_prompt(
+    state: dict,
+    turn_override: int | None = None,
+    awakening_trigger: bool = False,
+    player_input: str = "",
+    guardian_roll: dict | None = None,
+) -> str:
+    """Bygg systemprompt med kampanjkontext. turn_override används av /api/chat
+    för att räkna med det meddelande som ännu inte sparats i transkriptet."""
+    # Core-prompt + version (versionen tvingar cache-miss vid ändringar)
+    # ── LANGUAGE FIRST: must come before everything else ──
+    lang = _get_lang(state)
+    parts = [get_directive(lang)]
+    parts.append(f"[DM-prompt {DM_PROMPT_VERSION}]\n" + DM_CORE_PROMPT)
+
+    # Combat vs Narrative — injicera bara det som behövs denna tur
+    enemies = [n for n in state.get("npcs", []) if n.get("relation") in ("fiende", "enemy") and n.get("alive", True)]
+    if enemies:
+        parts.append(DM_COMBAT_PROMPT)
+    else:
+        parts.append(DM_NARRATIVE_PROMPT)
+
+    # Sanning — kompakt tillstånd istället för rå JSON
+    parts.append("\n" + truth_block(state, language=lang))
+
+    # Pre-DM-sömmen (P0): planerade fiendeattacker — visa de REDAN rullade
+    # utfallen så DM:n narrerar konsekvent med tärningarna (aldrig tvärtom).
+    _predm_combat = (state.get("world") or {}).get("combat")
+    if _predm_combat and _predm_combat.get("active"):
+        from enemy_rolls import format_planned_outcomes, unconsumed_planned_rolls
+        _planned_block = format_planned_outcomes(
+            unconsumed_planned_rolls(state.get("meta") or {}, _predm_combat),
+            lang=lang,
+        )
+        if _planned_block:
+            parts.append("\n" + _planned_block)
+
+    # Pre-DM-sömmen (P0b): SPELARENS attack är redan rullad av motorn
+    # (player_rolls.plan_player_attack i chat-turen). DM:n ska narrera ett
+    # avgjort utfall — träff/miss + skada — aldrig gissa siffran själv.
+    _pa_plan = (state.get("meta") or {}).get("player_attack_plan")
+    if isinstance(_pa_plan, dict) and _predm_combat and _predm_combat.get("active"):
+        from player_rolls import format_attack_block
+        parts.append(format_attack_block(_pa_plan, lang=lang))
+
+    # Hierarkiska sammanfattningar: 2 scen + 2 kapitel + 1 kampanjbåge
+    scene_summaries = store.load_summaries(state, last_n=2)
+    for s in scene_summaries:
+        parts.append(f"\n[Scen-sammanfattning vid tur {s.get('turn', '?')}]: {s.get('text', '')}")
+    chapter_summaries = store.load_chapters(state, last_n=2)
+    for c in chapter_summaries:
+        parts.append(f"\n[Kapitel {c.get('chapter', '?')}]: {c.get('text', '')}")
+    campaign_arcs = store.load_campaign_arcs(state, last_n=1)
+    for a in campaign_arcs:
+        parts.append(f"\n[Kampanjbåge {a.get('arc', '?')}]: {a.get('text', '')}")
+
+    # ACTIVE THREADS — trådkartan som ALLTID ligger på bordet (2026-08-07).
+    # 3-5 pågående storytrådar, uppdateras var 10:e turn av en billig LLM.
+    # Injiceras oavsett vad spelaren skriver — så DM:n aldrig tappar
+    # parallella trådar (Hildas uppdrag, pesten, löftet…) bara för att
+    # spelaren pratar om något annat just nu.
+    threads = state.get("meta", {}).get("active_threads") or []
+    if threads:
+        t_lines = []
+        for t in threads[:5]:
+            name = str(t.get("name") or "?").strip()
+            status = str(t.get("status") or "active").strip()
+            last = t.get("last_turn")
+            summary = str(t.get("summary") or "").strip()[:120]
+            t_lines.append(f"- {name} ({status}, last seen turn {last}): {summary}")
+        if t_lines:
+            parts.append("\n## ACTIVE THREADS\n" + "\n".join(t_lines))
+
+    # [SÖK:]/[SEARCH:] — DM-egna minnessökningar (2026-08-07). DM:n kan be
+    # backend om mer historik när spelarens senaste meddelande inte matchar
+    # de injicerade minnena. Taggen fångas av backend, hämtar relevanta
+    # fakta+RAG, och DM:n färdigställer svaret med den nya kontexten.
+    # Hoppas över under vaknandet (granskning pitfall #4, v31): minnes-
+    # injicering är avstängd de turerna och en ny kampanj har ingen historik
+    # att söka — erbjudandet bara bjuder på ett svalt extra-anrop.
+    if not (bool(state.get("meta", {}).get("awakening")) or awakening_trigger):
+        if lang == "sv":  # EU-kampanjer (de/fr/es/it) → engelsk fallback
+            parts.append(
+                "\n## MINNESSÖKNINGSVERKTYG\n"
+                "Om du behöver mer kontext än minnena ovan ger (en gammal tråd, ett löfte, "
+                "en NPC som inte nämnts nyligen) kan du avsluta ditt svar med "
+                "[SÖK: din fråga]. Systemet hämtar det och låter dig färdigställa svaret "
+                "med den hittade kontexten. Använd sparsamt — det kostar ett extra anrop. "
+                "Visa aldrig taggen i din berättelse."
+            )
+        else:
+            parts.append(
+                "\n## MEMORY SEARCH TOOL\n"
+                "If you need more context than the memories above provide (an old thread, "
+                "a promise, a NPC not mentioned recently) you may end your reply with "
+                "[SEARCH: your question]. The system will look it up and let you finish "
+                "your reply with the found context. Use it sparingly — it costs a second "
+                "call. Never show the tag in your narration."
+            )
+
+    # Förra turens mekaniska händelser — typen är kod-token (svensk),
+    # VISNINGSTEXTEN språkvald (granskning #5, v31: EN-kampanjer fick
+    # svenska etiketter tidigare — samma invariant som world-build enums).
+    last_effects = state.get("meta", {}).get("last_effects")
+    if last_effects:
+        fx_labels_sv = {
+            "skada": "Skada", "hela": "Hela", "xp": "XP", "guld": "Guld",
+            "föremål": "Nytt föremål", "föremål_bort": "Föremål bort",
+            "quest": "Nytt uppdrag", "quest_slutförd": "Uppdrag slutfört",
+            "quest_misslyckad": "Uppdrag misslyckat", "konsekvens": "Konsekvens",
+            "npc_död": "NPC död", "plats": "Ny plats", "tid": "Tid",
+            "npc_relation": "NPC-relation", "ny_dag": "Ny dag", "level_up": "Nivå upp",
+        }
+        fx_labels_en = {
+            "skada": "Damage", "hela": "Healed", "xp": "XP", "guld": "Gold",
+            "föremål": "New item", "föremål_bort": "Item lost",
+            "quest": "New quest", "quest_slutförd": "Quest completed",
+            "quest_misslyckad": "Quest failed", "konsekvens": "Consequence",
+            "npc_död": "NPC dead", "plats": "New location", "tid": "Time",
+            "npc_relation": "NPC relation", "ny_dag": "New day", "level_up": "Level up",
+        }
+        fx_labels = fx_labels_sv if lang == "sv" else fx_labels_en
+        fx_strs = [f"{fx_labels.get(e.get('type', ''), e.get('type', '?'))}: {e.get('value', '?')}" for e in last_effects]
+        fx_head = "## Förra turens händelser" if lang == "sv" else "## Events from last turn"
+        parts.append("\n" + fx_head + "\n" + ", ".join(fx_strs))
+
+    # Värld
+    world = state.get("world", {})
+    if world.get("current_location"):
+        parts.append(f"\n## Värld\nPlats: {world['current_location']}")
+        if world.get("time"):
+            parts.append(f"Tid: {world['time']}")
+        if world.get("weather"):
+            parts.append(f"Väder: {world['weather']}")
+
+    # Locations (förberedda/importerade platser) — med restid från nuvarande plats
+    locations = state.get("locations", [])
+    if locations:
+        try:
+            with_travel = get_locations_with_travel(state, lang=lang)
+        except Exception:
+            with_travel = []
+        if with_travel:
+            loc_str = "; ".join(
+                f"{l.get('name', '?')} ({l.get('terrain', 'okänd')}, {l.get('travel_text', '?')})"
+                + (f": {l.get('description', '')[:60]}" if l.get('description') else "")
+                for l in with_travel[:12]
+            )
+        else:
+            loc_str = "; ".join(
+                f"{l.get('name', '?')}: {l.get('description', '')[:80]}"
+                + (f" [{l.get('lore', '')[:60]}]" if l.get('lore') else "")
+                for l in locations[:12]
+            )
+        parts.append(f"\n## Kända platser\n{loc_str}")
+        # B: Terrängregeln — DM ska kunna uppskatta restid även för okända platser
+        travel_rule = (
+            "RESOR: Restid mellan platser = avstånd ÷ 10 × terrängmodifierare. "
+            "Terrängmodifierare (dagar per enhet): väg 0.5, stig 0.8, slätt 0.6, hav 0.4, "
+            "skog 1.2, berg 1.8, träsk 1.5, is 1.4, okänd 1.0. Minst en halv dag per resa. "
+            "När spelaren reser: narrera en trovärdig restid och låt tiden passera ([NY_DAG:] vid övernattning)."
+            if lang == "sv" else
+            "TRAVEL: Travel time between locations = distance ÷ 10 × terrain modifier. "
+            "Terrain modifiers (days per unit): road 0.5, trail 0.8, plains 0.6, sea 0.4, "
+            "forest 1.2, mountains 1.8, swamp 1.5, ice 1.4, unknown 1.0. Minimum half a day per journey. "
+            "When the player travels: narrate a believable travel time and let time pass ([NY_DAG:] when camping overnight)."
+        )
+        parts.append(travel_rule)
+
+    # Lore (världsdetaljer, historia)
+    lore = state.get("lore", [])
+    if lore:
+        lore_str = "; ".join(str(item)[:100] for item in lore[:10])
+        parts.append(f"\n## Världens lore\n{lore_str}")
+
+    # NPCs
+    npcs = state.get("npcs", [])
+    if npcs:
+        npc_str = "; ".join(
+            f"{n.get('name', '?')} ({n.get('role', '?')}, {n.get('relation', '?')})"
+            for n in npcs[:10]
+        )
+        parts.append(f"\n## Kända NPC:er\n{npc_str}")
+
+    # Quests (status kan vara "aktiv" eller "active" — matcha båda)
+    quests = state.get("quests", [])
+    active = [q for q in quests if q.get("status") in ("aktiv", "active")]
+    done = [q for q in quests if q.get("status") in ("slutförd", "completed", "misslyckad", "failed")]
+    if active:
+        q_lines = []
+        for q in active[:6]:
+            line = f"- {q.get('name', '?')}"
+            if q.get("description"):
+                line += f" — {q['description'][:90]}"
+            q_lines.append(line)
+        q_head = "## Aktiva uppdrag" if lang == "sv" else "## Active Quests"
+        parts.append(f"\n{q_head}\n" + "\n".join(q_lines))
+    if done:
+        d_lines = []
+        for q in done[:4]:
+            st = q.get("status", "")
+            mark = "✅" if st in ("slutförd", "completed") else "❌"
+            d_lines.append(f"- {mark} {q.get('name', '?')}")
+        d_head = "## Avslutade uppdrag" if lang == "sv" else "## Concluded Quests"
+        parts.append(f"\n{d_head}\n" + "\n".join(d_lines))
+
+    # ── ⚔️ PÅGÅENDE STRID — combat-motor (v25) ──
+    # Byggd av combat.py: turordning, action economy, status, fiende-HP/AC.
+    combat_ctx = build_combat_context(state, language=lang)
+    if combat_ctx:
+        parts.append("\n" + combat_ctx)
+
+    # ── 💀 DÖDSRÄDDNING — spelaren är nere (v23) ──
+    # Vid 0 HP MÅSTE DM:n begära dödsräddning varje runda; Guardian/main
+    # spårar framgångar/misslyckanden i character.death_saves.
+    # Språkmedvetet: etiketten i [KAST:]-taggen blir synlig i spelarens chatt
+    # (roll-request-kortet), så EN-kampanjer får aldrig svenska "DÖDSRÄDDNING".
+    char = state.get("character", {})
+    hp = char.get("hp", {})
+    if hp.get("current", 0) == 0:
+        ds = char.get("death_saves", {}) or {}
+        if lang == "sv":  # EU-kampanjer → engelsk fallback
+            _death_block = (
+                "\n## 💀 DÖDSRÄDDNING\n"
+                "Spelaren är på 0 HP. Du MÅSTE begära [KAST: 1d20 | DÖDSRÄDDNING] varje runda "
+                "tills stabiliserad/död. "
+                f"Framgångar: {ds.get('successes', 0)}, Misslyckanden: {ds.get('failures', 0)}. "
+                "3 framgångar = stabil, 3 misslyckanden = död. Nat 20 = vaknar med 1 HP."
+            )
+        else:
+            _death_block = (
+                "\n## 💀 DEATH SAVES\n"
+                "The player is at 0 HP. You MUST request [KAST: 1d20 | DEATH SAVE] every round "
+                "until stabilised/dead. "
+                f"Successes: {ds.get('successes', 0)}, Failures: {ds.get('failures', 0)}. "
+                "3 successes = stable, 3 failures = dead. Nat 20 = wake with 1 HP."
+            )
+        parts.append(_death_block)
+
+    # ── Enforcement borttaget (v19) ──
+    # tag_streak, missing_roll_streak, turns_since_roll: Guardian pre-DM
+    # detekterar kast och post-DM extraherar mekanik. DM behöver inte påminnas.
+
+    # Resultat-påminnelse: spelaren har skickat ett tärningsresultat.
+    # Språkmedvetet (rostad 2026-09-20): "[Resultat:]" är protokolltaggen och
+    # förblir svensk på båda språk, men själva instruktionen som DM:n läser
+    # ska vara på kampanjens språk.
+    if player_input.strip().startswith("[Resultat:"):
+        if lang == "sv":  # EU-kampanjer → engelsk fallback
+            parts.append(
+                "\n## 🎲 TÄRNINGSRESULTAT MOTTAGET\n"
+                "Spelaren har slagit en tärning. Ge utfallet direkt:\n"
+                "1. Jämför mot DC/AC → LYCKADES eller MISSLYCKADES.\n"
+                "2. Berätta utfallet narrativt.\n"
+                "3. ALDRIG fråga 'vad gör du?' utan att FÖRST ge utfallet."
+            )
+        else:
+            parts.append(
+                "\n## 🎲 DICE RESULT RECEIVED\n"
+                "The player has rolled a die. Give the outcome directly:\n"
+                "1. Compare against DC/AC → SUCCEEDED or FAILED.\n"
+                "2. Narrate the outcome.\n"
+                "3. NEVER ask 'what do you do?' without FIRST giving the outcome."
+            )
+
+    # ── VAKNANDEPROTOKOLLET ──
+    # Aktiveras BARA för nya kampanjer (turn 1-2). awakening-flaggan
+    # rensas efter turn 2 så den aldrig triggar igen.
+    # turn==1 = spelarens första meddelande → DM ställer frågor.
+    # turn==2 = spelaren har svarat på frågorna → DM öppnar scenen med svaren.
+    meta = state.get("meta", {})
+    if meta.get("awakening") or awakening_trigger:
+        turn = turn_override if turn_override is not None else meta.get("turn_count", 0)
+        # Default-öppning per kampanjspråk (A1: same nyckelset för alla språk;
+        # okänt språk → EN-fallback inuti get_opening_styles).
+        default_opening = dict(get_opening_styles(lang)).get(
+            "alone", dict(get_opening_styles("en"))["alone"])
+        opening = meta.get("opening_style", default_opening)
+        if turn <= 1:
+            parts.append(get_awakening_ask(lang))
+        elif turn == 2:
+            # {opening_style}-platshållaren är verbatim i varje språkvariant.
+            parts.append(get_awakening_open(lang).format(opening_style=opening))
+
+    # Per-turs regelinjicering — relevanta D&D 5e-regler för denna tur
+    rules_text = inject_rules(player_input)
+    if rules_text:
+        parts.append(f"\n## RELEVANTA REGLER (denna tur)\n{rules_text}")
+
+    # Guardian-råd: kast-detektion ──
+    # Guardian har analyserat spelarens handling och rekommenderar ett kast.
+    # DM:n bör använda exakt denna [KAST:]-tagg (eller motivera varför inte).
+    # Språkmedvetet (granskning #5, v31): rubrik + instruktion på kampanjens
+    # språk — [KAST:]-taggen och notationen förblir protokoll på båda.
+    if guardian_roll:
+        if lang == "sv":  # EU-kampanjer → engelsk fallback
+            parts.append(
+                f"\n## 🛡️ GUARDIAN: KAST REKOMMENDERAS\n"
+                f"Spelarens handling kräver ett tärningskast.\n"
+                f"Använd: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
+                f"Bygg scenen så att kastet känns naturligt. Ge konsekvenser för både lyckat och misslyckat."
+            )
+        else:
+            parts.append(
+                f"\n## 🛡️ GUARDIAN: ROLL RECOMMENDED\n"
+                f"The player's action requires a dice roll.\n"
+                f"Use: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
+                f"Build the scene so the roll feels natural. Give consequences for both success and failure."
+            )
+
+    # ── SPRÅKREINFORCERING (slutet): reasoning-modeller och långa transkript
+    # med svenska assistant-meddelanden kan drifta — upprepa språkdirektivet
+    # SIST i systemprompten så det väger lika tungt som toppen.
+    parts.append(get_reminder(lang))
+
+    return "\n".join(parts)
+
+
+async def _retrieve_relevant_memory(
+    username: str, campaign_id: str, query: str, state: dict
+) -> dict:
+    """Retrieve relevant long-term memory via RAG + fact register.
+
+    Returns a dict: {
+        "text":        str  — the block injected into the system prompt,
+        "facts_sent":  int  — number of facts actually injected (max 8),
+        "rag_sent":    int  — number of RAG chunks actually injected (max 4),
+        "timing_s":    float — retrieval latency,
+    }
+    NOTE: the stored fact archive can be hundreds of entries; this only
+    reports what was *sent to the DM* this turn, not the whole archive."""
+    import time as _t
+    _start = _t.time()
+    sections = []
+    facts_sent = 0
+    rag_sent = 0
+
+    # 1. Fact register — keyword-based, always available (no Qdrant needed)
+    try:
+        register = FactRegister(username, campaign_id)
+        relevant = register.get_relevant_facts(query, limit=8)
+        if relevant:
+            sections.append(format_facts_block(relevant))
+            facts_sent = len(relevant)
+    except Exception as e:
+        logger.debug("Fact register unavailable: %s", e)
+
+    # 2. RAG — semantic search in Qdrant (transcript, lore, summaries)
+    try:
+        if await rag.qdrant_healthy():
+            chunks = await rag.retrieve(query, username, top_k=4, campaign_id=campaign_id)
+            if chunks:
+                rag_lines = []
+                for c in chunks:
+                    label = {"transcript": "📜", "lore": "📖", "summary": "📋", "fact": "📌"}.get(
+                        c.get("chunk_type", ""), "•"
+                    )
+                    rag_lines.append(f"{label} (turn {c.get('turn', '?')}, relevance {c.get('score', 0):.0%}): {c['text'][:200]}")
+                sections.append(
+                    "## RELEVANT HISTORY (semantic memory)\n"
+                    + "\n".join(rag_lines)
+                )
+                rag_sent = len(chunks)
+    except Exception as e:
+        logger.debug("RAG unavailable: %s", e)
+
+    text = "\n\n".join(sections)
+    timing_s = _t.time() - _start
+
+    # Tydlig engelsk logg: vad som faktiskt skickades vs vad som lagras
+    try:
+        reg = FactRegister(username, campaign_id)
+        s = reg.stats()
+        logger.info(
+            "🧠 Memory retrieved for DM: %d facts + %d RAG chunks sent "
+            "(archive stored: total=%d active=%d archived=%d superseded=%d, %.1fs)",
+            facts_sent, rag_sent, s["total"], s["active"], s["archived"],
+            s["superseded"], timing_s,
+        )
+    except Exception:
+        logger.info(
+            "🧠 Memory retrieved for DM: %d facts + %d RAG chunks sent (%.1fs)",
+            facts_sent, rag_sent, timing_s,
+        )
+
+    return {"text": text, "facts_sent": facts_sent, "rag_sent": rag_sent, "timing_s": timing_s}
+
+
+# ── Bakgrund: generera dag-entry för loggboken ──
+async def _generate_day_entry(username: str, campaign_id: str, prev_day: int,
+                              epoch: int | None = None) -> None:
+    """Generera en dag-entry för föregående dag via snabb LLM.
+    Körs i bakgrunden efter NY_DAG — blockerar aldrig HTTP-svaret."""
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        await _generate_day_entry_locked(username, campaign_id, prev_day, epoch=epoch)
+
+
+def _track_unguarded(state: dict, model: str, usage: dict) -> None:
+    """Bokför bakgrunds-LLM-förbrukning i meta.unguarded_tokens, per modell.
+
+    'background'-tokens i admin-stats är alla LLM-anrop som inte skapar en
+    transkript-post: dag-entries, faktextraktion, sammanfattningar (alla
+    EXTRACTION_MODEL) samt Guardian-anrop som hittade inga ändringar
+    (guardian-modellen). Genom att spara by_model ser admin exakt vilken
+    modell som spenderade vad — inte bara en grå 'background'-klump.
+    """
+    if not usage or not usage.get("total_tokens"):
+        return
+    _ut = state.setdefault("meta", {}).setdefault(
+        "unguarded_tokens", {"prompt_tokens": 0, "completion_tokens": 0, "by_model": {}}
+    )
+    p = usage.get("prompt_tokens", 0) or 0
+    c = usage.get("completion_tokens", 0) or 0
+    _ut["prompt_tokens"] += p
+    _ut["completion_tokens"] += c
+    bm = _ut.setdefault("by_model", {}).setdefault(model, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+    bm["prompt_tokens"] += p
+    bm["completion_tokens"] += c
+    bm["calls"] += 1
+
+
+async def _generate_day_entry_locked(username: str, campaign_id: str, prev_day: int,
+                                     epoch: int | None = None) -> None:
+    """Hjärtat av dag-entry-genereringen — körs under per-kampanj-låset."""
+    _day_entry_usage = {}
+    try:
+        st = store.get(username, campaign_id)
+        if not st or not _epoch_ok(username, campaign_id, epoch):
+            return
+        world = st.setdefault('world', {})
+        transcript = store.load_transcript(st, last_n=200)
+        start_idx = world.get('last_day_turn', 0)
+        recent = transcript[start_idx:]
+        if not recent:
+            world['last_day_turn'] = len(transcript)
+            world.pop('_pending_day_entry', None)
+            store.save(st)
+            return
+        t_text = "\n".join(f"{e['role']}: {e['content']}" for e in recent)
+        prompt = (
+            "Här är transkriptet sedan förra dagsskiftet. "
+            "Skriv en kort dag-entry (JSON): "
+            '{"day": N, "title": "...", "mood": "...", '
+            '"events": ["...", "..."], "location": "...", '
+            '"npcs_met": [...], "quests": [...]}. '
+            f"Dagnumret är {prev_day}. "
+            "Max 3 events, max 2 NPCs. Svara ENDAST med JSON.\n\n"
+            + t_text
+        )
+        # Dag-entry är en intern bakgrundsuppgift — ingår i meddelandets turn (2026-08-08)
+        raw = await _extraction_call(
+            st,
+            [{"role": "user", "content": prompt}],
+            _day_entry_usage,
+            temperature=0.3,
+            max_tokens=300,
+            timeout=30,
+            thinking="disabled",
+        )
+        entry = _extract_json(raw)
+        entry['day'] = prev_day  # säkerställ korrekt dagnummer
+        # Skriv till world.logbook_llm (endpointens cache-shape {title, days})
+        # — world.logbook ägs av Guardian (lista av {day, turn, text}) och får
+        # ALDRIG blandas ihop (shape-kollision kraschade Guardian-appliceringen).
+        llm_lb = world.setdefault("logbook_llm", {})
+        llm_lb.setdefault("days", []).append(entry)
+        llm_lb.setdefault("title", st.get("meta", {}).get("campaign_name", "The Lore Weaver's Cauldron"))
+        world['last_day_turn'] = len(transcript)
+        world.pop('_pending_day_entry', None)
+        # Dag-entry är ett LLM-anrop — spara förbrukningen i meta.unguarded_tokens
+        _track_unguarded(st, _extraction_model_for(st), _day_entry_usage)
+        store.save(st)
+        logger.info("📖 Day entry generated for day %d", prev_day)
+    except Exception as e:
+        logger.warning("📖 Day entry failed: %s", e)
+
+
+# ── Guardian POST-DM: kör i bakgrunden, blockerar ALDRIG HTTP-svaret ──
+# ═══════════════════════════════════════
+# GUARDIAN MANUELL KORRIGERING (/guardian)
+# ═══════════════════════════════════════
+
+GUARDIAN_CORRECTION_SYSTEM = """\
+You are the Lorekeeper — a mechanical auditor for a D&D 5e campaign.
+The player has asked you to make a specific correction to the campaign state.
+
+You will receive:
+1. The current campaign state (NPCs, inventory, quests, character)
+2. Recent conversation history for context
+3. The player's correction instruction
+
+Analyze the instruction and return a JSON object with the corrections to apply.
+You are FREE to interpret the instruction broadly — the player trusts your judgment.
+
+Return ONLY valid JSON (no markdown):
+{
+  "npc_remove": ["Name1", "Name2"],
+  "npc_add": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
+  "npc_relations": [{"name": "", "new_relation": ""}],
+  "items_remove": ["ItemName"],
+  "items_add": [{"name": "", "type": "", "qty": 1}],
+  "quest_updates": [{"name": "", "new_status": "aktiv|slutförd|misslyckad"}],
+  "hp_set": null,
+  "spell_slots_set": {"current": 2, "max": 2},
+  "set_day": null,
+  "day_description": "",
+  "report": "A short summary of what you changed and why (shown to the player)"
+}
+
+Rules:
+- Only include fields that need changes. Omit or null for no change.
+- npc_remove: exact names to delete (case-insensitive match).
+- For duplicates: keep the BEST entry, remove the rest.
+- hp_set: set the character's current HP (e.g. after a long rest: hp_set = max HP).
+- spell_slots_set: set the character's spell slots {current, max}. current = slots
+  available right now, max = total. After a long rest, a caster's slots are fully
+  restored: spell_slots_set = {"current": <max>, "max": <max>}. Also use this when
+  the player learns new spells, levels up, or asks to refill/reduce slots.
+- report: ALWAYS fill this — it's shown to the player as the Lorekeeper's response.
+- Be conservative: only change what the player asked for.
+"""
+
+
+def _repair_truncated_json(text: str) -> str | None:
+    """Reparera kapad JSON från reasoning-modeller (fix 2026-08-02).
+
+    När en modell trunkerar content mitt i en sträng (t.ex. deepseek-v4-pro
+    med för låg max_tokens) stänger vi oavslutade citat och lägger till
+    saknade } ] så att fälten (items_add, spells_add …) ändå appliceras.
+    Returnerar reparerad text, eller None om reparationen inte hjälper.
+    """
+    s = text.strip()
+    if not s:
+        return None
+    # Redan giltig — returnera som den är
+    try:
+        json.loads(s)
+        return s
+    except json.JSONDecodeError:
+        pass
+    # Om udda antal oescapede citattecken → oavslutad sträng: stäng den
+    quote_count = len(re.findall(r'(?<!\\)"', s))
+    if quote_count % 2 == 1:
+        s += '"'
+    # Balansera { [ mot } ] — stäng i omvänd ordning
+    stack = []
+    for ch in s:
+        if ch in "{[":
+            stack.append(ch)
+        elif ch in "}]":
+            if stack:
+                stack.pop()
+    for ch in reversed(stack):
+        s += "]" if ch == "[" else "}"
+    try:
+        json.loads(s)
+        return s
+    except json.JSONDecodeError:
+        return None
+
+
+async def _guardian_manual_correction(
+    instruction: str,
+    state: dict,
+    username: str,
+    model_call_fn,
+    language: str = "sv",
+) -> str:
+    """Run a manual Guardian correction. Returns the formatted report string."""
+    from guardian import _format_state_for_guardian
+
+    # Fix 2026-09-07 (spelarfeedback): Lorekeeper-rapporten var EN-hårdkodad —
+    # svenska spelare fick engelska korrigeringsrapporter (och tvärtom).
+    # Quest-status är kodnivå-token ("slutförd" etc. jämförs i kod) — rapporten
+    # översätter bara ETIKETTERNA, aldrig token-värdena.
+    # EU-vågen 2026-10: bara 'sv' får svenska; de/fr/es/it → engelsk fallback.
+    not_sv = language != "sv"
+    L = {
+        "manual_correction": "Manual Correction" if not_sv else "Manuell korrigering",
+        "parse_fail": "Could not parse response. Raw:" if not_sv else "Kunde inte tolka svaret. Rådata:",
+        "npc_removed": "NPC removed:" if not_sv else "NPC borttagen:",
+        "npc_added": "NPC added:" if not_sv else "NPC tillagd:",
+        "item_removed": "Item removed:" if not_sv else "Föremål borttaget:",
+        "item_added": "Item added:" if not_sv else "Föremål tillagt:",
+        "quest_updated": "Quest updated:" if not_sv else "Uppdrag uppdaterat:",
+        "hp_set": "HP set to:" if not_sv else "HP satt till:",
+        "spell_slots": "Spell slots set to:" if not_sv else "Spell slots satt till:",
+        "day_advanced": "Day advanced:" if not_sv else "Dag avancerad:",
+        "no_changes": "No changes were needed." if not_sv else "Inga ändringar behövdes.",
+    }
+
+    state_ctx = _format_state_for_guardian(state, language)
+
+    # Recent transcript for context
+    recent = store.load_transcript(state, last_n=8)
+    history_lines = []
+    for entry in recent:
+        role = entry.get("role", "?")
+        content = entry.get("content", "")[:300]
+        if role == "guardian":
+            continue
+        label = "Player" if role == "user" else "DM"
+        history_lines.append(f"{label}: {content}")
+    history_block = "\n".join(history_lines) if history_lines else "(no recent history)"
+
+    user_msg = (
+        f"## Current State\n{state_ctx}\n\n"
+        f"## Recent Conversation\n{history_block}\n\n"
+        f"## Player's Correction Instruction\n{instruction}\n\n"
+        # Fix 2026-09-07 (feedback): rapporten ska vara på kampanjens språk —
+        # annars svarar Lorekeeper ofta svenska i EN-kampanjer (stat ctx är SV).
+        # quest_updates.new_status är kodnivå-token — ALDRIG översätta dem.
+        + ("IMPORTANT: write the \"report\" field in ENGLISH. quest_updates.new_status values (aktiv/slutförd/misslyckad) are code tokens — copy them exactly, never translate.\n"
+           if language != "sv" else
+           "VIKTIGT: skriv \"report\"-fältet på SVENSKA. quest_updates.new_status-värdena (aktiv/slutförd/misslyckad) är kodnivå-token — skriv dem exakt, översätt aldrig.\n")
+        + "Apply the corrections:"
+    )
+
+    messages = [
+        {"role": "system", "content": GUARDIAN_CORRECTION_SYSTEM},
+        {"role": "user", "content": user_msg},
+    ]
+
+    raw = await model_call_fn(messages)
+
+    # Parse JSON — robust: strip markdown-kodblock, hitta första { ... },
+    # och fixa Python-style single quotes (LLM:er glömmer ibland dubbla).
+    import re as _re
+    cleaned = _re.sub(r"^```(?:json)?\s*", "", raw.strip())
+    cleaned = _re.sub(r"\s*```$", "", cleaned)
+    data = None
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Försök hitta { ... }
+        match = _re.search(r"\{.*\}", cleaned, _re.DOTALL)
+        if match:
+            cand = match.group()
+            try:
+                data = json.loads(cand)
+            except json.JSONDecodeError:
+                # Fix Python-style dict: single quotes → double quotes
+                # (dock ej inuti strängar — enkel heuristik: byt bara
+                #  'key': och 'value',  mönster med kolon/komma/avslut)
+                fixed = _re.sub(
+                    r"'([^']*?)'\s*([:,}\])])", r'"\1"\2', cand
+                )
+                try:
+                    data = json.loads(fixed)
+                except json.JSONDecodeError:
+                    # Sista försök: reparera kapad JSON — reasoning-modeller
+                    # (t.ex. deepseek-v4-pro) trunkerar ibland content mitt i
+                    # en sträng → stäng citat + klammer så items_add ändå
+                    # appliceras (fix 2026-08-02).
+                    repaired = _repair_truncated_json(cleaned)
+                    if repaired is None:
+                        return f"🛡️ **Guardian** · {L['manual_correction']}\n⚠️ {L['parse_fail']}\n{raw[:500]}"
+                    try:
+                        data = json.loads(repaired)
+                    except json.JSONDecodeError:
+                        return f"🛡️ **Guardian** · {L['manual_correction']}\n⚠️ {L['parse_fail']}\n{raw[:500]}"
+    if data is None:
+        return f"🛡️ **Guardian** · {L['manual_correction']}\n⚠️ {L['parse_fail']}\n{raw[:500]}"
+
+    # Build a mechanics dict that apply_mechanics understands
+    effects = []
+    report_lines = []
+
+    # NPC removals
+    npcs = state.get("npcs", [])
+    for rname in data.get("npc_remove", []):
+        rname_lower = rname.strip().lower()
+        for i, npc in enumerate(npcs):
+            if npc.get("name", "").lower() == rname_lower:
+                removed = npcs.pop(i)
+                effects.append({"type": "korrigering", "value": f"NPC removed: {removed.get('name', '?')}"})  # kodnivå — DM läser detta
+                report_lines.append(f"🗑️ **{L['npc_removed']}** {removed.get('name', '?')}")
+                break
+
+    # NPC additions
+    for npc in data.get("npc_add", []):
+        if isinstance(npc, dict) and npc.get("name"):
+            existing = {n.get("name", "").lower() for n in npcs}
+            if npc["name"].lower() not in existing:
+                npcs.append({
+                    "name": npc["name"],
+                    "role": npc.get("role", "unknown" if not_sv else "okänd"),
+                    "relation": _normalize_relation(npc.get("relation", "neutral"), default="neutral"),
+                    "notes": npc.get("notes", ""),
+                    "alive": npc.get("alive", True),
+                })
+                report_lines.append(f"🧙 **{L['npc_added']}** {npc['name']} ({npc.get('role', '?')})")
+
+    # NPC relation changes
+    for rel in data.get("npc_relations", []):
+        rname = rel.get("name", "")
+        new_rel = _normalize_relation(rel.get("new_relation"))
+        if new_rel is None:
+            continue  # okänt värde → behåll gammal relation
+        for npc in npcs:
+            if npc.get("name", "").lower() == rname.lower():
+                old_rel = npc.get("relation", "?")
+                npc["relation"] = new_rel
+                report_lines.append(f"🤝 **{rname}:** {old_rel} → {new_rel}")  # relations-token är kodnivå
+                break
+
+    # Item removals
+    inv = state.get("inventory", [])
+    for item_name in data.get("items_remove", []):
+        item_lower = item_name.strip().lower()
+        for i, it in enumerate(inv):
+            if it.get("name", "").lower() == item_lower:
+                removed = inv.pop(i)
+                report_lines.append(f"🗑️ **{L['item_removed']}** {removed.get('name', '?')}")
+                break
+
+    # Item additions
+    for item in data.get("items_add", []):
+        if isinstance(item, dict) and item.get("name"):
+            inv.append({
+                "id": f"guardian-{len(inv)}",
+                "name": item["name"],
+                "type": item.get("type", "Annat"),
+                "qty": item.get("qty", 1),
+                "weight": 0,
+                "equipped": False,
+                "rarity": "normal",
+                "description": item.get("description", ""),
+            })
+            report_lines.append(f"📦 **{L['item_added']}** {item['name']}")
+
+    # Quest status updates
+    for qu in data.get("quest_updates", []):
+        qname = qu.get("name", "")
+        new_status = qu.get("new_status", "")
+        for quest in state.get("quests", []):
+            if quest.get("name", "").lower() == qname.lower():
+                quest["status"] = new_status
+                report_lines.append(f"📜 **{L['quest_updated']}** {qname} → {new_status}")
+                break
+
+    # HP override
+    hp_set = data.get("hp_set")
+    if hp_set is not None:
+        ch = state.get("character", {})
+        hp = ch.setdefault("hp", {})
+        hp["current"] = int(hp_set)
+        report_lines.append(f"💚 **{L['hp_set']}** {hp_set}/{hp.get('max', '?')}")
+
+    # Spell slots override (fix 2026-08-05 — Guardian kunde inte återställa
+    # slots via manual correction: påstod det i text men applicerade inget,
+    # eftersom spell_slots inte fanns i korrigerings-JSON:en.)
+    ss_set = data.get("spell_slots_set") or data.get("spell_slots")
+    if isinstance(ss_set, dict):
+        ch = state.get("character", {})
+        ss = ch.setdefault("spell_slots", {"current": 0, "max": 0})
+        if "max" in ss_set:
+            ss["max"] = int(ss_set["max"])
+        if "current" in ss_set:
+            ss["current"] = int(ss_set["current"])
+        report_lines.append(f"🔮 **{L['spell_slots']}** {ss.get('current', 0)}/{ss.get('max', 0)}")
+
+    # Dag-avancering (set_day) — uppdaterar world.day + day_log + journal-entry
+    set_day = data.get("set_day")
+    if set_day is not None:
+        world = state.setdefault("world", {})
+        old_day = world.get("day", 1)
+        new_day = int(set_day)
+        if new_day != old_day:
+            desc = (data.get("day_description") or "").strip()
+            if not desc:
+                desc = f"Day {new_day} begins."
+            world["day"] = new_day
+            world["day_description"] = desc
+            world.setdefault("day_log", []).append({"day": new_day, "description": desc})
+            world["_pending_day_entry"] = True
+            effects.append({"type": "ny_dag", "value": f"Dag {new_day}: {desc}"})
+            report_lines.append(f"🌅 **{L['day_advanced']}** {old_day} → {new_day}")
+            # Spola logbook-cachen så journalen byggs om med den nya dagen
+            world.pop("logbook_llm", None)
+
+    # Save state
+    store.save(state)
+
+    # Build report
+    report_text = data.get("report", "")
+    header = f"🛡️ **Guardian** · {L['manual_correction']}"
+    if report_lines:
+        body = "\n".join(report_lines)
+        if report_text:
+            body += f"\n\n💬 {report_text}"
+    else:
+        body = report_text or L['no_changes']
+
+    # Store last_effects so DM sees the changes next turn
+    if effects:
+        meta = state.setdefault("meta", {})
+        existing = meta.get("last_effects", [])
+        existing.extend(effects)
+        meta["last_effects"] = existing
+
+    return f"{header}\n{body}"
+
+
+def _ensure_single_combat_tag(message: str) -> str:
+    r"""Garantin: EXAKT EN [COMBAT:...]-tagg, allra sist i meddelandet.
+
+    Flera kodvägar kan lägga till [COMBAT:]-taggar i samma Guardian-meddelande
+    — format_guardian_summary (guardian.py, payload inkl. player_hp) och
+    combat_tag_dirty-fallbacket nedan (utan player_hp). Eftersom payloaderna
+    skiljer sig missar en ren strängjämförelse dupliceringen, och frontend-
+    regexen (/\[COMBAT:[^\]]*\]\s*$/) strippar bara DEN SISTA taggen — den
+    första läcker då ut i chatten.
+
+    Hjälparen tar bort alla [COMBAT:]-taggar utom en (föredrar den med
+    player_hp — rikast payload för Krigsrådet/statusbaren) och flyttar den
+    till allra slutet av meddelandet.
+    """
+    if not message:
+        return message
+    tags = re.findall(r"\[COMBAT:[^\]]*\]", message)
+    if not tags:
+        return message
+    body = re.sub(r"\[COMBAT:[^\]]*\]", "", message).rstrip()
+    # Föredra taggen med player_hp (guardian-formatet); annars den sista.
+    best = next((t for t in reversed(tags) if "player_hp" in t), tags[-1])
+    return (body + "\n" + best) if body else best
+
+
+async def _guardian_post_dm(
+    username: str, campaign_id: str, reply: str, player_msg: str,
+    effective_turn: int, dm_npcs: list[dict],
+    skip_effects: list | None = None,
+    epoch: int | None = None,
+) -> None:
+    """Extraherar mekanik ur DM-svaret i bakgrunden.
+    Uppdaterar state, sparar Guardian-rapporten i transkriptet.
+    Frontend pollar transkriptet för att visa rapporten.
+
+    campaign_id: EXPLICIT kampanj-ID — bakgrundsuppgifter får ALDRIG
+    förlita sig på store.get(username) (aktiv kampanj kan ha bytts).
+
+    skip_effects: effekter som REDAN applicerats denna tur via DM-taggar
+    (t.ex. [SKADA:12] eller [SKADA:12:fire]) — Guardian ska inte applicera
+    dem en andra gång.
+    (P0-dedup: se combat-spec B2.)
+    """
+    key = (username, campaign_id)
+    _RUNNING_BG.add(key)
+    try:
+        lock = _state_lock(username, campaign_id)
+        async with lock:
+            await _guardian_post_dm_locked(
+                username, campaign_id, reply, player_msg,
+                effective_turn, dm_npcs, skip_effects, epoch=epoch,
+            )
+    except Exception as e:
+        logger.warning("🛡️ Guardian background skipped: %s", e, exc_info=True)
+    finally:
+        _RUNNING_BG.discard(key)
+
+
+async def _guardian_post_dm_locked(
+    username: str, campaign_id: str, reply: str, player_msg: str,
+    effective_turn: int, dm_npcs: list[dict],
+    skip_effects: list | None = None,
+    epoch: int | None = None,
+) -> None:
+    """Hjärtat av Guardian post-DM — körs under per-kampanj-låset."""
+    try:
+        state = store.get(username, campaign_id)
+        if not state or not _epoch_ok(username, campaign_id, epoch):
+            return
+        turn_count = state.setdefault("meta", {}).get("turn_count", 0)
+
+        _log_activity(username, "🦉 Lorekeeper updating the world…")
+        _tg = time.time()
+        _guardian_transcript = store.load_transcript(state, last_n=8)
+        _guardian_usage = {}
+        mech = await guardian_extract_mechanics(
+            reply, player_msg, state, effective_turn,
+            lambda msgs: _guardian_call(state, msgs, _guardian_usage),
+            language=_get_lang(state),
+            conversation_history=_guardian_transcript,
+        )
+        await _guardian_finish_locked(
+            state, mech, username, campaign_id,
+            turn_count=turn_count, effective_turn=effective_turn,
+            dm_npcs=dm_npcs, skip_effects=skip_effects, epoch=epoch,
+            guardian_usage=_guardian_usage,
+        )
+        logger.info("🛡️ Guardian background (%.1fs)", time.time() - _tg)
+    except Exception as e:
+        logger.warning("🛡️ Guardian background skipped: %s", e, exc_info=True)
+
+
+async def _guardian_finish_locked(
+    state: dict, mech: dict, username: str, campaign_id: str,
+    *, turn_count: int, effective_turn: int, dm_npcs: list[dict],
+    skip_effects: list | None, epoch: int | None,
+    guardian_usage: dict | None = None,
+) -> bool:
+    """Hjärtat av Guardian post-DM EFTER LLM-anropet: applicera mech-JSON,
+    forma rapporten, skriv transkript-post, spara under epok-guard. Delad
+    mellan husvägen (_guardian_post_dm_locked) och 🏮 v2-reläkedjans
+    guardian-hop (klienten svarar med samma JSON). Returnerar True om
+    applicerat & sparat."""
+    guardian_usage = guardian_usage or {}
+    try:
+        # Spår A lägger till skip_effects på apply_mechanics; fallback om
+        # guardian.py inte hunnit uppdateras (parallell utveckling).
+        guardian_effects = apply_mechanics(state, mech, skip_effects=skip_effects)
+    except TypeError:
+        guardian_effects = apply_mechanics(state, mech)
+    meta = state.setdefault("meta", {})
+
+    # Spegla senaste stridslogg-entryn till aktivitetsflödet — så
+    # loading-animationen visar kampanjens senaste loggentry (⚔️ …).
+    _clog = state.get("world", {}).get("combat", {}).get("log", [])
+    if _clog and _clog[-1].get("text"):
+        _e = _clog[-1]
+        _log_activity(username, f"⚔️ {(_e.get('name') + ': ') if _e.get('name') else ''}{_e.get('text')}")
+
+    # ASCII-art (avstängd tills vidare)
+    if ATMOSPHERE_ENABLED:
+        guardian_art = mech.get("ascii_art")
+        if guardian_art and should_generate_art(meta, turn_count):
+            meta["last_art_turn"] = turn_count
+            logger.info("🛡️ Guardian-art")
+
+    if guardian_effects:
+        existing = meta.get("last_effects", [])
+        existing_keys = {(e.get("type"), str(e.get("value"))) for e in existing}
+        for ge in guardian_effects:
+            key = (ge.get("type"), str(ge.get("value")))
+            if key not in existing_keys:
+                existing.append(ge)
+        meta["last_effects"] = existing
+
+    guardian_summary = format_guardian_summary(
+        guardian_effects, state,
+        language=_get_lang(state),
+        mech=mech,
+        dm_npcs=dm_npcs,
+        turn=effective_turn,
+    )
+
+    # Om striden ändrades via tagg-parsning (initiativ/dödsräddning via
+    # [Resultat:]) men Guardian inte hittade egna effekter → skicka ändå
+    # [COMBAT:]-taggen så frontendens Krigsråd uppdateras direkt.
+    # (Endast om Guardian INTE redan skickat en tagg — payloaderna kan
+    # skilja sig, t.ex. player_hp, så jämför på taggens existens, inte
+    # hela strängen. Duplicering → frontend-regexen strippar bara den
+    # sista och den första läcker ut i chatten.)
+    combat = state.get("world", {}).get("combat")
+    if combat and meta.get("combat_tag_dirty"):
+        # (fix w2c) Fallback-taggen får samma player_hp-payload som
+        # Guardian-vägen (guardian.py format_guardian_summary) — annars
+        # tappar frontendens statusbar spelar-HP när bara tagg-vägen
+        # ändrade striden (t.ex. [Resultat:] initiativ/dödsräddning).
+        _php = (state.get("character", {}) or {}).get("hp", {}) or {}
+        combat_for_tag = dict(combat)
+        combat_for_tag["player_hp"] = {
+            "current": _php.get("current", 0),
+            "max": _php.get("max", 0),
+        }
+        _tag = _combat_tag(combat_for_tag)
+        if _tag and "[COMBAT:" not in (guardian_summary or ""):
+            guardian_summary = (guardian_summary + "\n" + _tag) if guardian_summary else _tag
+        meta.pop("combat_tag_dirty", None)
+    else:
+        meta.pop("combat_tag_dirty", None)
+
+    # Tag-only summary (inga synliga rader) → ge den en rubrik så
+    # bubblan inte ser tom ut i chatten.
+    if guardian_summary and guardian_summary.startswith("["):
+        guardian_summary = "🛡️ **Guardian**\n" + guardian_summary
+
+    if guardian_summary:
+        # Dedupe-säkring: EXAKT en [COMBAT:]-tagg, alltid sist (oavsett
+        # vilken kodväg som emitterade den — guardian-formatet och/eller
+        # combat_tag_dirty-fallbacket ovan).
+        guardian_summary = _ensure_single_combat_tag(guardian_summary)
+        _gmeta = {"turn": effective_turn}
+        if guardian_usage.get("total_tokens"):
+            _gmeta["tokens"] = guardian_usage
+        state = store.append_message(
+            state, "guardian", guardian_summary,
+            meta=_gmeta,
+        )
+        logger.info("🛡️ Guardian finish: %d effects, %d DM-NPCs, logbook=%s",
+                    len(guardian_effects), len(dm_npcs),
+                    "ja" if mech.get("logbook") else "nej")
+    else:
+        # Guardian körde LLM men hittade inga ändringar → ingen transkript-post.
+        # Spara ändå förbrukningen i meta["unguarded_tokens"] så admin-stats
+        # räknar ALL Guardian-förbrukning (inte bara posterna med summary).
+        _track_unguarded(state, _guardian_model_for(state), guardian_usage)
+        logger.info("🛡️ Guardian finish: no changes")
+
+    if not _epoch_ok(username, campaign_id, epoch):
+        logger.info("🛡️ Guardian discarded — the turn was undone (epoch changed)")
+        return False
+    store.save(state)
+    return True
+
+
+# ── Bakgrundsuppgifter efter ett DM-svar (icke-kritiska, blockerar ALDRIG svaret) ──
+async def _post_turn_tasks(
+    username: str, campaign_id: str, reply: str, player_msg: str,
+    turn_count: int, model_id: str,
+    epoch: int | None = None,
+    skip_extraction: bool = False,
+) -> None:
+    """Körs i bakgrunden EFTER att HTTP-svaret skickats till klienten.
+    Faktextraktion, RAG-indexering och sammanfattning — inget av detta
+    får någonsin fördröja spelarens upplevelse. Alla fel sväljs tyst.
+    (fix 2026-08-10) Egen nyckel i _RUNNING_BG: post-turn-tasks ska INTE
+    hålla guardian_running=true (tärningslåset) medan RAG-indexering körs —
+    annars låses tärningen i minuter efter att Lorekeeper-rapporten redan
+    renderats.
+
+    🏮 v2 `skip_extraction=True`: faktextraktionens LLM-huvudanrop körs
+    klient-side i reläkedjan (chain:'extract') — huset skutar den delen men
+    kör alla övriga bakgrundsjobb som vanligt."""
+    key = (username, campaign_id, "post")
+    _RUNNING_BG.add(key)
+    try:
+        lock = _state_lock(username, campaign_id)
+        async with lock:
+            await _post_turn_tasks_locked(
+                username, campaign_id, reply, player_msg, turn_count, model_id,
+                epoch=epoch, skip_extraction=skip_extraction,
+            )
+    finally:
+        _RUNNING_BG.discard(key)
+
+
+async def _post_turn_tasks_locked(
+    username: str, campaign_id: str, reply: str, player_msg: str,
+    turn_count: int, model_id: str,
+    epoch: int | None = None,
+    skip_extraction: bool = False,
+) -> None:
+    """Hjärtat av post-turn-uppgifterna — körs under per-kampanj-låset."""
+    import time as _ptt
+    _ptt_start = _ptt.time()
+    _threads_usage = {}  # ACTIVE THREADS (var 10:e turn) — alltid definierad
+    logger.info(
+        "⚙️ Post-turn pipeline START (turn %d, user=%s, camp=%s)",
+        turn_count, username, campaign_id or "<none>",
+    )
+
+    def _ok() -> bool:
+        return _epoch_ok(username, campaign_id, epoch)
+
+    if not _ok():
+        logger.info("⚙️ Post-turn pipeline discarded — the turn was undone (epoch changed)")
+        return
+    # 1. Extrahera fakta + inventory-ändringar ur DM-svaret (billig modell)
+    # Varannan tur (turn_count % 2 == 0): faktextraktion är ett LLM-anrop
+    # (kostnad + latens). [FÖREMÅL:]-taggar + Guardian täcker redan inventory,
+    # så att halvera extraktionsfrekvensen tappar ingen mekanik (P2, spec B5).
+    # 🏮 v2: skip_extraction ⇒ huvud-anropet körs klient-side (chain:'extract').
+    if turn_count % 2 == 0 and not skip_extraction:
+        _extract_usage = {}
+        try:
+            # Hämta state först — closuren nedan behöver extraction-modellen
+            st = store.get(username, campaign_id)
+
+            async def _extraction_llm(messages: list[dict]) -> str:
+                if not st:
+                    return await _call_llm(EXTRACTION_MODEL, messages, temperature=0.2, max_tokens=800, thinking="disabled", usage_out=_extract_usage)
+                return await _extraction_call(st, messages, _extract_usage, temperature=0.2, max_tokens=800, thinking="disabled")
+
+            # Bygg inventory-lista för kontext (så LLM:n inte lägger till duplikat)
+            inv_names = []
+            if st:
+                for it in st.get("inventory", []):
+                    inv_names.append(f"- {it['name']} (×{it.get('qty', 1)})")
+            inv_list_str = "\n".join(inv_names) if inv_names else "(tomt)"
+
+            facts, inv_changes = await extract_facts(
+                reply, player_msg, turn_count, _extraction_llm,
+                inventory_list=inv_list_str,
+                language=_get_lang(st) if st else "en",
+            )
+            if facts and _ok():
+                register = FactRegister(username, campaign_id)
+                register.add_facts(facts)
+                logger.info("Extracted %d facts (turn %d)", len(facts), turn_count)
+
+            # Applicera inventory-ändringar (LLM-baserat säkerhetsnät)
+            if inv_changes and st:
+                inv = st.setdefault("inventory", [])
+                # Namn som redan lagts till via [FÖREMÅL:]-tagg denna tur
+                tag_added = {e["value"].lower() for e in (st.get("meta", {}).get("last_effects", []))
+                             if e.get("type") == "föremål"}
+                for ch in inv_changes:
+                    name_lower = ch["name"].lower()
+                    if ch["action"] == "add":
+                        # Skippa om taggen redan lade till det
+                        if name_lower in tag_added:
+                            logger.debug("📦 LLM extraction skipped '%s' (already tagged)", ch["name"])
+                            continue
+                        existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                        if existing:
+                            existing["qty"] = existing.get("qty", 1) + ch["qty"]
+                            logger.info("📦 LLM-dedup: '%s' → qty=%d", ch["name"], existing["qty"])
+                        else:
+                            inv.append({
+                                "id": f"llm-{len(inv)}",
+                                "name": ch["name"],
+                                "type": ch.get("type", "Annat"),
+                                "qty": ch["qty"],
+                                "weight": 0,
+                                "equipped": False,
+                                "rarity": "normal",
+                                "description": "",
+                            })
+                            logger.info("📦 LLM extraction added '%s'", ch["name"])
+                    elif ch["action"] == "remove":
+                        existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                        if existing:
+                            existing["qty"] = existing.get("qty", 1) - ch["qty"]
+                            if existing["qty"] <= 0:
+                                inv.remove(existing)
+                                logger.info("📦 LLM extraction removed '%s'", ch["name"])
+                            else:
+                                logger.info("📦 LLM extraction reduced '%s' → qty=%d", ch["name"], existing["qty"])
+            # Faktextraktion är ett LLM-anrop — spara dess förbrukning i
+            # meta["unguarded_tokens"] så admin-stats räknar ALLLL förbrukning.
+            if st and _extract_usage.get("total_tokens"):
+                _track_unguarded(st, _extraction_model_for(st), _extract_usage)
+            if st and (inv_changes or _extract_usage.get("total_tokens")):
+                store.save(st)
+        except Exception as e:
+            logger.debug("Fact extraction skipped: %s", e)
+
+    # 1b. Guardian POST-DM: flyttad till /api/chat (inline) — syns nu i chatten.
+
+    # 1c. NPC rank-meta — räkna omnämnanden av kända NPC:er i DM-svar +
+    #     spelarmeddelande (gratis strängmatchning, inget LLM-anrop).
+    #     NPC:er som nämns ofta stiger i rank; de som aldrig nämns glider
+    #     ut ur fönstret (rörligt faktafönster, 2026-08-04).
+    if not _ok():
+        return
+    try:
+        st = store.get(username, campaign_id)
+        if st and st.get("npcs"):
+            search_text = (reply or "") + "\n" + (player_msg or "")
+            search_lower = search_text.lower()
+            bumped = False
+            for n in st["npcs"]:
+                nm = (n.get("name") or "").strip()
+                if not nm or len(nm) < 2:
+                    continue
+                count = search_lower.count(nm.lower())
+                if count > 0:
+                    n["mentions"] = int(n.get("mentions") or 1) + count
+                    n["last_seen_turn"] = turn_count
+                    bumped = True
+            if bumped:
+                store.save(st)
+                logger.debug("🗣️ NPC mentions bumped for turn %d", turn_count)
+    except Exception as e:
+        logger.debug("NPC rank update skipped: %s", e)
+
+    # 1d. Kompakteringspass (var 50:e turn) — extraction-modellen bedömer
+    #     vilka aktiva fakta som inte längre är relevanta och de sänks i
+    #     rank (relevance → 0.2) så det rörliga faktafönstret hålls rent.
+    if not _ok():
+        return
+    if turn_count % 50 == 0 and turn_count > 0:
+        try:
+            st = store.get(username, campaign_id)
+            if st:
+                register = FactRegister(username, campaign_id)
+                active = [f for f in register._facts if not f.superseded_by and not f.archived]
+                if active:
+                    _compact_usage = {}
+                    fact_lines = "\n".join(
+                        f"- [{f.category}] {f.text} (ID: {f.id}, omnämnd {f.mentions}g, tur {f.source_turn})"
+                        for f in active[:80]
+                    )
+                    lang = _get_lang(st)
+                    compact_prompt = (
+                        "Du är en arkivarie som städar ett faktaarkiv för en D&D-kampanj.\n"
+                        "Läs listan över fakta. Markera de som INTE längre är relevanta för "
+                        "den pågående storyn — t.ex. lösa påståenden, något någon sa som inte "
+                        "påverkade något, avslutade händelser utan fortsatt betydelse, eller "
+                        "detaljer som aldrig återkommit.\n"
+                        "SVARA ENDAST med en JSON-array av ID:n, t.ex. [\"abc123\", \"def456\"]. "
+                        "Ingen markdown, ingen förklaring. Om inget ska markeras: []\n\n"
+                        + fact_lines
+                    )
+                    raw = await _extraction_call(
+                        st,
+                        [{"role": "user", "content": compact_prompt}],
+                        _compact_usage,
+                        temperature=0.1, max_tokens=600, thinking="disabled",
+                        timeout=45,
+                    )
+                    low_ids: set[str] = set()
+                    raw_s = raw or "" if isinstance(raw, str) else ""
+                    try:
+                        parsed = _extract_json(raw_s)
+                        if isinstance(parsed, list):
+                            low_ids = {str(i) for i in parsed if isinstance(i, (str, int))}
+                        elif isinstance(parsed, dict):
+                            arr = parsed.get("ids") or parsed.get("facts") or []
+                            low_ids = {str(i) for i in arr if isinstance(i, (str, int))}
+                    except Exception:
+                        # Fallback: JSON-array direkt (["abc", ...]) eller 12-hex-ID:n
+                        try:
+                            arr = json.loads(raw_s)
+                            if isinstance(arr, list):
+                                low_ids = {str(i) for i in arr if isinstance(i, (str, int))}
+                        except Exception:
+                            low_ids = set(re.findall(r'[0-9a-f]{12}', raw_s))
+                    n_compacted = register.compact(low_ids)
+                    # Logga till ringbuffern → syns i /api/debug/logs + admin
+                    logger.info("🧹 Compaction pass (turn %d): %d facts downranked of %d", turn_count, n_compacted, len(active))
+                    if _compact_usage.get("total_tokens"):
+                        _track_unguarded(st, _extraction_model_for(st), _compact_usage)
+                    store.save(st)
+        except Exception as e:
+            logger.debug("Compaction pass skipped: %s", e)
+    else:
+        logger.debug("🧹 Compaction not due (turn %d, runs every 50th)", turn_count)
+
+    # 1e. Arkiveringspass (varje turn, gratis — ingen LLM) — gamla
+    #     lågkonfidensfakta (eller LLM-nedrankade av kompakteringspasset)
+    #     markeras archived så de slutar konkurrera i keyword-scoring.
+    #     Data raderas ALDRIG — allt ligger kvar i facts.json, osynligt.
+    try:
+        register = FactRegister(username, campaign_id)
+        n_archived = register.archive_old(min_turn=turn_count)
+        if n_archived:
+            logger.info("🗄️ Archival pass (turn %d): %d facts archived", turn_count, n_archived)
+        else:
+            logger.debug("🗄️ Archival pass (turn %d): 0 facts archived (none stale)", turn_count)
+    except Exception as e:
+        logger.debug("Archival pass skipped: %s", e)
+
+    # 1f. ACTIVE THREADS (var 10:e turn) — billig LLM läser de senaste
+    #     meddelandena + senaste scen-sammanfattningen och skriver ut de
+    #     3-5 PÅGÅENDE storytrådarna. Injiceras ALLTID i DM-prompten så
+    #     DM:n håller koll på parallella trådar även när spelaren pratar
+    #     om något annat just nu (2026-08-07).
+    if turn_count % 10 == 0 and turn_count > 0:
+        _threads_usage = {}
+        try:
+            st = store.get(username, campaign_id)
+            if st:
+                recent = store.load_transcript(st, last_n=20)
+                t_text = "\n".join(
+                    f"{e['role']}: {str(e.get('content'))[:160]}"
+                    for e in recent
+                    if e.get("content") != "__VAKNA_DM__"
+                )[:3000]
+                scenes = store.load_summaries(st, last_n=1)
+                s_text = scenes[0].get("text", "")[:300] if scenes else ""
+                lang = _get_lang(st)
+                prompt = (
+                    "You are a story archivist for a D&D campaign. "
+                    "Read the recent events and identify the 3-5 ACTIVE story threads "
+                    "(ongoing quests, promises, relationships, threats, mysteries). "
+                    "Skip finished or one-off events. Reply ONLY with a JSON array, e.g. "
+                    '[{"name": "Hilda\'s quest", "status": "active", "last_turn": 45, '
+                    '"summary": "Find the map to Greywatch Caverns"}]. '
+                    "No markdown, no explanation.\n\n"
+                    "Recent scene summary:\n" + s_text + "\n\nRecent events:\n" + t_text
+                )
+                if lang == "sv":  # EU-kampanjer → engelsk arkivarie-prompt
+                    prompt = (
+                        "Du är en arkivarie som håller koll på storytrådar i en D&D-kampanj. "
+                        "Läs de senaste händelserna och identifiera de 3-5 AKTIVA storytrådarna "
+                        "(pågående uppdrag, löften, relationer, hot, mysterier). "
+                        "Hoppa över avslutade eller engångshändelser. "
+                        "SVARA ENDAST med en JSON-array, t.ex. "
+                        '[{"name": "Hildas uppdrag", "status": "aktiv", "last_turn": 45, '
+                        '"summary": "Hämta kartan till Gråvakts grottor"}]. '
+                        "Ingen markdown, ingen förklaring.\n\n"
+                        "Senaste scen-sammanfattning:\n" + s_text + "\n\nSenaste händelser:\n" + t_text
+                    )
+                raw = await _extraction_call(
+                    st, [{"role": "user", "content": prompt}], _threads_usage,
+                    temperature=0.3, max_tokens=600, timeout=45, thinking="disabled",
+                )
+                threads = _parse_threads(raw, turn_count)
+                if threads:
+                    st["meta"]["active_threads"] = threads
+                    store.save(st)
+                    logger.info("🧵 Active threads updated (turn %d): %d threads", turn_count, len(threads))
+                else:
+                    logger.debug("🧵 Active threads parse failed (turn %d): %.120s", turn_count, (raw or "")[:120])
+        except Exception as e:
+            logger.debug("Active threads update skipped: %s", e)
+
+    # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur)
+    if not _ok():
+        return
+    if turn_count % 5 == 0 and turn_count > 0:
+        try:
+            if await rag.qdrant_healthy():
+                st = store.get(username, campaign_id)
+                if st:
+                    recent = store.load_transcript(st, last_n=10)
+                    msgs_for_rag = [
+                        {"role": e["role"], "content": e["content"], "turn": turn_count}
+                        for e in recent
+                        if e.get("content") != "__VAKNA_DM__"
+                    ]
+                    if msgs_for_rag:
+                        await rag.index_transcript(msgs_for_rag, username, campaign_id)
+                        logger.info("🔎 RAG indexed %d messages (turn %d)", len(msgs_for_rag), turn_count)
+                    else:
+                        logger.debug("🔎 RAG index skipped — no new messages (turn %d)", turn_count)
+            else:
+                logger.warning("🔎 RAG index skipped — Qdrant unhealthy (turn %d)", turn_count)
+        except Exception as e:
+            logger.debug("RAG indexing skipped: %s", e)
+    else:
+        logger.debug("🔎 RAG index not due (turn %d, runs every 5th)", turn_count)
+
+    # 3. Sammanfattning (om det är dags)
+    if not _ok():
+        return
+    _summary_usage = {}
+    try:
+        st = store.get(username, campaign_id)
+        if st and store.maybe_summarize(st):
+            full_transcript = store.load_transcript(st, last_n=60)
+            t_text = "\n".join(f"{e['role']}: {e['content']}" for e in full_transcript)
+            if _get_lang(st) == "sv":
+                sum_prompt = (
+                    "Sammanfatta följande D&D-session på svenska. "
+                    "Fokusera på viktiga händelser, beslut, NPC-möten och konsekvenser. "
+                    "Max 200 ord.\n\n" + t_text
+                )
+            else:
+                sum_prompt = (
+                    "Summarize the following D&D session in English. "
+                    "Focus on important events, decisions, NPC meetings and consequences. "
+                    "Max 200 words.\n\n" + t_text
+                )
+            logger.info("📋 Scene summary due (turn %d) — generating from %d messages", turn_count, len(full_transcript))
+            # Sammanfattningar är interna bakgrundsuppgifter — ingår i meddelandets turn (2026-08-08)
+            summary = await _call_llm(
+                _extraction_model_for(st), [{"role": "user", "content": sum_prompt}],
+                temperature=0.3, max_tokens=512, thinking="disabled", usage_out=_summary_usage,
+            )
+            store.save_summary(st, summary)
+            logger.info("📋 Scene summary saved (turn %d, %d tkn)", turn_count, _summary_usage.get("total_tokens", 0))
+        else:
+            logger.debug("📋 Scene summary not due (turn %d)", turn_count)
+    except Exception as e:
+        logger.debug("Summary skipped: %s", e)
+
+    # 4. Kapitel-sammanfattning (var 5:e scen-sammanfattning, Nivå 2)
+    if not _ok():
+        return
+    _chapter_usage = {}
+    try:
+        st = store.get(username, campaign_id)
+        if st and store.maybe_chapter(st):
+            scenes = store.load_summaries(st, last_n=5)
+            s_text = "\n\n".join(
+                f"{'Scen' if _get_lang(st) == 'sv' else 'Scene'} {i + 1}: {s.get('text', '')}"
+                for i, s in enumerate(scenes)
+            )
+            if _get_lang(st) == "sv":
+                ch_prompt = (
+                    "Sammanfatta följande fem scener till ETT kapitel på svenska. "
+                    "Fokusera på övergripande händelsebåge, viktiga beslut, NPC-utveckling "
+                    "och konsekvenser. Max 300 ord.\n\n" + s_text
+                )
+            else:
+                ch_prompt = (
+                    "Summarize the following five scenes into ONE chapter in English. "
+                    "Focus on the overall story arc, important decisions, NPC development "
+                    "and consequences. Max 300 words.\n\n" + s_text
+                )
+            logger.info("📖 Chapter summary due (turn %d) — generating from %d scenes", turn_count, len(scenes))
+            chapter_text = await _call_llm(
+                _extraction_model_for(st), [{"role": "user", "content": ch_prompt}],
+                temperature=0.3, max_tokens=512, timeout=30, thinking="disabled", usage_out=_chapter_usage,
+            )
+            store.save_chapter_summary(st, chapter_text)
+            logger.info("📖 Chapter summary saved (turn %d, %d tkn)", turn_count, _chapter_usage.get("total_tokens", 0))
+        else:
+            logger.debug("📖 Chapter summary not due (turn %d)", turn_count)
+    except Exception as e:
+        logger.debug("Chapter summary skipped: %s", e)
+
+    # 5. Kampanjbåge (var 3:e kapitel, Nivå 3)
+    if not _ok():
+        return
+    _arc_usage = {}
+    try:
+        st = store.get(username, campaign_id)
+        if st and store.maybe_arc(st):
+            chapters = store.load_chapters(st, last_n=3)
+            c_text = "\n\n".join(
+                f"{'Kapitel' if _get_lang(st) == 'sv' else 'Chapter'} {i + 1}: {c.get('text', '')}"
+                for i, c in enumerate(chapters)
+            )
+            if _get_lang(st) == "sv":
+                arc_prompt = (
+                    "Sammanfatta följande tre kapitel till EN kampanjbåge på svenska. "
+                    "Fokusera på den stora berättelsen, huvudkonflikter, allianser och "
+                    "hur världen förändrats. Max 400 ord.\n\n" + c_text
+                )
+            else:
+                arc_prompt = (
+                    "Summarize the following three chapters into ONE campaign arc in English. "
+                    "Focus on the grand narrative, main conflicts, alliances and "
+                    "how the world has changed. Max 400 words.\n\n" + c_text
+                )
+            logger.info("📜 Campaign arc due (turn %d) — generating from %d chapters", turn_count, len(chapters))
+            arc_text = await _call_llm(
+                _extraction_model_for(st), [{"role": "user", "content": arc_prompt}],
+                temperature=0.3, max_tokens=640, timeout=30, thinking="disabled", usage_out=_arc_usage,
+            )
+            store.save_campaign_arc(st, arc_text)
+            logger.info("📜 Campaign arc saved (turn %d, %d tkn)", turn_count, _arc_usage.get("total_tokens", 0))
+        else:
+            logger.debug("📜 Campaign arc not due (turn %d)", turn_count)
+    except Exception as e:
+        logger.debug("Campaign arc skipped: %s", e)
+
+    # Sammanfattnings-/kapitel-/båge-anrop är LLM-förbrukning — spara i
+    # meta["unguarded_tokens"] så admin-stats räknar ALL förbrukning.
+    _bg_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    logger.info(
+        "⚙️ Post-turn pipeline DONE (turn %d, %.1fs)",
+        turn_count, _ptt.time() - _ptt_start,
+    )
+    for _u in (_summary_usage, _chapter_usage, _arc_usage, _threads_usage):
+        _bg_usage["prompt_tokens"] += _u.get("prompt_tokens", 0) or 0
+        _bg_usage["completion_tokens"] += _u.get("completion_tokens", 0) or 0
+        _bg_usage["total_tokens"] += _u.get("total_tokens", 0) or 0
+    if _bg_usage["prompt_tokens"] or _bg_usage["completion_tokens"]:
+        try:
+            _st = store.get(username, campaign_id)
+            if _st:
+                _track_unguarded(_st, _extraction_model_for(_st), _bg_usage)
+                store.save(_st)
+        except Exception as e:
+            logger.debug("Summary token accounting skipped: %s", e)
+
+
+@app.post("/api/chat")
+async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    # Icke-admin spelare kan välja mellan PLAYER_MODELS (Qwen 3.8 / DeepSeek Flash);
+    # free-tier klampas alltid till step-3.7-flash (FAS A).
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
+
+    # ── Turn-tak (FAS A: periodbaserad; premium = oändligt, 0 = oändligt) ──
+    # total_turns() används FORTFARANDE i admin-stats — men inte för cap.
+    turns_left = _turns_available(username)
+    if turns_left <= 0:
+        _udata = load_users().get(username, {})
+        _reset = _udata.get("reset_date") if isinstance(_udata, dict) else None
+        _reset = _reset or _today_str()
+        logger.info("⛔ Turn cap reached: %s", username)
+        raise HTTPException(
+            403,
+            detail={
+                "cap_reached": True,
+                "reset_date": _reset,
+                "message": f"Your free turns are spent. New turns on {_reset} — or upgrade for unlimited.",
+            },
+        )
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
+
+    # campaign_id tidigt — bakgrundsuppgifter behöver explicit ID
+    campaign_id = state["meta"].get("campaign_id", "")
+
+    # Hela chat-turen körs under per-kampanj-låset: bakgrundsuppgifterna
+    # (_guardian_post_dm, _post_turn_tasks, dag-entry) skriver state
+    # asynkront — utan låset kan den som sparar sist skriva över andras
+    # ändringar (t.ex. NPC tillagd av Guardian försvann när faktextraktionen
+    # sparade en gammal kopia). Låset släpps när turen är klar; de taskar som
+    # chat skapar i slutet körs efteråt och tar låset själva.
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        # Hämta färskt state UNDER låset: en bakgrundsuppgift från förra
+        # turen kan ha skrivit sedan vi läste ovan (campaign_id-uppslag).
+        fresh_state = store.get(username, campaign_id)
+        if fresh_state:
+            state = fresh_state
+        # Undo: spara läget FÖRE turen (single-level). /guardian är ett
+        # korrigeringsverktyg, inte en story-tur → ingen snapshot.
+        _is_guardian_cmd = (req.message or "").strip().lower().startswith("/guardian")
+        _snap_taken = False
+        if not _is_guardian_cmd:
+            try:
+                store.snapshot_turn(state, prompt=req.message)
+                _snap_taken = True
+            except Exception as e:
+                logger.warning("Undo snapshot failed: %s", e)
+        try:
+            return await _chat_locked(req, payload, username, campaign_id, state)
+        except Exception:
+            # Turen kraschade före commit (LLM-fel, turn-tak) → snapshotet
+            # beskriver ett läge som aldrig skrevs. Släng det.
+            if _snap_taken:
+                try:
+                    store.discard_snapshot(username, campaign_id)
+                except Exception:
+                    pass
+            raise
+
+
+async def _chat_locked(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+) -> dict:
+    """Hjärtat av chat-turen — körs under per-kampanj-låset."""
+
+    # Delad i Fas A (prompt-bygge) och Fas B (efter-behandling) så 🏮
+    # local-reläet (/api/chat/local/prepare + /commit) kan köra EXAKT samma
+    # kod över två HTTP-anrop. Husvägen: A → LLM-anrop → B — oförändrat.
+    ctx, early = await _chat_phase_a(req, payload, username, campaign_id, state)
+    if early is not None:
+        return early
+    # FAS A: pipeline-reservationen = EXAKT 1 turn per spelarmeddelande
+    # (eded88a — revert av per-anrops-modellen; se _reserve_chat_pipeline-
+    # docstringen). DM, Guardian pre/post och extraction ingår i den turnen.
+    # Egna turns kostar: bilder, TTS, karaktärsskapande, [SÖK:] och
+    # validerings-repair (se _consume_turn-anropsplatserna). 403 om saldot
+    # inte räcker.
+    _reserve_chat_pipeline(username, req.model_id, ctx["is_awakening"], req.message, ctx["effective_turn"])
+
+    _log_activity(username, "🧙 DM weaving the tale…")
+    _tllm = time.time()
+    try:
+        reply, reasoning, usage = await _call_llm_with_reasoning(req.model_id, ctx["messages"], max_tokens=ctx["_dm_max_tokens"])
+        _llm_time = round(time.time() - _tllm, 1)
+        logger.info("🤖 DM responded (%d tkn, %.1fs)", len(reply), _llm_time)
+        if reasoning:
+            logger.debug("💭 DM reasoned (%d tkn)", len(reasoning))
+    except HTTPException:
+        logger.error("❌ DM call failed (HTTP error)")
+        raise
+    except (ValueError, RuntimeError) as e:
+        logger.error("❌ DM call failed: %s", e)
+        raise HTTPException(502, f"DM:n nås inte just nu: {e}")
+    except Exception as e:
+        logger.error("❌ Unexpected LLM error: %s", e)
+        raise HTTPException(502, f"Oväntat LLM-fel: {e}")
+
+    return await _chat_phase_b(
+        req, payload, username, campaign_id, state, ctx,
+        reply, reasoning, usage, _llm_time,
+    )
+
+
+async def _chat_phase_a(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+) -> tuple[dict | None, dict | None]:
+    """Fas A av chat-turen: allt fram till och MED att DM-prompten är byggd.
+
+    Returnerar (ctx, None) — ctx bär messages + turmetadata som Fas B behöver —
+    eller (None, early_response) för /guardian-grenen (ingen LLM-tur alls).
+    Konsumerar INTE någon turn (reservationen ligger i huswrappern; reläets
+    commit bokför en local_dm-ledgerrad med 0 turns istället).
+
+    v2 (2026-09-30): Fas A är subdividerad i A1 (deterministiskt före
+    Guardian kast-koll) och A2 (prompt-bygge efter kast-kollen) så 🏮
+    full-pipelinen kan köra kast-kollen på klienten mellan de två. Husvägen
+    A→(guardian_check_roll)→B är beteendemässigt oförändrad."""
+    pre, early = await _chat_phase_a1(req, payload, username, campaign_id, state)
+    if early is not None:
+        return None, early
+    assert pre is not None  # a1:ar returnerar (pre, None) ELLER (None, early)
+    guardian_roll, _guardian_roll_usage = await _house_guardian_roll_check(
+        req, username, state, pre)
+    ctx = await _chat_phase_a2(
+        req, payload, username, campaign_id, state, pre,
+        guardian_roll, _guardian_roll_usage)
+    return ctx, None
+
+
+async def _chat_phase_a1(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+) -> tuple[dict | None, dict | None]:
+    """Fas A-del 1: allt deterministic fram T.o.m. pre-DM-sömmen — INNAN
+    Guardian kast-koll (husvägen kör den i wrappern; 🏮 full-pipelinen kör
+    den som en klient-hop mellan A1 och A2).
+
+    Returnerar (pre_ctx, None) eller (None, early_response)."""
+
+    # Spara senaste DM-modellen per kampanj — så valet behålls när spelaren
+    # återvänder till kampanjen (frontend återställer den vid load).
+    if state.setdefault("meta", {}).get("dm_model") != req.model_id:
+        state["meta"]["dm_model"] = req.model_id
+
+    # Undo-guard: kampanjens epoch vid turstart. Bakgrundsuppgifterna
+    # (Guardian, faktextraktion, dag-entry) får bara spara om epoken är kvar —
+    # annars skriver de zombiedata ovanpå ett ångrat läge.
+    turn_epoch = int(state.setdefault("meta", {}).get("epoch", 0) or 0)
+
+    # Spelaren svarade på ett tärningskast → rensa väntande kast-begäran.
+    # last_roll_requests fungerar då som "obesvarade kast": de finns kvar
+    # tills spelaren slår, så en refresh kan återställa knapparna.
+    result_effects: list = []
+    if req.message.startswith("[Resultat:"):
+        state.setdefault("meta", {})["last_roll_requests"] = []
+        # En roll_grant-resurs (t.ex. Healing Potion) som spelaren svarat på
+        # är FÖRBRUKAD — ta bort den ur state.resources så den inte dyker upp
+        # igen som en evig "Roll 🎲"-knapp eller triggar nya roll_grants.
+        # (showstopper-fix 2026-08-01: potion-resurs från turn 24 loopade i turn 30+)
+        _m = re.search(r"\[Resultat:\s*([^→]+?)\s*→", req.message)
+        if _m:
+            _label = _m.group(1).strip().lower()
+            _res = state.get("resources", [])
+            _kept = [r for r in _res if (r.get("label") or "").strip().lower() != _label]
+            if len(_kept) != len(_res):
+                state["resources"] = _kept
+                logger.info("🎲 Consumed roll resource '%s' removed from state.resources", _label)
+        # ── [Resultat:] — initiative + dödsräddningar (v23) ──
+        # Uppdaterar world.combat.initiative (spelarens initiativ) och
+        # character.death_saves. Muterar state FÖRE systemprompten byggs
+        # så B4-blocket visar uppdaterade värden denna tur.
+        _, result_effects = _parse_result_tag(req.message, state)
+        if result_effects:
+            logger.info("🎲 Result effects: %s",
+                        ", ".join(str(e.get("value", "?")) for e in result_effects))
+
+    # ── /guardian <instruktion> — manuell korrigering ──
+    # Spelaren kan be Guardian justera state direkt (ta bort dubletter,
+    # fixa items, ändra relations). Guardian får state + transkript +
+    # instruktion och returnerar JSON som appliceras. DM informeras nästa tur.
+    if req.message.strip().lower().startswith("/guardian"):
+        instruction = req.message.strip()[len("/guardian"):].strip()
+        if not instruction:
+            return None, {"reply": "🛡️ Usage: `/guardian <instruction>` — e.g. `/guardian remove duplicate NPCs`", "turn_count": state["meta"].get("turn_count", 0)}
+
+        try:
+            _tg = time.time()
+            _manual_usage = {}
+            # Körs redan under chat:ens per-kampanj-lås (_chat_locked) —
+            # inget extra lås här (asyncio.Lock är inte reentrant).
+            # state är redan färskt (hämtat under låset i chat()).
+            guardian_report = await _guardian_manual_correction(
+                instruction, state, username,
+                lambda msgs: _guardian_call(state, msgs, _manual_usage, temperature=0.1, thinking="disabled"),
+                language=_get_lang(state),
+            )
+            logger.info("🛡️ Guardian manual correction (%.1fs): %s", time.time() - _tg, guardian_report[:100])
+
+            # Spara Guardian-rapporten i transkriptet (med tokens)
+            _mmeta = {"turn": state["meta"].get("turn_count", 0), "manual": True}
+            if _manual_usage.get("total_tokens"):
+                _mmeta["tokens"] = _manual_usage
+            store.append_message(state, "guardian", guardian_report, meta=_mmeta)
+            store.save(state)
+
+            return None, {"reply": guardian_report, "turn_count": state["meta"].get("turn_count", 0)}
+        except Exception as e:
+            logger.error("🛡️ Guardian manual correction failed: %s", e)
+            return None, {"reply": f"🦉 Lorekeeper could not process the correction: {e}", "turn_count": state["meta"].get("turn_count", 0)}
+
+    # Bygg meddelandelista — spelarens meddelande sparas först EFTER att LLM:n svarat,
+    # så ett misslyckat anrop lämnar inga spår i transkriptet.
+    effective_turn = state["meta"].get("turn_count", 0) + 1
+    is_awakening = req.message == "__VAKNA_DM__"
+    _t0 = time.time()
+    logger.info(
+        "▶ TURN %d · model=%s · %s",
+        effective_turn, req.model_id,
+        "AWAKENING" if is_awakening else f"«{req.message[:40]}»",
+    )
+
+    # Senaste DM-svar som kontext till Guardian kast-koll (flyttad hit från
+    # A-/B-gränsen 2026-09-30 så 🏮 full-pipelinen kan skicka samma kontext i
+    # roll-check-hopen). Read-fel degraderar till tom kontext — kast-kollen
+    # hoppas ändå över på samma sätt som tidigare vid undantag.
+    dm_context = ""
+    if not is_awakening and not req.message.startswith("[Resultat:"):
+        try:
+            _recent = store.load_transcript(state, last_n=4)
+            for entry in reversed(_recent):
+                if entry.get("role") == "assistant":
+                    dm_context = entry.get("content", "")
+                    break
+        except Exception as e:
+            logger.warning("🛡️ Guardian pre-DM context load skipped: %s", e)
+
+    # ── Pre-DM-sömmen (P0): servern rullar fiendeattacker INNAN DM:n narrerar ──
+    # Planerade utfall lagras i meta["enemy_attack_rolls"][str(round)] och
+    # visas i DM-prompten (se _build_system_prompt) så att narrationen blir
+    # konsekvent med tärningarna. Idempotent per runda (retry-säkert).
+    try:
+        _plan_pre_dm_enemy_rolls(state)
+    except Exception as e:
+        logger.warning("Pre-DM enemy roll planning skipped: %s", e)
+
+    # ── Pre-DM-sömmen (P0b): SPELARENS attack rullas FÖRE DM:en ──
+    # Fienderna har gjort detta sedan tidigare; spelarens attack rullades
+    # efter DM-svaret, vilket gav "träff/miss utan siffra" och gjorde att
+    # guardian kunde tappa attacken helt (hero2 2026-10-23). Planen
+    # lagras i meta och injiceras i DM-prompten som ett avgjort utfall.
+    try:
+        from player_rolls import plan_player_attack
+        plan_player_attack(state, req.message)
+    except Exception as e:
+        logger.warning("Pre-DM player attack planning skipped: %s", e)
+
+    return {
+        "effective_turn": effective_turn,
+        "is_awakening": is_awakening,
+        "result_effects": result_effects,
+        "turn_epoch": turn_epoch,
+        "_t0": _t0,
+        "dm_context": dm_context,
+    }, None
+
+
+async def _house_guardian_roll_check(
+    req: ChatRequest, username: str, state: dict, pre: dict,
+) -> tuple[dict | None, dict]:
+    """Husvägens Guardian PRE-DM kast-koll — oförändrad beteende, flyttad
+    till en egen helper när Fas A delades (v2-reläet kör samma prompt
+    klient-side i 'rollcheck'-hopen istället)."""
+    guardian_roll = None
+    _guardian_roll_usage = {}
+    if not pre["is_awakening"] and not req.message.startswith("[Resultat:"):
+        try:
+            _tg = time.time()
+            _log_activity(username, "🦉 Lorekeeper reviewing the action…")
+            guardian_roll = await guardian_check_roll(
+                req.message, state,
+                lambda msgs: _guardian_call(state, msgs, _guardian_roll_usage, temperature=0.1, max_tokens=1024),
+                language=_get_lang(state),
+                dm_context=pre.get("dm_context", ""),
+            )
+            # Pre-DM tokens sparas i DM-postens meta (guardian_pre_dm_tokens) så
+            # admin-stats räknar ALL Guardian-förbrukning (roll-detection körs varje tur).
+            if _guardian_roll_usage.get("total_tokens"):
+                logger.info("🛡️ Guardian pre-DM (%.1fs): %d tkn (%s)",
+                            time.time() - _tg, _guardian_roll_usage.get("total_tokens", 0), guardian_roll["notation"] if guardian_roll else "no roll")
+            else:
+                logger.debug("🛡️ Guardian pre-DM (%.1fs): no roll", time.time() - _tg)
+        except Exception as e:
+            logger.warning("🛡️ Guardian pre-DM skipped: %s", e)
+    return guardian_roll, _guardian_roll_usage
+
+
+async def _chat_phase_a2(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+    pre: dict, guardian_roll: dict | None, _guardian_roll_usage: dict,
+) -> dict:
+    """Fas A-del 2: prompt-bygget (systemprompt, RAG/minnen, NPC-kontext,
+    transkript, long-form-detektion) — efter kast-kollen. Returnerar ctx."""
+    is_awakening = pre["is_awakening"]
+    effective_turn = pre["effective_turn"]
+
+    messages = [{"role": "system", "content": _build_system_prompt(
+        state, turn_override=effective_turn, awakening_trigger=is_awakening,
+        player_input=req.message,
+        guardian_roll=guardian_roll,
+    )}]
+    logger.debug("System prompt built (%d chars)", len(messages[0]["content"]))
+
+    # RAG + faktaregister: injicera relevant långtidsminne i systemprompten
+    if not is_awakening:
+        campaign_id = state["meta"].get("campaign_id", "")
+        try:
+            _tm = time.time()
+            memory = await _retrieve_relevant_memory(
+                username, campaign_id, req.message, state
+            )
+            memory_block = memory.get("text", "")
+            if memory_block:
+                messages[0]["content"] += "\n\n" + memory_block
+                logger.info(
+                    "🧠 Memory injected into system prompt: %d facts + %d RAG chunks "
+                    "(+%d chars, retrieve %.1fs, total inject %.1fs)",
+                    memory.get("facts_sent", 0), memory.get("rag_sent", 0),
+                    len(memory_block), memory.get("timing_s", 0.0),
+                    time.time() - _tm,
+                )
+            else:
+                logger.debug("🧠 No relevant memory found (%.1fs)", time.time() - _tm)
+        except Exception as e:
+            logger.warning("RAG/fact injection skipped: %s", e)
+
+    # ── @-NPC-chatt: spelaren pratar direkt med en NPC (t.ex. '@Mimmrick: …') ──
+    # Injicera NPC-kontext + rollspelsinstruktion i systemprompten så DM:n svarar
+    # I KARAKTÄR som NPC:n. Endast levande, icke-fiende NPC:er; ingen match →
+    # ingen ändring (bakåtkompatibelt).
+    try:
+        _npc_injected = _maybe_inject_npc_context(
+            messages[0]["content"], req.message, state
+        )
+        if len(_npc_injected) > len(messages[0]["content"]):
+            messages[0]["content"] = _npc_injected
+            logger.info("💬 NPC chat: @-context injected into system prompt")
+    except Exception as e:
+        logger.warning("NPC chat injection skipped: %s", e)
+
+    # Sammanfattningar injiceras numera i _build_system_prompt (hierarkiskt:
+    # 2 scen + 2 kapitel + 1 kampanjbåge) — ingen separat loop behövs här.
+
+    # Lägg till recent transcript + spelarens nya meddelande
+    # (vaknandetrigger filtreras bort — den är en intern signal, inte spelartext)
+    transcript = store.load_transcript_by_tokens(state)
+    for entry in transcript:
+        if entry.get("content") == "__VAKNA_DM__":
+            continue
+        if entry["role"] == "guardian":
+            # Guardian-rapport → DM ser den som systemkontext (mekaniska ändringar)
+            messages.append({"role": "user", "content": f"[GUARDIAN: Mekaniska ändringar denna tur]\n{entry['content']}"})
+        else:
+            messages.append({"role": "user" if entry["role"] == "user" else "assistant", "content": entry["content"]})
+    # Vaknandet: LLM:n ser en narrativ kallelse istället för den råa triggern
+    user_content = req.message
+    if is_awakening:
+        _lang = _get_lang(state)
+        user_content = (
+            "*Du slår upp ögonen i mörkret. Någon har kallat på dig. "
+            "En ny spelare sitter vid bordet och väntar.*"
+            if _lang == "sv" else  # EU-kampanjer → engelsk kallelse
+            "*You open your eyes in the darkness. Someone has called upon you. "
+            "A new player sits at the table, waiting.*"
+        )
+    messages.append({"role": "user", "content": user_content})
+    logger.debug("Context: %d messages → DM", len(messages))
+
+    # ── Long-form detektion ──
+    # Om spelaren ber om bakgrundshistoria, bokkapitel, detaljerad beskrivning etc.
+    # höj max_tokens så DM får utrymme att skriva en längre berättelse.
+    _long_form_kw = [
+        "bakgrund", "berätta om", "historia", "kapitel", "läsa", "bok",
+        "legend", "berättelse", "dagbok", "brev", "beskriv", "vad ser jag",
+        "undersök", "inskription", "runor", "skylt", "karta", "musik",
+        "sång", "dikt", "minne", "dröm", "vision", "förflutna",
+        " backstory", "tell me about", "history", "chapter", "read", "book",
+        "legend", "tale", "diary", "letter", "describe", "what do i see",
+        "examine", "inscription", "runes", "sign", "map", "song", "poem",
+        "memory", "dream", "vision", "past",
+    ]
+    _is_long_form = any(kw in req.message.lower() for kw in _long_form_kw) and len(req.message) > 15
+    _dm_max_tokens = 16000 if _is_long_form else 8192
+    if _is_long_form:
+        logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
+
+    return {
+        "messages": messages,
+        "effective_turn": effective_turn,
+        "is_awakening": is_awakening,
+        "result_effects": pre["result_effects"],
+        "guardian_roll": guardian_roll,
+        "_guardian_roll_usage": _guardian_roll_usage,
+        "_dm_max_tokens": _dm_max_tokens,
+        "turn_epoch": pre["turn_epoch"],
+        "_t0": pre["_t0"],
+    }
+
+
+async def _chat_phase_b(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+    ctx: dict, reply: str, reasoning: str, usage: dict, llm_time: float,
+    *, relay: bool = False, chain_active: bool = False,
+    carve_guardian: bool = False, carve_extract: bool = False,
+) -> dict:
+    """Fas B av chat-turen: allt EFTER att DM-svaret mottagits.
+
+    `relay=True` = 🏮 local-vägen (commit): ingen repair-retry (invalid
+    mekanik förkastas, narrationen behålls) och [SÖK:]-fortsättningen körs på
+    husets DEFAULT_PLAYER_MODEL utan att driva turn-potten. Husvägen
+    (relay=False) är beteendemässigt identisk med före relä-refactorn.
+
+    🏮 Per-roll (2026-10-01, ersätter `full_chain`-booleans):
+    - `chain_active` = minst en bakgrundsroll är local: → repair/[SÖK:]-hopp
+      kan köas som klient-hopp (Fas B sparar ändå turen så ett avbrott
+      lämnar ett giltigt läge; signalerar vidare arbete via ctx-nycklarna
+      `_pending_search` och `_repair_pending`).
+    - `carve_guardian` = Lorekeeperns huvud-anrop är utbrutet till en
+      klient-hop (chain:'guardian') — ingen hus-registrering här.
+    - `carve_extract` = faktextraktionens huvud-anrop körs klient-side
+      (chain:'extract') — huset hoppar över den delen men kör resten.
+    Rollerna som INTE är local: körs på huset exakt som i v1."""
+    messages = ctx["messages"]
+    effective_turn = ctx["effective_turn"]
+    is_awakening = ctx["is_awakening"]
+    result_effects = ctx["result_effects"]
+    guardian_roll = ctx["guardian_roll"]
+    _guardian_roll_usage = ctx["_guardian_roll_usage"]
+    _dm_max_tokens = ctx["_dm_max_tokens"]
+    turn_epoch = ctx["turn_epoch"]
+    _t0 = ctx["_t0"]
+    _llm_time = llm_time
+    _relay = relay
+    _cont_model = DEFAULT_PLAYER_MODEL if _relay else req.model_id
+    # ── [SÖK: fråga] — DM-egna minnessökningar (2026-08-07) ──
+    # Om DM:n känner att den saknar kontext (en gammal tråd, en NPC som inte
+    # dök upp bland minnena) kan den avsluta sitt svar med [SÖK: fråga].
+    # Backend hämtar relevanta fakta + RAG-chunks och gör ett ANDRA anrop så
+    # DM:n färdigställer svaret med den nya informationen. Taggen tas bort
+    # ur det slutgiltiga svaret. Kostar 2x den turen — en undantagsmekanism.
+    _search_re = re.compile(r"\[(?:SÖK|SEARCH):\s*(.*?)\]", re.DOTALL | re.IGNORECASE)
+    _search_m = _search_re.search(reply or "")
+    if _search_m and not is_awakening and chain_active:
+        # 🏮 v2: fortsättningsanropet körs klient-side i kedjans 'search'-hop
+        # (sist i kön) — här sparas frågan och taggen strippas (husets
+        # beteende: minne saknas → original-svaret behålls, taggen bort).
+        ctx["_pending_search"] = _search_m.group(1).strip()[:200]
+        reply = reply.replace(_search_m.group(0), "").strip()
+        logger.info("🏮 CHAIN search queued (tag stripped): %.120s", ctx["_pending_search"])
+    elif _search_m and not is_awakening:
+        _query = _search_m.group(1).strip()[:200]
+        logger.info("🔍 DM requested memory search: %.120s", _query)
+        try:
+            _mem = await _retrieve_relevant_memory(username, campaign_id, _query, state)
+            _mem_text = (_mem or {}).get("text", "")
+            _base = reply.replace(_search_m.group(0), "").strip()
+            if _mem_text:
+                # Extra LLM-anrop ([SÖK:]) = extra turn. Om saldot
+                # tagit slut skippas sökningen tyst — original-svaret behålls.
+                # 🏮 relä: huset betalar fortsättningen på DEFAULT_PLAYER_MODEL
+                # utan turn-drift — local_dm-capet skyddar mot missbruk.
+                if not _relay and _turns_available(username) < 1:
+                    reply = _base
+                    logger.info("🔍 DM search skipped — turn cap reached")
+                else:
+                    if not _relay:
+                        _consume_turn(username, action="search", model=req.model_id)
+                    _cont_prompt = (
+                        "The player is waiting for your reply. You asked for more context — "
+                        "here it is:\n\n" + _mem_text +
+                        "\n\nFinish your reply to the player now, weaving in anything from "
+                        "this memory that matters. Output ONLY the final narration (no [SÖK:] tag)."
+                    )
+                    _cont_messages = [
+                        {"role": "system", "content": messages[0]["content"]},
+                        {"role": "assistant", "content": _base},
+                        {"role": "user", "content": _cont_prompt},
+                    ]
+                    _reply2, _reasoning2, _usage2 = await _call_llm_with_reasoning(
+                        _cont_model, _cont_messages, max_tokens=_dm_max_tokens,
+                    )
+                    if _reply2 and len(_reply2.strip()) > 10:
+                        reply = _reply2
+                        if _reasoning2:
+                            reasoning = reasoning or _reasoning2
+                        if _usage2 and _usage2.get("total_tokens"):
+                            usage = usage or _usage2
+                        logger.info("🔍 DM search continuation (%d tkn)", len(_reply2))
+                    else:
+                        reply = _base
+                        logger.warning("🔍 DM search continuation empty → kept original reply")
+            else:
+                reply = _base
+                logger.info("🔍 DM search found no memory → kept original reply")
+        except Exception as e:
+            logger.warning("🔍 DM search failed: %s", e)
+            reply = _search_re.sub("", reply or "").strip()
+    elif _search_m and is_awakening:
+        # Under vaknandet finns inget minne att söka — rensa taggen tyst.
+        reply = _search_re.sub("", reply or "").strip()
+
+    # Spara spelarens meddelande + DM-svar i transkriptet
+    state = store.append_message(state, "user", req.message)
+
+    # Parsa NPCs och kastbegäran ur svaret
+    reply, new_npcs = _parse_npcs(reply)
+    reply, roll_requests = _parse_roll_requests(reply)
+    if new_npcs:
+        logger.info("🎭 %d new NPC(s): %s", len(new_npcs), ", ".join(n["name"] for n in new_npcs))
+    if roll_requests:
+        logger.info("🎲 %d roll(s) requested: %s", len(roll_requests), ", ".join(r["notation"] for r in roll_requests))
+    _log_activity(username, "📜 Parsing mechanics…")
+
+    # ── Säkerhetsnät: prosa-kast utan [KAST:]-tagg ──
+    # Om DM skrev "Rulla tärningen" i prosa men glömde taggen spawnas ingen
+    # klickbar tärning och spelaren fastnar. Auto-spawna en 1d20 så spelet
+    # aldrig stannar. (Taggade kast har redan rensats ur reply av _parse_roll_requests.)
+    # Etiketten blir synlig i spelarens roll-request-kort → språkmedveten.
+    _prose_roll_label = _err("Tärningsslag", "Dice roll", _get_lang(state))
+    if not roll_requests and PROSE_ROLL_PATTERN.search(reply):
+        roll_requests = [{"notation": "1d20", "label": _prose_roll_label}]
+        logger.warning("🎲 Prose roll detected (no [KAST:] tag) → auto-spawning 1d20")
+
+    # ── Guardian-fallback: DM glömde [KAST:] men Guardian rekommenderade kast ──
+    # Guardian pre-DM avgjorde att handlingen kräver kast. Om DM inte
+    # producerade någon [KAST:]-tagg, använd Guardians rekommendation.
+    if not roll_requests and guardian_roll:
+        roll_requests = [{"notation": guardian_roll["notation"], "label": guardian_roll["label"]}]
+        logger.warning("🛡️ Guardian fallback: DM forgot [KAST:] → auto-spawning %s (%s)",
+                       guardian_roll["notation"], guardian_roll["label"])
+
+    # Lägg till nya NPCs FÖRE taggparsning (så NPC_DÖD hittar dem)
+    for npc in new_npcs:
+        existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
+        if npc["name"].lower() not in existing:
+            state.setdefault("npcs", []).append(npc)
+
+    # ── Pydantic-validering + retry av mekaniska taggar ──
+    # Parsa mekaniska taggar och validera mot kampanjtillståndet. Vid fel:
+    # repair-prompt + nytt LLM-anrop (upp till 2 försök totalt). Efter 2
+    # misslyckade försök behålls narrationen men trasig mekanik förkastas.
+    effects: list = []
+    base_state = copy.deepcopy(state)  # utgångsläge innan mekanisk parsning
+    current_reply = reply
+
+    for attempt in range(2):
+        work_state = copy.deepcopy(base_state)
+        parsed_reply, work_state, parsed_effects = _parse_mechanical_tags(
+            current_reply, work_state
+        )
+        dm_resp, errors = validate_dm_response(
+            parsed_reply, parsed_effects, roll_requests, work_state
+        )
+        if dm_resp.valid:
+            # Giltigt — acceptera parsningen
+            state = work_state
+            reply = parsed_reply
+            effects = parsed_effects
+            break
+
+        if chain_active:
+            # 🏮 v2: ogiltig mekanik → spara narrationen strippt (säker save —
+            # ett avbrott i kedjan lämnar ett giltigt läge) och kö 'repair'-
+            # hoppen: klienten lagar taggarna, commit validerar om.
+            # (repair-hoppen körs alltid på DM-modellen — det är DM:ens
+            # narration som lagas, oavsett Lorekeeper/Background-rollval.)
+            ctx["_repair_pending"] = {
+                "errors": errors,
+                "current_reply": current_reply,
+                "roll_requests": roll_requests,
+            }
+            logger.info("🏮 CHAIN repair queued — mechanics invalid: %s", "; ".join(errors))
+            reply = _strip_mechanical_tags(current_reply)
+            effects = []
+            break
+
+        if attempt < 1 and not _relay:
+            # Ogiltigt — be LLM:n reparera de mekaniska taggarna
+            # Repair kostar en EGEN turn (+1) — pipeline-reservationen (1 turn
+            # per meddelande, eded88a) inkluderar inte validerings-repair.
+            # Utan saldo → acceptera svaret som det är (reparation är en extra
+            # chans, inte en rättighet).
+            if _turns_available(username) < 1:
+                logger.info("⛔ Validation repair skipped — turn cap reached")
+                break
+            _consume_turn(username, action="repair", model=req.model_id)
+            repair_prompt = (
+                "Ditt förra svar hade dessa fel: "
+                + "; ".join(errors)
+                + ". Behåll narrationen men fixa de mekaniska taggarna. "
+                "Svara med samma format."
+            )
+            try:
+                repaired = await _call_llm(
+                    req.model_id,
+                    messages
+                    + [
+                        {"role": "assistant", "content": current_reply},
+                        {"role": "user", "content": repair_prompt},
+                    ],
+                )
+                # Rensa NPC-/kast-taggar ur det reparerade svaret (texten bara)
+                repaired, _ = _parse_npcs(repaired)
+                repaired, _ = _parse_roll_requests(repaired)
+                current_reply = repaired
+            except Exception as e:
+                logger.warning("Repair call failed: %s", e)
+                break
+        else:
+            # Försöken slut — behåll narrationen, förkasta trasig mekanik
+            logger.warning(
+                "DM response invalid after 2 attempts, discarding mechanics. Errors: %s",
+                "; ".join(errors),
+            )
+            reply = _strip_mechanical_tags(current_reply)
+            effects = []
+            break
+
+    # Logga dag-byte till aktivitetsflödet (loading-animationen)
+    if any(e.get("type") == "ny_dag" for e in effects):
+        _log_activity(username, "🌅 A new day dawns…")
+
+    # 🏮 Bokför local_dm-ledgerraden (0 turns) EXAKT en gång per drag — på
+    # dm-hoppet (v1) respektive första committen efter dm (v2: repair-
+    # commiten har flaggan redan satt). Husvägen har ingen local_dm-rad.
+    if _relay and not ctx.get("_ledger_booked"):
+        ctx["_ledger_booked"] = True
+        _append_turn_ledger(username, "local_dm", req.model_id,
+                           int((usage or {}).get("total_tokens") or 0))
+
+    # ── [STRID:] — öppna/uppdatera strid (v23) ──
+    # DM öppnar striden med taggen → world.combat skapas. Körs EFTER
+    # mekanikvalideringen så taggen stripas ur den slutgiltiga reply-texten.
+    # Effekten slås ihop med tagg-effekterna → meta["last_effects"] och
+    # skickas som skip_effects till Guardian (dedup, se B2).
+    reply, strid_effects = _parse_strid_tag(reply, state)
+    effects = effects + strid_effects
+
+    # ── [ALLIERAD:] — allierade ansluter till PÅGÅENDE strid ──
+    # DM låter vänliga NPC:er slåss vid spelarens sida mitt i striden.
+    # Kräver aktiv strid — utan strid ignoreras taggen (bara en varning).
+    reply, allierad_effects = _parse_allierad_tag(reply, state)
+    effects = effects + allierad_effects
+
+    # ── Prosa-föremål: borttaget (v18) ──
+    # LLM-extraktion i _post_turn_tasks() hanterar nu föremål som DM
+    # glömde tagga — med kontextförståelse istället för regex.
+
+    # Spara effekter för nästa turs systemprompt
+    meta = state.setdefault("meta", {})
+    meta["last_effects"] = (result_effects or []) + (effects or [])
+    # Spara kast-begäran så transkript-fallbacken kan återställa dem
+    meta["last_roll_requests"] = roll_requests if roll_requests else []
+
+    # ── ASCII-art: Guardian genererar i post-DM (se guardian_inline nedan) ──
+    # Fallback-banken används om Guardian inte genererade art.
+    ascii_art = None
+    art_type = None
+    turn_count = meta.get("turn_count", 0)
+
+    # Rensa intern struktur innan transkriptsparning
+    # (reply är redan rensad från mekaniska taggar via _parse_mechanical_tags)
+    reply = re.sub(r'<STATE_UPDATE>.*?</STATE_UPDATE>', '', reply, flags=re.DOTALL).strip()
+    # Säkerhetsnät: reasoning-modeller kan läcka <think>-taggar i content
+    reply = re.sub(r'<think>.*?</think>', '', reply, flags=re.DOTALL | re.IGNORECASE).strip()
+    # Prosa-kast som säkerhetsnätet missade (t.ex. "Kast:" som rubrik)
+    if not roll_requests and re.search(r'^\s*-?\s*Kast\s*:', reply, re.MULTILINE | re.IGNORECASE):
+        roll_requests = [{"notation": "1d20", "label": _prose_roll_label}]
+        reply = re.sub(r'^\s*-?\s*Kast\s*:.*$', '', reply, flags=re.MULTILINE | re.IGNORECASE).strip()
+        logger.warning("🎲 Prose roll 'Kast:' detected → auto-spawning 1d20")
+        # Uppdatera last_roll_requests (sattes tidigare, men prose-fallbacken
+        # kan ha lagt till kast efteråt — spara så frontend kan återställa)
+        meta["last_roll_requests"] = roll_requests
+
+    # Spara DM-svar (ren text — inga taggar eller intern struktur)
+    _dm_meta = {
+        "model": req.model_id,
+        "tokens": usage,
+        "time": _llm_time,
+    }
+    # DM:ns inre monolog sparas i transkriptet (2026-08-14) så den överlever
+    # reload — frontend renderar den i loadTranscript via m.meta.reasoning.
+    if reasoning:
+        _dm_meta["reasoning"] = reasoning[:3000]
+    # Pre-DM Guardian-roll-detection förbrukning (körs varje tur) — fästs på
+    # DM-posten så admin-stats räknar ALL Guardian-förbrukning.
+    if _guardian_roll_usage.get("total_tokens"):
+        _dm_meta["guardian_pre_dm_tokens"] = _guardian_roll_usage
+    state = store.append_message(state, "assistant", reply, meta=_dm_meta)
+
+    # Rensa awakening-flaggan när scenöppningen VERKLIGEN genomförts
+    # (granskning pitfall #2, v31): tidigare ren bara efter turANTALET —
+    # ett tomt/avklippt DM-svar på turn 2 sänkte flaggan ändå och protokollet
+    # halverades för alltid. Nu krävs att öppningssvaret faktiskt sparats
+    # (icke-tomt assistant-meddelande) innan vaknandet anses komplett.
+    if state["meta"].get("awakening") and effective_turn >= 2 and reply and reply.strip():
+        state["meta"]["awakening"] = False
+        logger.info("🌅 Awakening complete (turn %d)", effective_turn)
+
+    # ── Spara DM-svar + effekter (Guardian kör i bakgrunden) ──
+    store.save(state)
+
+    # ── Guardian POST-DM → BAKGRUND (blockerar ALDRIG HTTP-svaret) ──
+    # skip_effects = denna turs redan applicerade tagg-effekter (P0-dedup):
+    # Guardian ska inte applicera [SKADA:]-taggen en andra gång.
+    # Registered synchronously (_register_bg_task) so an undo racing this turn
+    # can always see and await the task (undo-turn design 2026-09 race recipe).
+    # 🏮 v2 full_chain: guardian-huvudanropet är UTBRUTET till en klient-hop
+    # (chain:'guardian') — ingen hus-registrering här; resten av
+    # bakgrundsjobben (threads/summaries/RAG/dag-entry) registreras som vanligt.
+    # Per-roll (2026-10-01): carve_guardian styr exakt detta; Lorekeeper på
+    # huset ⇒ hus-Guardian registreras som i v1.
+    if not carve_guardian:
+        _register_bg_task(username, campaign_id, _guardian_post_dm(
+            username, campaign_id, reply, req.message, effective_turn, list(new_npcs),
+            skip_effects=meta.get("last_effects") or [], epoch=turn_epoch,
+        ))
+
+    # ── Fas 3: Faktextraktion + RAG + sammanfattning → BAKGRUND ──
+    # Dessa är icke-kritiska och får ALDRIG fördröja HTTP-svaret till klienten.
+    # (Tidigare blockerade de svaret i upp till 180s vardera → "fastnar i laddning".)
+    # 🏮 v2 full_chain: faktextraktionens huvudanrop körs klient-side
+    # (chain:'extract') — huset hoppar över den delen men kör resten.
+    # Per-roll (2026-10-01): carve_extract styr bara extraktionen.
+    campaign_id = state["meta"].get("campaign_id", "")
+    turn_count = state["meta"].get("turn_count", 0)
+    _register_bg_task(username, campaign_id, _post_turn_tasks(
+        username, campaign_id, reply, req.message, turn_count, req.model_id,
+        epoch=turn_epoch, skip_extraction=carve_extract,
+    ))
+
+    # Dag-entry: om NY_DAG trigga, generera loggbok-entry i bakgrunden
+    if state.get('world', {}).pop('_pending_day_entry', False):
+        prev_day = state['world']['day'] - 1
+        _register_bg_task(username, campaign_id, _generate_day_entry(username, campaign_id, prev_day, epoch=turn_epoch))
+
+    logger.info("◀ TURN %d done · total %.1fs", state["meta"]["turn_count"], time.time() - _t0)
+
+    return {
+        "reply": reply,
+        "reasoning": reasoning[:3000] if reasoning else "",
+        "model_id": req.model_id,
+        "tokens": usage,
+        "response_time": _llm_time,
+        "turn_count": state["meta"]["turn_count"],
+        "summary_generated": False,  # körs nu i bakgrunden
+        "new_npcs": new_npcs,
+        "roll_requests": roll_requests,
+        "ascii_art": ascii_art,
+        "art_type": art_type,
+        "effects": effects,
+        "guardian_summary": "",
+        "guardian_pending": True,
+        # World-state → frontend renderar Atmosphere-raden vid scenbyte
+        # (plats · tid · väder). Rörligt faktafönster, 2026-08-04.
+        "world": {
+            "current_location": state.get("world", {}).get("current_location", ""),
+            "time": state.get("world", {}).get("time", ""),
+            "weather": state.get("world", {}).get("weather", ""),
+            "day": state.get("world", {}).get("day", 0),
+        },
+    }
+
+
+# ═══════════════════════════════════════
+# 🏮 LOCAL AI / OLLAMA RELÄ (v1: DM-steget på spelarens egen hårdvara)
+# ═══════════════════════════════════════
+# Servern är hjärnan, spelarens maskin är munnen: prepare byger DM-prompten
+# (Fas A av /api/chat) och lämnar Ollama-payloaden till klienten; commit kör
+# efterbehandlingen (Fas B) på klientens text. Steget är engångsanvänt,
+# TTL-bundet och låst mot (user, campaign, turn_count). Husets turn-pott
+# drivas INTE — commit bokför en local_dm-ledgerrad (0 turns) och ett
+# dagligt cap (LOCAL_DM_DAILY_CAP) skyddar Guardian/extraction-huset.
+# Se backend/local_relay.py + vault:en (dnd-llm-local-ollama-impl-2026-09).
+
+
+def _local_role_flags(state: dict) -> tuple[bool, bool]:
+    """🏮 (guardian_local, extract_local) — vilka bakgrundsroller som körs på
+    spelarens egen maskin (2026-10-01: per-roll-val ersätter den binära
+    local_pipeline-växlaren "Story only / Story + rules").
+
+    Rollerna läses ur samma meta-nycklar som husmodellerna
+    (meta.guardian_model / meta.extraction_model) — en local:*-modell där
+    betyder att rollens kedjehop körs klient-side. Meningsbart ENDAST när
+    kampanjens DM är en local:-modell (reläkedjan finns annars inte; hus-DM
+    med local:-guardian faller säkert tillbaka på hus-Guardian via
+    _guardian_model_for:s registry-validering).
+
+    Legacy-skim: meta.local_pipeline=='full' (v2-växlaren, borttagen ur UI
+    2026-10-01) carvar fortfarande båda rollerna — de kampanjerna körde
+    hoppen på DM-modellen och fortsätter göra det (roll-modellen är ett
+    hus-id → _chain_issue_* använder DM:ens local:-modell, se
+    _local_role_model)."""
+    meta = state.get("meta", {}) or {}
+    dm_local = str(meta.get("dm_model", "") or "").startswith(local_relay.LOCAL_PREFIX)
+    if not dm_local:
+        return False, False
+    g = str(meta.get("guardian_model", "") or "").startswith(local_relay.LOCAL_PREFIX)
+    e = str(meta.get("extraction_model", "") or "").startswith(local_relay.LOCAL_PREFIX)
+    if not g and not e and meta.get("local_pipeline") == "full":
+        g = e = True  # legacy v2-kampanj — hela kedjan på DM-modellen
+    return g, e
+
+
+def _local_role_model(state: dict, meta_key: str, fallback: str) -> str:
+    """local:-modellen för en roll (meta.guardian_model/meta.extraction_model)
+    — fallback = DM:ens local:-modell (legacy full-läge körde alla hoppar på
+    DM-modellen; ett hus-id i rollnyckeln betyder då 'samma som DM')."""
+    m = str((state.get("meta", {}) or {}).get(meta_key, "") or "")
+    return m if m.startswith(local_relay.LOCAL_PREFIX) else fallback
+
+
+def _local_cap_mode(username: str) -> str:
+    """Dygns-cap-läge för _local_gate: 'full' (300/dag) när BÅDA bakgrunds-
+    rollerna (Lorekeeper + Background) är local: — huset betalar inga
+    huvud-anrop per drag. Annars 'dm' (100/dag). Okänd/ingen kampanj ⇒ 'dm'."""
+    st = store.get(username)
+    if not st:
+        return "dm"
+    try:
+        g, e = _local_role_flags(st)
+    except AttributeError:
+        return "dm"
+    return "full" if (g and e) else "dm"
+
+
+def _local_gate(username: str, pipeline: str = "dm") -> None:
+    """503 om funktionen är avstängd, 429 om dagliga capet är nått.
+    🏮 v2: capet är pipeline-beroende (LOCAL_DM_DAILY_CAP vs _FULL) — hela
+    kedjan lokalt kostar huset inga prompts ⇒ högre tak. Per-roll-läget
+    (2026-10-01) härleder 'full' när BÅDE Lorekeeper och Background är
+    lokala; annars 'dm' (huset betalar minst en roll per drag)."""
+    if not local_relay.enabled():
+        raise HTTPException(503, "Local AI är inte påslaget på servern just nu")
+    if not local_relay.under_daily_cap(username, pipeline):
+        logger.info("⛔ Local DM cap reached: %s", username)
+        raise HTTPException(
+            429,
+            f"Dagens lokala drag är slut ({local_relay.daily_cap(pipeline)}) — vila lite, "
+            "eller kör hus-DM:n (den kostar en turn).",
+        )
+
+
+# ── 🏮 v2 chain-hjälpare ─────────────────────────────────────────────
+# Varje hop = ett NYTT engångssteg (samma TTL/drift-disciplin som v1) med
+# `chain`-etikett; steget vet vilken hop det är. alla kedjans LLM-anrop körs
+# klient-side — _call_llm anropas ALDRIG med local:-id i kedjan.
+
+
+def _chain_issue_step(
+    *, username: str, campaign_id: str, base: dict, chain: str,
+    messages: list[dict], temperature: float, num_predict: int,
+    json_format: bool = False, turn_count_at: int | None = None,
+    carry: dict | None = None, ollama_model: str | None = None,
+) -> dict:
+    """Stasha nästa kedjehop och returnera stegets JSON-payload (samma form
+    som v1 prepare + `chain`).
+
+    `ollama_model` (2026-10-01, per-roll-lokala modeller): rollens egen
+    local:-modell (Lorekeeper/Background kan vara en ANNAN ollama-modell än
+    DM:ens). Stegets `model_id` förblir DM-modellen (ledger + done-JSON:s
+    model_id bokför DM:ens röst); endast ollama-payloadens model fält viker
+    av. None ⇒ DM-modellen (repair/search/rollcheck-legacy)."""
+    sid = local_relay.new_step_id()
+    now = time.time()
+    ttl = local_relay.ttl_seconds()
+    data = {
+        "username": username,
+        "campaign_id": campaign_id,
+        "turn_count_at_prepare": (
+            turn_count_at if turn_count_at is not None
+            else base.get("turn_count_at_prepare", 0)
+        ),
+        "model_id": base["model_id"],
+        "message": base["message"],
+        "num_ctx": base.get("num_ctx"),
+        "pipeline": "full",
+        "carve_guardian": bool(base.get("carve_guardian")),
+        "carve_extract": bool(base.get("carve_extract")),
+        "chain": chain,
+        "prepare_ts": base.get("prepare_ts", now),
+        "created_ts": now,
+    }
+    if carry:
+        data.update(carry)
+    local_relay.stash_step(sid, data)
+    options: dict = {
+        "num_ctx": local_relay.clamp_num_ctx(base.get("num_ctx")),
+        "temperature": temperature,
+        "num_predict": num_predict,
+    }
+    if json_format:
+        # Husparitet: strukturerade JSON-anrop körs med thinking AVSTÄNGT
+        # (house _guardian_call/_guardian_manual_correction använder
+        # thinking="disabled"). Ollamas 'think' är ett FÖDT-payload-fält —
+        # clients lyfter det ur options (verifierat mot ollama 2026-09-30:
+        # på CPU brände guardian-hoppet hela num_predict på tanke → tomt).
+        options["format"] = "json"
+        options["think"] = False
+    role_model = local_relay.ollama_model(ollama_model) if ollama_model \
+        else local_relay.ollama_model(base["model_id"])
+    logger.info("🏮 CHAIN %s step=%s model=%s", chain, sid[:8], role_model)
+    return {
+        "step_id": sid,
+        "kind": "generate",
+        "chain": chain,
+        "ollama": {
+            "model": role_model,
+            "messages": messages,
+            "options": options,
+        },
+        "deadline": now + ttl,
+    }
+
+
+def _chain_dm_step_shape(step: dict, ctx: dict, now: float | None = None) -> dict:
+    """DM-hoppet: options EXAKT som v1 prepare (temp 0.8, num_predict
+    _dm_max_tokens, ingen format-fält)."""
+    sid = local_relay.new_step_id()
+    now = now or time.time()
+    ttl = local_relay.ttl_seconds()
+    data = {
+        "username": step["username"],
+        "campaign_id": step["campaign_id"],
+        "turn_count_at_prepare": step.get("turn_count_at_prepare", 0),
+        "model_id": step["model_id"],
+        "message": step["message"],
+        "num_ctx": step.get("num_ctx"),
+        "pipeline": step.get("pipeline", "dm"),
+        "carve_guardian": bool(step.get("carve_guardian")),
+        "carve_extract": bool(step.get("carve_extract")),
+        "chain": "dm",
+        "ctx": ctx,
+        "prepare_ts": step.get("prepare_ts", now),
+        "created_ts": now,
+    }
+    local_relay.stash_step(sid, data)
+    logger.info("🏮 CHAIN dm step=%s model=%s", sid[:8], step["model_id"])
+    return {
+        "step_id": sid,
+        "kind": "generate",
+        "chain": "dm",
+        "ollama": {
+            "model": local_relay.ollama_model(step["model_id"]),
+            "messages": ctx["messages"],
+            "options": {
+                "num_ctx": local_relay.clamp_num_ctx(step.get("num_ctx")),
+                "temperature": 0.8,
+                "num_predict": ctx["_dm_max_tokens"],
+            },
+        },
+        "deadline": now + ttl,
+    }
+
+
+def _step_carves(step: dict) -> tuple[bool, bool]:
+    """(carve_guardian, carve_extract) ur ett stashat steg. Steg skapade
+    FÖRE per-roll-vågen (deploy-övergång, TTL ≤ 600 s) bär endast
+    pipeline:'full' — de behandlas som båda-rollerna-lokala (dåtidens
+   Whole Cauldron-läge)."""
+    if "carve_guardian" in step or "carve_extract" in step:
+        return bool(step.get("carve_guardian")), bool(step.get("carve_extract"))
+    full = step.get("pipeline") == "full"
+    return full, full
+
+
+async def _chain_issue_guardian_step(step: dict, state: dict) -> dict:
+    """Guardian post-DM-hop: SAMMA meddelanden som _guardian_post_dm bygger för
+    sitt huvud-anrop (delad builder — husvägen oförändrad).
+    🏮 Per-roll (2026-10-01): hoppen körs på Lorekeeperns EGEN local:-modell
+    (meta.guardian_model) — fallback DM-modellen (legacy full-läge)."""
+    meta = state.setdefault("meta", {})
+    reply = step["done"]["reply"]
+    messages = build_extract_mechanics_messages(
+        reply, step["message"], state,
+        meta.get("turn_count", 0),
+        language=_get_lang(state),
+        conversation_history=store.load_transcript(state, last_n=8),
+    )
+    carry = {
+        "done": step["done"], "ctx": step.get("ctx"),
+        "skip_effects": list(meta.get("last_effects") or []),
+        "turn_epoch": (step.get("ctx") or {}).get("turn_epoch"),
+        "effective_turn": (step.get("ctx") or {}).get("effective_turn", meta.get("turn_count", 0)),
+        "new_npcs": list(step.get("new_npcs") or (step.get("done") or {}).get("new_npcs") or []),
+    }
+    return _chain_issue_step(
+        username=step["username"], campaign_id=step["campaign_id"], base=step,
+        chain="guardian", messages=messages, temperature=0.1, num_predict=4096,
+        json_format=True, turn_count_at=meta.get("turn_count", 0), carry=carry,
+        ollama_model=_local_role_model(state, "guardian_model", step["model_id"]),
+    )
+
+
+async def _chain_issue_extract_step(step: dict, state: dict) -> dict | None:
+    """Extract-hop — samma cadence som huset: faktextraktion körs varannan
+    tur (turn_count % 2 == 0, P2/spec B5). Bygger samma messages som
+    _post_turn_tasks huvud-anrop via delad builder."""
+    meta = state.setdefault("meta", {})
+    turn_count = meta.get("turn_count", 0)
+    if turn_count % 2 != 0:
+        return None  # huset hade heller inte extraherat denna tur
+    inv_names = [f"- {it['name']} (×{it.get('qty', 1)})" for it in state.get("inventory", [])]
+    messages = build_extraction_messages(
+        step["done"]["reply"], step["message"], turn_count,
+        inventory_list="\n".join(inv_names) if inv_names else "(tomt)",
+        language=_get_lang(state),
+    )
+    carry = {
+        "done": step["done"], "ctx": step.get("ctx"),
+        "turn_epoch": (step.get("ctx") or {}).get("turn_epoch"),
+        "extract_turn": turn_count,
+        "guardian_applied": step.get("guardian_applied"),
+    }
+    return _chain_issue_step(
+        username=step["username"], campaign_id=step["campaign_id"], base=step,
+        chain="extract", messages=messages,
+        # house-paritet: temperature 0.2 ur husets _extraction_llm-closure;
+        # num_predict 2048 per fryst v2-kontrakt (husets max_tokens 800 är en
+        # övre gräns — Ollama stoppar ändå vid EOS).
+        temperature=0.2, num_predict=2048, json_format=True,
+        turn_count_at=turn_count, carry=carry,
+        # 🏮 per-roll: Backgrounds EGEN local:-modell (meta.extraction_model)
+        ollama_model=_local_role_model(state, "extraction_model", step["model_id"]),
+    )
+
+
+async def _chain_issue_search_step(step: dict, state: dict) -> dict | None:
+    """Search-hop: servern hämtar minnet som huset gör; tomt minne ⇒ ingen
+    hop (original-svaret behålls — husets beteende)."""
+    query = (step.get("ctx") or {}).get("_pending_search")
+    if not query:
+        return None
+    campaign_id = step["campaign_id"]
+    try:
+        _mem = await _retrieve_relevant_memory(step["username"], campaign_id, query, state)
+    except Exception as e:
+        logger.warning("🏮 CHAIN search memory failed: %s", e)
+        _mem = {}
+    _mem_text = (_mem or {}).get("text", "")
+    if not _mem_text:
+        logger.info("🏮 CHAIN search skipped — no relevant memory")
+        return None
+    ctx = step["ctx"]
+    _cont_prompt = (
+        "The player is waiting for your reply. You asked for more context — "
+        "here it is:\n\n" + _mem_text +
+        "\n\nFinish your reply to the player now, weaving in anything from "
+        "this memory that matters. Output ONLY the final narration (no [SÖK:] tag)."
+    )
+    messages = [
+        {"role": "system", "content": ctx["messages"][0]["content"]},
+        {"role": "assistant", "content": step["done"]["reply"]},
+        {"role": "user", "content": _cont_prompt},
+    ]
+    carry = {"done": step["done"], "ctx": ctx,
+             "guardian_applied": step.get("guardian_applied")}
+    return _chain_issue_step(
+        username=step["username"], campaign_id=step["campaign_id"], base=step,
+        chain="search", messages=messages, temperature=0.8,
+        num_predict=ctx["_dm_max_tokens"],
+        turn_count_at=state.get("meta", {}).get("turn_count", 0), carry=carry,
+    )
+
+
+def _apply_extracted_facts(username: str, campaign_id: str, facts, inv_changes) -> dict | None:
+    """Applicera extraktionsresultat (fakta + inventory) — EXAKT husets
+    tillämpning i _post_turn_tasks, delad med kedjans extract-commit.
+    Returnerar ev. muterat state (anroparen sparar)."""
+    st = store.get(username, campaign_id)
+    if facts:
+        register = FactRegister(username, campaign_id)
+        register.add_facts(facts)  # self-persistens
+    if inv_changes and st:
+        inv = st.setdefault("inventory", [])
+        tag_added = {e["value"].lower() for e in (st.get("meta", {}).get("last_effects", []))
+                     if e.get("type") == "föremål"}
+        for ch in inv_changes:
+            name_lower = ch["name"].lower()
+            if ch["action"] == "add":
+                if name_lower in tag_added:
+                    logger.debug("📦 LLM extraction skipped '%s' (already tagged)", ch["name"])
+                    continue
+                existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                if existing:
+                    existing["qty"] = existing.get("qty", 1) + ch["qty"]
+                    logger.info("📦 LLM-dedup: '%s' → qty=%d", ch["name"], existing["qty"])
+                else:
+                    inv.append({
+                        "id": f"llm-{len(inv)}",
+                        "name": ch["name"],
+                        "type": ch.get("type", "Annat"),
+                        "qty": ch["qty"],
+                        "weight": 0,
+                        "equipped": False,
+                        "rarity": "normal",
+                        "description": "",
+                    })
+                    logger.info("📦 LLM extraction added '%s'", ch["name"])
+            elif ch["action"] == "remove":
+                existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                if existing:
+                    existing["qty"] = existing.get("qty", 1) - ch["qty"]
+                    if existing["qty"] <= 0:
+                        inv.remove(existing)
+                        logger.info("📦 LLM extraction removed '%s'", ch["name"])
+                    else:
+                        logger.info("📦 LLM extraction reduced '%s' → qty=%d", ch["name"], existing["qty"])
+    return st
+
+
+async def _chain_next_step(step: dict, state: dict) -> dict | None:
+    """Nästa hop i kön EFTER den slutförda (repair → guardian → extract →
+    search). None ⇒ kedjan klar (anroparen returnerar done-JSON).
+
+    🏮 Per-roll (2026-10-01): steget bär carve_guardian/carve_extract —
+    roller på HUSet hoppas som klient-hop (huset kör dem i bakgrunden,
+    registrerade på dm-commiten via _chat_phase_b). repair/search är alltid
+    DM-modellens hoppar när KEDJAN är aktiv."""
+    chain = step.get("chain", "dm")
+    carve_g = bool(step.get("carve_guardian"))
+    carve_e = bool(step.get("carve_extract"))
+    if chain == "dm":
+        ctx = step.get("ctx") or {}
+        if ctx.get("_repair_pending"):
+            rp = ctx["_repair_pending"]
+            repair_prompt = (
+                "Ditt förra svar hade dessa fel: "
+                + "; ".join(rp["errors"])
+                + ". Behåll narrationen men fixa de mekaniska taggarna. "
+                "Svara med samma format."
+            )
+            messages = ctx["messages"] + [
+                {"role": "assistant", "content": rp["current_reply"]},
+                {"role": "user", "content": repair_prompt},
+            ]
+            carry = {"done": step["done"], "ctx": ctx, "repair_attempt": 1}
+            return _chain_issue_step(
+                username=step["username"], campaign_id=step["campaign_id"], base=step,
+                chain="repair", messages=messages, temperature=0.8,
+                num_predict=ctx["_dm_max_tokens"],
+                turn_count_at=state.get("meta", {}).get("turn_count", 0), carry=carry,
+            )
+        if carve_g:
+            return await _chain_issue_guardian_step(step, state)
+        if carve_e:
+            nxt = await _chain_issue_extract_step(step, state)
+            if nxt is not None:
+                return nxt
+        # search-hoppen (DM-fortsättning) om [SÖK:] köats — annars None
+        return await _chain_issue_search_step(step, state)
+    if chain == "repair":
+        if carve_g:
+            return await _chain_issue_guardian_step(step, state)
+        if carve_e:
+            nxt = await _chain_issue_extract_step(step, state)
+            if nxt is not None:
+                return nxt
+        return await _chain_issue_search_step(step, state)
+    if chain == "guardian":
+        if carve_e:
+            nxt = await _chain_issue_extract_step(step, state)
+            if nxt is not None:
+                return nxt
+        return await _chain_issue_search_step(step, state)
+    if chain == "extract":
+        return await _chain_issue_search_step(step, state)
+    return None  # search (eller okänd) ⇒ klart
+
+
+def _chain_done(step: dict, state: dict, *, guardian_applied: bool | None = None,
+                final_reply: str | None = None, reasoning: str | None = None) -> dict:
+    """Slutlig done-JSON — EXAKT samma nycklor som /api/chat (v1-kontraktet).
+
+    guardian_pending: hus-vägen sätter alltid True (bakgrunds-Guardian
+    rapporterar via transkript-poll). I FULL mode vet servern om guardian-hoppet
+    faktiskt applicerats — fast → False (ingen poll behövs), avbrott/inget
+    guardian-hopp → True så klienten pollar transkriptet som idag.
+    response_time = prepare→done (kontrakt 3h)."""
+    done = dict(step.get("done") or {})
+    if final_reply is not None:
+        done["reply"] = final_reply
+    if reasoning and not done.get("reasoning"):
+        done["reasoning"] = reasoning[:3000]
+    if guardian_applied is not None:
+        done["guardian_pending"] = not guardian_applied
+    try:
+        done["turn_count"] = state.get("meta", {}).get("turn_count", done.get("turn_count", 0))
+        world = state.get("world", {})
+        done["world"] = {
+            "current_location": world.get("current_location", ""),
+            "time": world.get("time", ""),
+            "weather": world.get("weather", ""),
+            "day": world.get("day", 0),
+        }
+    except AttributeError:
+        pass
+    done["response_time"] = round(time.time() - step.get("prepare_ts", step.get("created_ts", time.time())), 1)
+    return done
+
+
+async def _chain_guardian_apply(step: dict, username: str, campaign_id: str, content: str) -> bool:
+    """Tillämpa klient-JSON:et på guardian-hoppet EXAKT som husvägen
+    (delad finish-hjälpare). Ogiltig JSON ⇒ tomt mech-mallar (husets
+    fallback-beteende vid extraktionsfel; ingen extra retry-hop)."""
+    state = store.get(username, campaign_id)
+    if not state:
+        return False
+    epoch = (step.get("ctx") or {}).get("turn_epoch")
+    if not _epoch_ok(username, campaign_id, epoch):
+        logger.info("🏮 CHAIN guardian discarded — the turn was undone")
+        return False
+    mech = _guardian_parse_json(content)
+    if mech is None:
+        logger.warning("🏮 CHAIN guardian: invalid JSON → treated as no changes")
+        mech = mechanics_empty_template()
+    else:
+        mech = normalize_mechanics_result(dict(mech))
+    return await _guardian_finish_locked(
+        state, mech, username, campaign_id,
+        turn_count=state.get("meta", {}).get("turn_count", 0),
+        effective_turn=step.get("effective_turn", 0),
+        dm_npcs=step.get("new_npcs") or [],
+        skip_effects=step.get("skip_effects") or None,
+        epoch=epoch, guardian_usage={},
+    )
+
+
+async def _chain_extract_apply(step: dict, username: str, campaign_id: str, content: str) -> None:
+    state = store.get(username, campaign_id)
+    if not state:
+        return
+    epoch = step.get("turn_epoch") if step.get("turn_epoch") is not None else (step.get("ctx") or {}).get("turn_epoch")
+    if not _epoch_ok(username, campaign_id, epoch):
+        logger.info("🏮 CHAIN extract discarded — the turn was undone")
+        return
+    parsed = _extract_json_object(content)
+    if parsed is None:
+        logger.warning("🏮 CHAIN extract: invalid JSON → no facts")
+        return
+    facts, inv_changes = parse_extraction_result(parsed, step.get("extract_turn", 0))
+    st = _apply_extracted_facts(username, campaign_id, facts, inv_changes)
+    if st and inv_changes:
+        store.save(st)
+
+
+def _chain_replace_last_assistant(state: dict, new_text: str) -> None:
+    """Byt transkriptets senaste assistant-post mot `new_text` (delad
+    repair/search-rewriter: dm-hoppets commit sparade mitt-texten, den
+    slutgiltiga narrationen ska vara den text klienten renderar)."""
+    try:
+        tdir = store.get_transcripts_dir(state)
+        session = state["meta"].get("session_count", 1)
+        tfile = tdir / f"session-{session:03d}.jsonl"
+        if not tfile.exists():
+            return
+        lines = tfile.read_text(encoding="utf-8").splitlines()
+        for i in range(len(lines) - 1, -1, -1):
+            try:
+                e = json.loads(lines[i])
+            except Exception:
+                continue
+            if e.get("role") == "assistant":
+                e["content"] = new_text
+                lines[i] = json.dumps(e, ensure_ascii=False)
+                break
+        tfile.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except Exception as ex:
+        logger.warning("🏮 CHAIN transcript rewrite failed: %s", ex)
+
+
+def _chain_clean_search_reply(content: str) -> str:
+    """Rensa en search-fortsettning till ren narration (mekanska taggar
+    bokfordes redan på dm-hoppet — dubbel-applicering undviks; se kontrakt 3g)."""
+    reply, _ = _parse_npcs(content)
+    reply, _ = _parse_roll_requests(reply)
+    reply = _strip_mechanical_tags(reply)
+    reply = re.sub(r'<STATE_UPDATE>.*?</STATE_UPDATE>', '', reply, flags=re.DOTALL).strip()
+    reply = re.sub(r'<think>.*?</think>', '', reply, flags=re.DOTALL | re.IGNORECASE).strip()
+    return reply
+
+
+@app.post("/api/chat/local/prepare")
+async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | None = Cookie(None)):
+    """Fas A över relä: bygg DM-prompten, stasha steget, returnera Ollama-payload.
+
+    Konsumerar INTE någon turn (husets /api-chat reserverar 1 turn mellan Fas A
+    och B; reläets commit bokför istället en local_dm-ledgerrad med 0 turns).
+
+    🏮 Per-roll (2026-10-01, ersätter full-pipeline-växlaren): vilka hopp som
+    körs lokalt bestäms av kampanjens roll-modeller (meta.guardian_model /
+    meta.extraction_model = local:*). Är Lorekeepern lokal körs kast-kollen
+    ('rollcheck'-hop) på spelarens maskin; är ingen roll lokal är svaret ett
+    enda dm-steg (byte-identiskt v1-kontrakt, ingen chain-nyckel). Legacy
+    meta.local_pipeline=='full' carvar båda rollerna (skim i
+    _local_role_flags). För vaknande/[Resultat:]-meddelanden, där huset
+    skjuter kast-kollen, kommer dm-hoppet direkt från prepare."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    _local_gate(username, _local_cap_mode(username))
+
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
+    if not local_relay.is_local_id(req.model_id):
+        raise HTTPException(400, f"Ogiltig lokal modell: {req.model_id!r}")
+    # /guardian är ett korrigeringsverktyg (hus-Guardian, ingen DM-tur) —
+    # relä-clienten skickar det via vanliga /api/chat.
+    if (req.message or "").strip().lower().startswith("/guardian"):
+        raise HTTPException(400, "guardian-kommandon körs via vanliga /api/chat")
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
+    campaign_id = state["meta"].get("campaign_id", "")
+
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh_state = store.get(username, campaign_id)
+        if fresh_state:
+            state = fresh_state
+        # 🏮 per-roll: vilka bakgrundsroller är local:* i kampanj-metat?
+        carve_guardian, carve_extract = _local_role_flags(state)
+        chain_active = carve_guardian or carve_extract
+        # Undo-snapshot precis som hus-chatten: steget beskiver läget FÖRE turen.
+        _snap_taken = False
+        try:
+            store.snapshot_turn(state, prompt=req.message)
+            _snap_taken = True
+        except Exception as e:
+            logger.warning("Undo snapshot failed (local prepare): %s", e)
+        try:
+            if not carve_guardian:
+                # Hus-Lorekeeper (eller ingen roll lokal): huset skjuter
+                # kast-kollen — v1-flödet A→(roll check)→A2, prompten klar.
+                ctx, early = await _chat_phase_a(req, payload, username, campaign_id, state)
+                if early is not None:
+                    if _snap_taken:
+                        try:
+                            store.discard_snapshot(username, campaign_id)
+                        except Exception:
+                            pass
+                    return early
+                chain_payload = ctx  # stash-ctx under 'dm'-nyckeln nedan
+                chain = "dm"
+            else:
+                # 🏮 lokal Lorekeeper: A1 nu, kast-koll + A2 efter rollcheck-hopen
+                pre, early = await _chat_phase_a1(req, payload, username, campaign_id, state)
+                if early is not None:
+                    if _snap_taken:
+                        try:
+                            store.discard_snapshot(username, campaign_id)
+                        except Exception:
+                            pass
+                    return early
+                assert pre is not None
+                if pre["is_awakening"] or req.message.startswith("[Resultat:"):
+                    # huset skjuter kast-kollen här → dm-hopp direkt (kontrakt 3a)
+                    guardian_roll, roll_usage = await _house_guardian_roll_check(
+                        req, username, state, pre)
+                    ctx = await _chat_phase_a2(
+                        req, payload, username, campaign_id, state, pre,
+                        guardian_roll, roll_usage)
+                    chain_payload, chain = ctx, "dm"
+                else:
+                    chain_payload, chain = pre, "rollcheck"
+            # Pre-DM-mutationer ([Resultat:], fienderolls-planering) sparas nu:
+            # husvägen sparar först i Fas B, men reläet kan dö mellan prepare
+            # och commit — planerade kast får inte tappas (idempotent per runda,
+            # samma design som _plan_pre_dm_enemy_rolls).
+            store.save(state)
+        except Exception:
+            if _snap_taken:
+                try:
+                    store.discard_snapshot(username, campaign_id)
+                except Exception:
+                    pass
+            raise
+
+    now = time.time()
+    ttl = local_relay.ttl_seconds()
+    if not chain_active:
+        # ── v1-formen (byte-identiskt kontrakt): ett enda steg, ingen chain ──
+        step_id = local_relay.new_step_id()
+        local_relay.stash_step(step_id, {
+            "username": username,
+            "campaign_id": campaign_id,
+            "turn_count_at_prepare": state["meta"].get("turn_count", 0),
+            "model_id": req.model_id,
+            "message": req.message,
+            "num_ctx": req.num_ctx,
+            "pipeline": "dm",
+            "chain": "dm",
+            "ctx": chain_payload,
+            "prepare_ts": now,
+            "created_ts": now,
+        })
+        logger.info("🏮 LOCAL prepare step=%s model=%s turn=%s chain=dm",
+                    step_id[:8], req.model_id, state["meta"].get("turn_count", 0))
+        return {
+            "step_id": step_id,
+            "kind": "generate",
+            "ollama": {
+                "model": local_relay.ollama_model(req.model_id),
+                "messages": chain_payload["messages"],
+                "options": {
+                    "num_ctx": local_relay.clamp_num_ctx(req.num_ctx),
+                    "temperature": 0.8,
+                    "num_predict": chain_payload["_dm_max_tokens"],
+                },
+            },
+            "deadline": now + ttl,
+        }
+
+    base = {
+        "username": username,
+        "campaign_id": campaign_id,
+        "turn_count_at_prepare": state["meta"].get("turn_count", 0),
+        "model_id": req.model_id,
+        "message": req.message,
+        "num_ctx": req.num_ctx,
+        "pipeline": "full",
+        "carve_guardian": carve_guardian,
+        "carve_extract": carve_extract,
+        "prepare_ts": now,
+    }
+    if chain == "rollcheck":
+        # Lorekeeperns kast-koll som klient-hop — samma builder som husets
+        # guardian_check_roll (temp 0.1, json, num_predict 1024 = husets max_tokens).
+        # 🏮 Körs på Lorekeeperns EGEN local:-modell (per-roll).
+        messages = build_roll_check_messages(
+            req.message, state, language=_get_lang(state),
+            dm_context=chain_payload.get("dm_context", "")) or []
+        logger.info("🏮 LOCAL prepare model=%s turn=%s chain=rollcheck",
+                    req.model_id, state["meta"].get("turn_count", 0))
+        return _chain_issue_step(
+            username=username, campaign_id=campaign_id, base=base,
+            chain="rollcheck", messages=messages, temperature=0.1, num_predict=1024,
+            json_format=True, carry={"pre": chain_payload},
+            ollama_model=_local_role_model(state, "guardian_model", req.model_id),
+        )
+
+    # kedja aktiv, dm-hopp direkt (vaknande / [Resultat:] / hus-Lorekeeper)
+    logger.info("🏮 LOCAL prepare model=%s turn=%s chain=dm(carve g=%s e=%s)",
+                req.model_id, state["meta"].get("turn_count", 0),
+                carve_guardian, carve_extract)
+    return _chain_dm_step_shape(base, chain_payload, now=now)
+
+
+@app.post("/api/chat/local/commit")
+async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None = Cookie(None)):
+    """Fas B över relä: ta emot klienttexten, kör efterbehandlingen, returnera
+    EXAKT samma JSON som /api/chat (klientrenderingen blir identisk).
+
+    🏮 v2: steget vet vilken hop det är (chain): rollcheck → dm → repair? →
+    guardian → extract → search? — varje commit antingen returnerar nästa
+    generate-steg eller den slutliga done-JSON:en. dm-hoppets commit sparar
+    turen direkt: abbryts kedjan efteråt står draget (DM-text + taggar);
+    utebliven anrikning = samma som en misslyckad bakgrundsuppgift.
+    Per-roll (2026-10-01): steget bär carve_guardian/carve_extract — roller
+    på huset körs som hus-bakgrund (registrerade i Fas B), lokala roller som
+    klient-hopp. Legacy-steg (pipeline:'full' utan carve-nycklar) = båda."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    with local_relay._steps_lock:
+        peek = local_relay._steps.get(req.step_id)
+        peek_user = peek.get("username") if peek else None
+        peek_carves = _step_carves(peek) if peek else (False, False)
+    # Cap-läge ur stegets rollsammansättning (båda lokala ⇒ 'full'/300 per dag)
+    _local_gate(username, "full" if all(peek_carves) else "dm")
+
+    if not req.content or not req.content.strip():
+        raise HTTPException(400, "Tomt innehåll från klienten")
+
+    # Engångsanvänt steg — ägarskap kontrolleras FÖRE pop (en gissning
+    # av andras step_id får inte konsumera deras steg).
+    if peek is not None and peek_user != username:
+        raise HTTPException(403, "Steg tillhör en annan spelare")
+    step = local_relay.take_step(req.step_id)
+    if step is None:
+        raise HTTPException(410, "Steg okänt, utgånget eller redan använt — kör om prepare")
+
+    state = store.get(username, step["campaign_id"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
+    campaign_id = step["campaign_id"]
+
+    chain = step.get("chain", "dm")
+    carve_guardian, carve_extract = _step_carves(step)
+    chain_active = carve_guardian or carve_extract
+
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        state = store.get(username, campaign_id) or state
+        # Optimistisk låsning: har turn_count flyttats sedan steget skapades
+        # (annan flik/hus-chatt) — förkasta steget, klienten köer om hela draget.
+        if state["meta"].get("turn_count", 0) != step.get("turn_count_at_prepare", state["meta"].get("turn_count", 0)):
+            if chain in ("dm", "rollcheck"):
+                try:
+                    store.discard_snapshot(username, campaign_id)
+                except Exception:
+                    pass
+            logger.info("🏮 LOCAL commit 409 (turn drift): %s chain=%s", username, chain)
+            raise HTTPException(409, "Turn-count har flyttats sedan prepare — kö om draget")
+
+        chat_req = ChatRequest(message=step["message"], model_id=step["model_id"])
+
+        # ── v2 rollcheck-hop: parsat kastbesked → Fas A-del 2 → dm-steg ──
+        if chain == "rollcheck":
+            guardian_roll = parse_roll_check_result(req.content, _get_lang(state))
+            _ctx_pre = step.get("pre") or {}
+            ctx = await _chat_phase_a2(
+                chat_req, payload, username, campaign_id, state, _ctx_pre,
+                guardian_roll, {})
+            logger.info("🏮 CHAIN rollcheck done → dm hop (roll=%s)",
+                        guardian_roll["notation"] if guardian_roll else "none")
+            return _chain_dm_step_shape(step, ctx)
+
+        # ── dm-hop: Fas B (relä; per-roll carve-flaggor) + boka + spara + köa resten ──
+        if chain == "dm":
+            try_tokens = int(req.tokens or 0)
+            usage = {"total_tokens": try_tokens} if try_tokens > 0 else {}
+            # local_dm-ledgerraden bokfirs INNE i Fas B (exakt en rad per drag)
+            try:
+                result = await _chat_phase_b(
+                    chat_req, payload, username, campaign_id, state, step["ctx"],
+                    reply=req.content,
+                    reasoning=(req.reasoning or ""),
+                    usage=usage,
+                    llm_time=round(time.time() - step.get("prepare_ts", step["created_ts"]), 1),
+                    relay=True,
+                    chain_active=chain_active,
+                    carve_guardian=carve_guardian,
+                    carve_extract=carve_extract,
+                )
+            except Exception:
+                try:
+                    store.discard_snapshot(username, campaign_id)
+                except Exception:
+                    pass
+                raise
+            if not chain_active:
+                # v1 dm-läge — ett steg, klart (oförändrat kontrakt)
+                return result
+            step["done"] = result
+            # Fas B muterade + sparade sin egen state-kopia (samma ctx-dict
+            # bars i steget: _pending_search/_repair_pending/_ledger_booked) —
+            # läs om för att kö nästa hop mot det sparade läget.
+            state = store.get(username, campaign_id) or state
+            nxt = await _chain_next_step(step, state)
+            if nxt is None:
+                # Hus-Lorekeeper (carve_guardian=False) ⇒ guardian_pending True
+                # (klienten pollar transkriptet som i v1); lokal Lorekeeper som
+                # inte hann köra ⇒ samma. Kedjan klar utan guardian-applicering.
+                return _chain_done(step, state, guardian_applied=False)
+            return nxt
+
+        # ── repair-hop: validera exakt som hus-loopen; giltig ⇒ applicera ──
+        if chain == "repair":
+            ctx = step.get("ctx") or {}
+            ctx.pop("_repair_pending", None)
+            repair_reply, rep_npcs = _parse_npcs(req.content)
+            repair_reply, rep_rolls = _parse_roll_requests(repair_reply)
+            for npc in rep_npcs:
+                existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
+                if npc["name"].lower() not in existing:
+                    state.setdefault("npcs", []).append(npc)
+            work_state = copy.deepcopy(state)
+            parsed_reply, work_state, parsed_effects = _parse_mechanical_tags(repair_reply, work_state)
+            dm_resp, errors = validate_dm_response(parsed_reply, parsed_effects, rep_rolls, work_state)
+            done = step.get("done") or {}
+            if dm_resp.valid:
+                # tillämpa mekaniken på det sparade läget + uppdatera done-fält
+                state = work_state
+                meta = state.setdefault("meta", {})
+                meta["last_effects"] = (meta.get("last_effects") or []) + parsed_effects
+                meta["last_roll_requests"] = rep_rolls or []
+                done["reply"] = parsed_reply
+                done["effects"] = (done.get("effects") or []) + parsed_effects
+                if rep_rolls:
+                    done["roll_requests"] = rep_rolls
+                store.save(state)
+                _chain_replace_last_assistant(state, parsed_reply)
+                logger.info("🏮 CHAIN repair valid — mechanics applied (%d effects)", len(parsed_effects))
+            else:
+                # husets 'final else': behåll narrationen, förkasta trasig mekanik
+                cleaned = _strip_mechanical_tags(repair_reply)
+                cleaned = re.sub(r'<STATE_UPDATE>.*?</STATE_UPDATE>', '', cleaned, flags=re.DOTALL).strip()
+                cleaned = re.sub(r'<think>.*?</think>', '', cleaned, flags=re.DOTALL | re.IGNORECASE).strip()
+                done["reply"] = cleaned
+                done["effects"] = []
+                store.save(state)
+                _chain_replace_last_assistant(state, cleaned)
+                logger.warning("🏮 CHAIN repair still invalid — mechanics discarded: %s",
+                               "; ".join(errors))
+            step["done"] = done
+            nxt = await _chain_next_step(step, state)
+            if nxt is None:
+                return _chain_done(step, state, guardian_applied=False)
+            return nxt
+
+        # ── guardian-hop: applicera JSON precis som husvägen ──
+        if chain == "guardian":
+            applied = await _chain_guardian_apply(step, username, campaign_id, req.content)
+            logger.info("🏮 CHAIN guardian commit applied=%s", applied)
+            step["guardian_applied"] = applied
+            state = store.get(username, campaign_id) or state
+            nxt = await _chain_next_step(step, state)
+            if nxt is None:
+                return _chain_done(step, state, guardian_applied=applied)
+            return nxt
+
+        # ── extract-hop: fakta + inventory exakt som huset ──
+        if chain == "extract":
+            await _chain_extract_apply(step, username, campaign_id, req.content)
+            logger.info("🏮 CHAIN extract commit")
+            state = store.get(username, campaign_id) or state
+            nxt = await _chain_next_step(step, state)
+            if nxt is None:
+                return _chain_done(step, state, guardian_applied=step.get("guardian_applied"))
+            return nxt
+
+        # ── search-hop (sist): slutlig narration ersätter, tagen bort ──
+        if chain == "search":
+            final_reply = _chain_clean_search_reply(req.content)
+            if len(final_reply) <= 10:
+                final_reply = (step.get("done") or {}).get("reply", req.content)
+                logger.warning("🏮 CHAIN search continuation empty → kept dm reply")
+            else:
+                # transkriptets sista assistant-post = dm-svaret; byt till den
+                # slutgiltiga narrationen så reload visar samma text som klienten
+                _chain_replace_last_assistant(state, final_reply)
+            logger.info("🏮 CHAIN search commit — final reply set (%d chars)", len(final_reply))
+            return _chain_done(step, state,
+                               guardian_applied=step.get("guardian_applied"),
+                               final_reply=final_reply,
+                               reasoning=req.reasoning)
+
+        raise HTTPException(410, "Okänt kedjesteg — kör om prepare")
+
+# ═══════════════════════════════════════
+# CHARACTER GENERATION
+# ═══════════════════════════════════════
+
+CHARACTER_PROMPT_SV = """Du är en D&D-karaktärsgenerator för ett mörkt fantasy-äventyr. Skapa en karaktär baserad på spelarens beskrivning.
+
+## SPELARENS ÖNSKEMÅL ÄR HELIGT (FÖRST AV ALLT)
+Spelarens beskrivning i nästa meddelande styr. Ger den namn, ras, klass,
+kultur eller koncept — ANVÄND DEM EXAKT SOM ANGIVET och bygg resten av
+karaktären runt dem. Alla regler nedan gäller ENDAST det spelaren inte har
+tagit ställning till. Ett enkelt, vanligt namn spelaren valt är ALLTID
+rätt — byt aldrig ut ett specificerat namn mot något "mer oväntat".
+
+## VÄRLD OCH NAMN
+Karaktären hör hemma i en påhittad mörk fantasy-värld: hitta på egna
+ortnamn — inga verkliga städer eller länder i bakgrund, bygd eller
+utrustning. I själva PERSONNAMNEN är jordiska kulturtraditioner däremot
+uttryckligen TILLÅTNA och uppmuntrade (nordiskt, keltiskt, slaviskt,
+västafrikanskt, persiskt, polynesiskt, japanskt, iberiskt, romerskt,
+arabiskt, påhittat). Följ kreativitetsspåret i spelarens meddelande — det
+dras slumpat mellan generationer för mångfald. Ett bra namn låter som att
+en förälder valde det, inte som en generator spottade ut det. Undvik de
+utgnuggade AI-klassikerna (Elara, Kael, Thorne, Nyx och makei) — men
+undvik dem genom att vrida en stavelse till något oväntat, inte genom att
+hydda hela ljudområden eller vara rädd för vanliga namn.
+
+## KREATIVITET
+Två karaktärer från samma prompt ska kännas som om OLIKA MÄNNISKOR skrivit
+dem:
+- Klassisk klass + oväntad bakgrund (en präst som tvivlar, en tjuv med för
+  mycket samvete).
+- Ovanlig ras/klass-kombination är uppmuntrad: halvorch-druid, dvärg bard,
+  munk som sent börjat — så länge mekaniken är 5e-korrekt.
+- Välj en detalj som överraskar (ärr med historia, gammalt yrke, udda
+  husdjur, en vana) och låt den genomsyra story, utrustning och item-lore.
+"Mörk fantasy" är VÄRLDEN, inte en mall för karaktären — inte alla är
+mörka, söndrade eller hämndlystna. En glad halvlingsbagare som hamnat i
+fel sällskap är också mörk fantasy.
+
+Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
+{
+  "name": "string",
+  "race": "string",
+  "class": "string",
+  "level": 1,
+  "max_weight_lbs": "number — STR score × 15 (D&D 5e bärvikt)",
+  "alignment": "string",
+  "background": "string — klass/bakgrund, kort",
+  "ac": 10 + DEX-mod (+ rustning om utrustad),  // BERÄKNA från abilities!
+  "initiative": DEX-mod,                        // BERÄKNA från abilities!
+  "perception": 10 + WIS-mod,                   // BERÄKNA från abilities!
+  "speed": "string — rasbaserad: dvärg/halvling 25 ft, de flesta andra 30 ft",
+  "proficiency": 2,
+  "hp": {"current": "<max>", "max": "<BERÄKNA: klassens hit die + CON-mod, nivå 1>", "temp": 0},
+  "spell_slots": {"current": "<max>", "max": "<klassens besvärjelseplatser enligt 5e-tabellen; icke-kastare 0; full kastare 2, warlock 1>"},
+  "spells": [{"name": "string", "level": 0, "school": "string", "casting_time": "string", "damage_dice": "string|null", "description": "string"}],  // KLASS-ANPASSADE besvärjelser: cantrips (nivå 0) + nivå-1-besvärjelser för nivå 1. Icke-kasterklasser (fighter, rogue, barbarian) → []. Kasterklasser (wizard, sorcerer, cleric, druid, bard, warlock): ALLTID minst 2 cantrips + 2 nivå-1-besvärjelser.
+  "xp": {"current": 0, "next_level": 300},
+  "abilities": {
+    "STR": {"score": 10, "mod": 0},
+    "DEX": {"score": 10, "mod": 0},
+    "CON": {"score": 10, "mod": 0},
+    "INT": {"score": 10, "mod": 0},
+    "WIS": {"score": 10, "mod": 0},
+    "CHA": {"score": 10, "mod": 0}
+  },
+  "traits": ["string — 3-4 förmågor/egenskaper"],
+  "saves": [{"name": "STR", "prof": true}],  // klassens save-proficiencies!
+  "skills": [{"name": "string — standard-5e-skill (Athletics, Acrobatics, Stealth, Perception, Arcana, Persuasion…)", "ability": "STR|DEX|INT|WIS|CHA", "proficient": true}],  // ALLA 18 skills; proficient=true ENDAST på 2-4 klass-/bakgrundsrelevanta. Bonuses beräknas av systemet (ability-mod + proficiency).
+  "features": [{"name": "string", "level": 1, "description": "string — kort beskrivning av klass-/rasförmågan"}],  // klassens start-förmågor (t.ex. Rage, Sneak Attack, Spellcasting, Fighting Style, Second Wind) + ras-förmågor
+  "inspiration": false,
+  "resistances": ["fire"],           // ras-/klassbaserat — tom lista om inga
+  "vulnerabilities": [],             // ras-/blodslinjebaserat — tom lista om inga
+  "immunities": [],                  // tom lista om inga
+  "darkvision": "60 ft|null",        // rasbaserat: elf/drow 60 ft, dvärg 0 (null)
+  "exhaustion": 0,                   // 0-6 (5e-utmattning)
+  "training": [],                    // [{name, days_spent, days_needed, skill}] — tom om ingen
+  "gear": "string — startutrustning, 5-8 föremål separerade med ' · '",
+  "story": "string — bakgrundshistoria, max 100 ord, mörk och stämningsfull",
+  "inventory": [
+    {"name": "string", "type": "Vapen|Rustning|Dryck|Magisk|Verktyg|Annat", "category": "weapon|armor|potion|magic|tool|trinket", "usage": "wielded|consumable|activated", "qty": 1, "weight": 1.0, "lore": "string|null", "equipped": false, "rarity": "normal|magic|rare|legendary", "damage": "1d8 slashing|null", "damage_dice": "1d8|null", "damage_type": "slashing|null", "ac_bonus": 14|null, "range": "melee|null", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "string", "effects": "string|null", "roll": "2d4+2|null"}
+  ]
+}
+
+## HÄRLEDDA VÄRDEN (BERÄKNA — exempelvärden i schemat är EXEMPEL, inte krav)
+- hp.max = klassens hit die + CON-mod (barbarian 12, fighter/paladin/ranger 10,
+  bard/cleric/druid/monk/rogue/warlock 8, sorcerer/wizard 6) — minimum 1 HP.
+- ac = 10 + DEX-mod (+ rustning om utrustad) — beräkna från abilities
+- initiative = DEX-mod
+- perception = 10 + WIS-mod
+- resistances/vulnerabilities/immunities = ras-/klassbaserat: dvärg = poison-resistans, tiefling = fire-resistans, blodslinje/undead = sårbarheter. Tomma arrayer om inga.
+- darkvision = rasbaserat: dvärg "120 ft", elf/drow/orc/halvorch/tiefling/gnom "60 ft", människa/halvling null.
+- saves = klassens save-proficiencies (5e): Barbarian/Krigare = STR+CON, Bard = DEX+CHA, Präst/Cleric = WIS+CHA, Häxmästare/Warlock = WIS+CHA, Druid/Trollkarl = INT+WIS, Munk = STR+DEX, Paladin/Riddare = STR+WIS, Ranger/Jägare = STR+DEX, Tjuv/Rogue = DEX+INT, Sorcerer = CON+CHA
+
+## STARTUTRUSTNING (inventory) — KRITISKT
+Fyll ALLTID inventory-arrayen med 5-8 föremål som passar karaktärens klass och bakgrund:
+- **Ett basvapen** som passar klassen (svärd för krigare, stav för magiker, dolk för rogue, etc.) — sätt equipped:true. Fyll i damage (t.ex. "1d8 slashing"), damage_dice, damage_type, range ("melee" eller "ranged X/Y"), properties (t.ex. ["finesse","light"]).
+- **Rustning** (om relevant): fyll i ac_bonus (t.ex. 14 för kedjerustning, 11+DEX för läder). Sköld: ac_bonus=2, type="Rustning".
+- **Mat/proviant** (t.ex. "Torkat kött", "Hårt bröd", "Fältportioner") — qty 2-5
+- **En potion** (t.ex. "Läkedryck", "Elixir av mod", "Giftflaska") — qty 1-2. Magiska föremål/potions: fyll i charges, max_charges, effects, magic_bonus.
+- **Ett klass-unikt föremål** som speglar klassens identitet (t.ex. "Runristad spellbok" för magiker, "Tjuvverktyg" för rogue, "Heligt symbol" för cleric, "Jaktbåge + 20 pilar" för ranger)
+- **2-3 ytterligare äventyrsföremål** (rep, facklor, tändstål, karta, sovsäck, etc.)
+- Sätt realistic weight (lbs) på varje föremål. Vapen 2-6 lbs, potion 0.5 lbs, mat 0.5-1 lbs per styck.
+- Sätt 'lore' på VARJE föremål: 1-2 meningar stämningsfull världshistoria — var det kommer ifrån, vem som ägde det, vad det varit med om. Skriv utifrån karaktärens bakgrund och värld. Aldrig generiska floskler. **VARJE föremål MÅSTE ha lore — om du är osäker, skriv en mening om dess ursprung. Inga föremål utan lore.**
+- Beräkna max_weight_lbs = STR score × 15 (D&D 5e bärvikt).
+- Basvapnet ska ha equipped:true, allt annat equipped:false.
+- rarity: de flesta "normal", potion kan vara "magic", det klass-unika föremålet kan vara "rare"."""
+
+CHARACTER_PROMPT_EN = """You are a D&D character generator for a dark fantasy adventure. Create a character based on the player's description.
+
+## THE PLAYER'S WISH IS SACRED (FIRST OF ALL)
+The player's description in the next message rules. If it gives a name,
+race, class, culture or concept — USE IT EXACTLY AS GIVEN and build the
+rest of the character around it. Every rule below applies ONLY to what the
+player left unspecified. A plain, common name the player chose is ALWAYS
+right — never swap a specified name for something "more unexpected".
+
+## WORLD AND NAMES
+The character belongs in an invented dark-fantasy world: make up your own
+place names — no real cities or countries in background, homeland or gear.
+In PERSON NAMES, however, earthly cultural traditions are explicitly
+ALLOWED and encouraged (Nordic, Celtic, Slavic, West African, Persian,
+Polynesian, Japanese, Iberian, Roman, Arabic, invented). Follow the
+creativity track in the player's message — it is drawn randomly between
+generations for variety. A good name sounds chosen by a parent, not
+spat out by a generator. Avoid the worn-out AI classics (Elara, Kael,
+Thorne, Nyx and kin) — but avoid them by twisting one syllable into
+something unexpected, not by hiding whole sound-worlds or fearing common
+names.
+
+## CREATIVITY
+Two characters from the same prompt should feel written by DIFFERENT
+PEOPLE:
+- Classic class + unexpected background (a doubting priest, a thief with
+  too much conscience).
+- Unusual race/class pairings are encouraged: half-orc druid, dwarf bard,
+  a monk who started late — as long as the mechanics are 5e-correct.
+- Pick one surprising detail (a scar with history, an old trade, an odd
+  pet, a habit) and let it colour story, gear and item lore.
+"Dark fantasy" is the WORLD, not a template for the character — not
+everyone is grim, broken or vengeful. A cheerful halfling baker who ended
+up in the wrong company is dark fantasy too.
+
+Respond ONLY with valid JSON (no markdown) using this schema:
+{
+  "name": "string",
+  "race": "string",
+  "class": "string",
+  "level": 1,
+  "max_weight_lbs": "number — STR score × 15 (D&D 5e carry capacity)",
+  "alignment": "string",
+  "background": "string — class/background, brief",
+  "ac": 10 + DEX-mod (+ armor if equipped),  // COMPUTE from abilities!
+  "initiative": DEX-mod,                     // COMPUTE from abilities!
+  "perception": 10 + WIS-mod,                // COMPUTE from abilities!
+  "speed": "string — race-based: dwarf/halfling 25 ft, most others 30 ft",
+  "proficiency": 2,
+  "hp": {"current": "<max>", "max": "<COMPUTE: class hit die at level 1 + CON mod>", "temp": 0},
+  "spell_slots": {"current": "<max>", "max": "<class spell slots per 5e table; non-casters 0; full casters 2, warlock 1>"},
+  "spells": [{"name": "string", "level": 0, "school": "string", "casting_time": "string", "damage_dice": "string|null", "description": "string"}],  // CLASS-APPROPRIATE spells: cantrips (level 0) + level-1 spells for level 1. Non-caster classes (fighter, rogue, barbarian) → []. Caster classes (wizard, sorcerer, cleric, druid, bard, warlock): ALWAYS at least 2 cantrips + 2 level-1 spells.
+  "xp": {"current": 0, "next_level": 300},
+  "abilities": {
+    "STR": {"score": 10, "mod": 0},
+    "DEX": {"score": 10, "mod": 0},
+    "CON": {"score": 10, "mod": 0},
+    "INT": {"score": 10, "mod": 0},
+    "WIS": {"score": 10, "mod": 0},
+    "CHA": {"score": 10, "mod": 0}
+  },
+  "traits": ["string — 3-4 abilities/traits"],
+  "saves": [{"name": "STR", "prof": true}],  // class save proficiencies!
+  "skills": [{"name": "string — standard 5e skill (Athletics, Acrobatics, Stealth, Perception, Arcana, Persuasion…)", "ability": "STR|DEX|INT|WIS|CHA", "proficient": true}],  // ALL 18 skills; proficient=true ONLY on 2-4 class/background-relevant ones. Bonuses are computed by the system (ability mod + proficiency).
+  "features": [{"name": "string", "level": 1, "description": "string — brief description of the class/race ability"}],  // class starting features (e.g. Rage, Sneak Attack, Spellcasting, Fighting Style, Second Wind) + race features
+  "inspiration": false,
+  "resistances": ["fire"],           // race/class-based — empty array if none
+  "vulnerabilities": [],             // race/bloodline-based — empty array if none
+  "immunities": [],                  // empty array if none
+  "darkvision": "60 ft|null",        // race-based: elf/drow 60 ft, others null
+  "exhaustion": 0,                   // 0-6 (5e exhaustion)
+  "training": [],                    // [{name, days_spent, days_needed, skill}] — empty if none
+  "gear": "string — starting equipment, 5-8 items separated by ' · '",
+  "story": "string — backstory, max 100 words, dark and atmospheric",
+  "inventory": [
+    {"name": "string", "type": "Weapon|Armor|Potion|Magic|Tool|Other", "category": "weapon|armor|potion|magic|tool|trinket", "usage": "wielded|consumable|activated", "qty": 1, "weight": 1.0, "lore": "string|null", "equipped": false, "rarity": "normal|magic|rare|legendary", "damage": "1d8 slashing|null", "damage_dice": "1d8|null", "damage_type": "slashing|null", "ac_bonus": 14|null, "range": "melee|null", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "string", "effects": "string|null", "roll": "2d4+2|null"}
+  ]
+}
+
+## DERIVED VALUES (COMPUTE — example values in the schema are EXAMPLES, not requirements)
+- hp.max = class hit die + CON mod (barbarian 12, fighter/paladin/ranger 10,
+  bard/cleric/druid/monk/rogue/warlock 8, sorcerer/wizard 6) — minimum 1 HP.
+- ac = 10 + DEX-mod (+ armor if equipped) — compute from abilities
+- initiative = DEX-mod
+- perception = 10 + WIS-mod
+- resistances/vulnerabilities/immunities = race/class-based: dwarf = poison resistance, tiefling = fire resistance, undead/bloodline = vulnerabilities. Empty arrays if none.
+- darkvision = race-based: dwarf "120 ft", elf/drow/orc/half-orc/tiefling/gnome "60 ft", human/halfling null.
+- saves = class save proficiencies (5e): Barbarian/Fighter = STR+CON, Bard = DEX+CHA, Cleric/Warlock = WIS+CHA, Druid/Wizard = INT+WIS, Monk = STR+DEX, Paladin = STR+WIS, Ranger = STR+DEX, Rogue = DEX+INT, Sorcerer = CON+CHA
+
+## STARTING EQUIPMENT (inventory) — CRITICAL
+ALWAYS fill the inventory array with 5-8 items fitting the character's class and background:
+- **A base weapon** fitting the class (sword for fighter, staff for wizard, dagger for rogue, etc.) — set equipped:true. Fill in damage (e.g. "1d8 slashing"), damage_dice, damage_type, range ("melee" or "ranged X/Y"), properties (e.g. ["finesse","light"]).
+- **Armor** (if relevant): fill in ac_bonus (e.g. 14 for chain mail, 11+DEX for leather). Shield: ac_bonus=2, type="Armor".
+- **Food/rations** (e.g. "Dried meat", "Hard bread", "Field rations") — qty 2-5
+- **A potion** (e.g. "Healing potion", "Elixir of courage", "Poison vial") — qty 1-2. Magic items/potions: fill in charges, max_charges, effects, magic_bonus.
+- **A class-unique item** reflecting class identity (e.g. "Rune-etched spellbook" for wizard, "Thieves' tools" for rogue, "Holy symbol" for cleric, "Hunting bow + 20 arrows" for ranger)
+- **2-3 additional adventure items** (rope, torches, tinderbox, map, bedroll, etc.)
+- Set realistic weight (lbs) on each item. Weapons 2-6 lbs, potions 0.5 lbs, food 0.5-1 lbs per piece.
+- Set 'lore' on EVERY item: 1-2 sentences of atmospheric world-history — where it comes from, who owned it, what it has been through. Write from the character's background and world. Never generic platitudes. **EVERY item MUST have lore — if unsure, write one sentence about its origin. No item without lore.**
+- Compute max_weight_lbs = STR score × 15 (D&D 5e carry capacity).
+- The base weapon should have equipped:true, everything else equipped:false.
+- rarity: most items "normal", potions can be "magic", the class-unique item can be "rare"."""
+
+
+# ═══════════════════════════════════════
+# CHAR-GEN: kreativitetsspår + namn-dedup (2026-10-01)
+# Variationen HAMTAS UR PROMPTEN (kontrollerat) i stället för att
+# förväntas komma ur temperaturen kring en statisk text. Dessutom:
+# 'återanvänd inte namn från tidigare svar' var omöjligt att följa —
+# varje generering är statlös. I stället levereras spelarens EGENA
+# senaste namn i meddelandet, så undvik-regeln faktiskt kan uppfyllas.
+# ═══════════════════════════════════════
+
+_CHARGEN_CULTURES = [
+    ("nordisk klang: hårda företonsstavelser, ändelser som -vi, -mund, -dottir, -stein",
+     "Nordic feel: hard stressed syllables, endings like -vi, -mund, -dottir, -stein"),
+    ("keltisk klang: blöta konsonanter, apostrofer, ändelser som -agh, -een, -idh",
+     "Celtic feel: soft consonants, apostrophes, endings like -agh, -een, -idh"),
+    ("slavisk klang: konsonantkluster, -ovich, -ova, -slav, -mira",
+     "Slavic feel: consonant clusters, -ovich, -ova, -slav, -mira"),
+    ("västafrikansk klang (joruba/akan): toniska vokalsekvenser, -kwa, -di, Ama-",
+     "West African feel (Yoruba/Akan): tonal vowel runs, -kwa, -di, Ama-"),
+    ("persisk klang: mjuka g-, ch-, -zad, -an, -eh, Farra-",
+     "Persian feel: soft g-, ch-, -zad, -an, -eh, Farra-"),
+    ("polynesisk klang: få konsonanter, många vokaler, glottala stop, -nga, Wha-",
+     "Polynesian feel: few consonants, many vowels, glottal stops, -nga, Wha-"),
+    ("japansk klang: morarytm, -tarō, -hime, -zō, Kuro-",
+     "Japanese feel: mora rhythm, -tarō, -hime, -zō, Kuro-"),
+    ("iberisk klang: -ez, -ito, -ita, Dor-, Sal-",
+     "Iberian feel: -ez, -ito, -ita, Dor-, Sal-"),
+    ("romersk-latin klang: tria nomina-efterklang, -ianus, -illa, Cass-",
+     "Roman-Latin feel: echo of tria nomina, -ianus, -illa, Cass-"),
+    ("arabisk klang: -uddin, -iya, Rash-, Am-, q- och 'ain-ljud",
+     "Arabic feel: -uddin, -iya, Rash-, Am-, q and 'ayn sounds"),
+    ("grekisk klang: -andros, -ia, Thesso-, Niko-, -dora",
+     "Greek feel: -andros, -ia, Thesso-, Niko-, -dora"),
+    ("påhittad stavelsepoesi: inga jordiska rötter — bygg upp/ned-ljud, hårda clusters, udda tryck",
+     "invented syllable-poetry: no earthly roots — build up/down sounds, hard clusters, odd stress"),
+    ("blandkultur: slå ihop två traditioner till ett namn som tillhör en gränsbygd",
+     "cross-culture: fuse two traditions into a name from a borderland"),
+]
+
+_CHARGEN_NAMEFORMS = [
+    ("enväld + efternamn härlett från yrke eller hembygd",
+     "given name + surname from a trade or homeland"),
+    ("enväld + episkt tillnamn (smeknamn byn gett)",
+     "single name + epic epithet (a nickname the village gave)"),
+    ("faders-/modersnamn (-son/-dottir, -ić, -pour, -sen)",
+     "patronymic/matronymic (-son/-dottir, -ić, -pour, -sen)"),
+    ("kort tvåstavigt, hårda konsonanter, slutar konsonant",
+     "short two-syllable, hard consonants, ends in a consonant"),
+    ("långt och musikaliskt, många vokaler, flytande tryck",
+     "long and musical, many vowels, flowing stress"),
+    ("korthugget enstavigt ropnamn",
+     "chopped one-syllable shout-name"),
+]
+
+_CHARGEN_TWISTS = [
+    ("klassisk klass, oväntad bakgrund (den tvivelnde prästen, tjuven med för mycket samvete)",
+     "classic class, unexpected background (the doubting priest, the thief with too much conscience)"),
+    ("ovanlig ras/klass-kombination (halvorch-druid, dvärg bard, gnom krigare)",
+     "unusual race/class pairing (half-orc druid, dwarf bard, gnome fighter)"),
+    ("fel ålder på jobbet: för ung eller för gammal för sin klass — låt det synas i story och hälsa",
+     "wrong age for the job: too young or too old for the class — let it show in story and health"),
+    ("ljust folkslag i mörk värld: inte söndrad, inte hämndlysten — men omgiven av allt som kan bita",
+     "a bright soul in a dark world: not broken, not vengeful — but surrounded by everything that can bite"),
+    ("vanligt hantverk innan äventyret: bagare, bryggare, slaktare, vävare, budbärare — låt verktygen följa med",
+     "an ordinary trade before adventuring: baker, brewer, butcher, weaver, courier — let the tools follow"),
+    ("något förlorat som aldrig återkommer: ett namn, en persons minne, en kroppsdel, en röst",
+     "something lost that never returns: a name, a person's memory, a body part, a voice"),
+    ("ett hemligt förflutet: karaktären är inte den hen utger sig för, och varken spelaren eller världen vet ännu",
+     "a secret past: the character is not who they seem — neither player nor world knows yet"),
+    ("en lojal följeslagare: udda husdjur, byxbandsapa, tam råtta, en kråka som svarar på ett vissel",
+     "a loyal companion: odd pet, trouser monkey, tame rat, a crow that answers a whistle"),
+]
+
+
+def _canonical_class_name(class_str: str) -> str:
+    """Klassnamn (SV eller EN) → kanonisk 5e-nyckel via guardian:s alias."""
+    c = (class_str or "").strip().lower()
+    if not c:
+        return ""
+    canon = _CLASS_ALIASES.get(c)
+    if canon:
+        return canon
+    for key, val in _CLASS_ALIASES.items():
+        if key in c:
+            return val
+    return ""
+
+
+# Save-proficiencies enligt 5e PHB (klass → de två savings den är proficient i).
+_SAVE_PROFS_BY_CLASS = {
+    "barbarian": ["STR", "CON"],
+    "bard": ["DEX", "CHA"],
+    "cleric": ["WIS", "CHA"],
+    "druid": ["INT", "WIS"],
+    "fighter": ["STR", "CON"],
+    "monk": ["STR", "DEX"],
+    "paladin": ["STR", "WIS"],
+    "ranger": ["STR", "DEX"],
+    "rogue": ["DEX", "INT"],
+    "sorcerer": ["CON", "CHA"],
+    "warlock": ["WIS", "CHA"],
+    "wizard": ["INT", "WIS"],
+}
+
+
+def _recent_character_names(username: str, limit: int = 8) -> list:
+    """Spelarens senaste karaktnamn (valv + kampanjer) — för namn-dedup."""
+    names: list = []
+    seen = set()
+
+    def _add(raw) -> None:
+        n = str(raw or "").strip()
+        key = n.lower()
+        if n and key not in seen:
+            seen.add(key)
+            names.append(n)
+
+    try:
+        for e in vault.list(username):
+            _add((e.get("character") or {}).get("name"))
+            if len(names) >= limit:
+                break
+    except Exception:
+        pass
+    try:
+        for c in store.list_campaigns(username):
+            _add(c.get("character_name"))
+            if len(names) >= limit:
+                break
+    except Exception:
+        pass
+    return names[:limit]
+
+
+def _build_chargen_seed_block(username: str, lang: str) -> str:
+    """Slumpat kreativitetsspår + nyligen använda namn till user-meddelandet.
+
+    Språket styrs av kampanjen; dragningarna är index-parallella så samma
+    drag ger samma spår i båda språken. Allt är villkorat: spelarens
+    uttalade önskemål väger tyngre (sé promptens första stycke).
+    """
+    ci = random.randrange(len(_CHARGEN_CULTURES))
+    ni = random.randrange(len(_CHARGEN_NAMEFORMS))
+    ti = random.randrange(len(_CHARGEN_TWISTS))
+    not_sv = lang != "sv"  # EU-kampanjer → engelskt spår (fallback)
+    cult = _CHARGEN_CULTURES[ci][1 if not_sv else 0]
+    namef = _CHARGEN_NAMEFORMS[ni][1 if not_sv else 0]
+    twist = _CHARGEN_TWISTS[ti][1 if not_sv else 0]
+    if not_sv:
+        head = ("## CREATIVITY TRACK (randomly drawn for THIS character — "
+                "the player's stated wishes always outrank it)")
+        lines = [f"- Naming culture: {cult}",
+                 f"- Name shape: {namef}",
+                 f"- Concept twist: {twist}"]
+        avoid = "- Avoid recently used names: "
+    else:
+        head = ("## KREATIVITETSSPÅR (slumpat för DEN HÄR karaktären — "
+                "spelarens uttalade önskemål väger alltid tyngre)")
+        lines = [f"- Namnkultur: {cult}",
+                 f"- Namnform: {namef}",
+                 f"- Koncept-twist: {twist}"]
+        avoid = "- Undvik nyligen använda namn: "
+    recent = _recent_character_names(username)
+    if recent:
+        lines.append(avoid + ", ".join(recent))
+    return "\n\n" + head + "\n" + "\n".join(lines)
+
+
+@app.post("/api/character/generate")
+async def generate_character(req: CharacterRequest, morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    # Icke-admin spelare begränsas till tillåtna modeller; free-tier → step-3.7-flash (FAS A)
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
+
+    # ── Turn-tak (2026-08-04, security audit P1): karaktärsgenerering
+    # förbrukar en turn — samma gate som chatten, mot kostnadsmissbruk.
+    _gate_turn_quota(username)
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    # Språkanpassning av karaktärsgenerering (EU → EN-fallback, bara 'sv' SV)
+    lang = _get_lang(state)
+    char_prompt = CHARACTER_PROMPT_SV if lang == "sv" else CHARACTER_PROMPT_EN
+    user_msg = (f"Skapa en karaktär: {req.prompt}" if lang == "sv"
+                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang) \
+        + get_char_sheet_output_directive(lang)
+
+    messages = [
+        {"role": "system", "content": char_prompt},
+        {"role": "user", "content": user_msg},
+    ]
+
+    _consume_turn(username, action="char_gen", model=req.model_id)
+    try:
+        usage_out: dict = {}
+        raw = await _call_llm(
+            req.model_id, messages, temperature=0.95, max_tokens=8000,
+            thinking_cap=8000, reasoning_effort="high", timeout=300,
+            usage_out=usage_out,
+        )
+        char_data = _extract_json(raw)
+        # Bokför karaktärsgenererings-tokens (livstid, överlever radering)
+        _add_character_creation(username, usage_out)
+    except HTTPException:
+        raise
+    except (ValueError, RuntimeError) as e:
+        err = _err("Karaktären kunde inte vävas", "The character could not be woven", lang)
+        raise HTTPException(502, f"{err}: {e}")
+
+    return _finalize_character(char_data, state, lang)
+
+
+def _keep_unknown_item_keys(norm: dict, raw: dict) -> dict:
+    """W3-M2 (audit-economy §1.2): behåll okända nycklar från LLM:ns item-JSON.
+
+    _normalize_item (guardian.py) bygger en fast ITEM_SCHEMA-dict och tappar
+    allt den inte känner — bl.a. price_gp som prompt-sidan (M1) numera ber
+    DM:n om. Lägger tillbaka okända icke-tomma nycklar; skriver ALDRIG över
+    normaliserade fält. Anropas på char-gen- och PATCH-inventory-vägarna.
+    """
+    if isinstance(raw, dict):
+        for k, v in raw.items():
+            if k not in norm and v not in (None, ""):
+                norm[k] = v
+    return norm
+
+
+def _finalize_character_data(char_data: dict, lang: str) -> tuple[dict, list, bool]:
+    """Normalisera LLM:ns karaktärs-JSON → färdig karaktär + inventory.
+
+    Ren funktion — rör ej kampanj-state/store. Returnerar (character,
+    inventory, had_inventory). Delas av kampanj-flödet (generate_character +
+    stream) och The Forge (fristående karaktärsvalv) så båda vägarna
+    validerar/beräknar identiskt.
+    """
+    # Validera löst — se till att grundfält finns
+    if not char_data.get("name"):
+        char_data["name"] = "Namnlös" if lang == "sv" else "Nameless"
+    for field in ("race", "class", "alignment", "background"):
+        char_data.setdefault(field, "Okänd" if lang == "sv" else "Unknown")
+    char_data.setdefault("level", 1)
+    char_data.setdefault("abilities", {})
+
+    # ── Backup-beräkning av härledda värden (P1, spec B7) ──
+    # Modellen SKA beräkna ac/initiative/perception från abilities (se
+    # prompten), men om den glömde det (default 10/0/10) räknar vi ut det
+    # här istället — så karaktärsbladet aldrig visar fel värden.
+    abilities = char_data.get("abilities") or {}
+
+    # ── Bärvikt (D&D 5e): max_weight_lbs = STR × 15 ──
+    # ALDRIG från LLM — räkna alltid från STR-poängen (överriddar fel värden).
+    str_score = int((abilities.get("STR") or {}).get("score", 10) or 10)
+    char_data["max_weight_lbs"] = str_score * 15
+
+    def _abil_mod(key: str) -> int:
+        entry = abilities.get(key) or {}
+        m = entry.get("mod")
+        if m is None:
+            m = (int(entry.get("score", 10) or 10) - 10) // 2
+        return int(m or 0)
+
+    dex_mod = _abil_mod("DEX")
+    wis_mod = _abil_mod("WIS")
+    if dex_mod:
+        if not char_data.get("ac") or char_data["ac"] <= 10:
+            char_data["ac"] = 10 + dex_mod
+        if not char_data.get("initiative"):
+            char_data["initiative"] = dex_mod
+    if wis_mod and (not char_data.get("perception") or char_data["perception"] <= 10):
+        char_data["perception"] = 10 + wis_mod
+
+    # Save-proficiencies: fyll från klassen om modellen lämnade dem tomma.
+    # 2026-10-01: tabellen var fel mot 5e (monk/ranger/bard/druid) och
+    # matchade aldrig svenska klassnamn — använder guardian:s klass-alias.
+    if not char_data.get("saves"):
+        canon = _canonical_class_name(char_data.get("class") or "")
+        profs = _SAVE_PROFS_BY_CLASS.get(canon)
+        if profs:
+            char_data["saves"] = [{"name": p, "prof": True} for p in profs]
+
+    # ── HP / besvärjelseplatser / speed (2026-10-01): kodnät ──
+    # Gamla schemat hårdkodade hp 10/10 och spell_slots 0/0 — direkt i
+    # strid med "BERÄKNA"-kraven (nivå-1-trollkarl utan slots, barbar med
+    # 10 HP). Nätet räknar ut auktoritativa värden från 5e-tabellerna
+    # (samma tabeller som Guardian använder vid level-up) när modellen lämnat
+    # fälten tomma eller satt dem till 0. Modellens rimliga värden rörs.
+    try:
+        level = int(char_data.get("level", 1) or 1)
+    except (TypeError, ValueError):
+        level = 1
+    canon_cls = _canonical_class_name(char_data.get("class") or "")
+    con_mod = _abil_mod("CON")
+
+    hp = char_data.get("hp")
+    if not isinstance(hp, dict):
+        hp = {}
+        char_data["hp"] = hp
+    try:
+        hp_max = int(hp.get("max") or 0)
+    except (TypeError, ValueError):
+        hp_max = 0
+    if hp_max <= 0:
+        sides = int(_hit_die_for_class(canon_cls or "rogue").split("d")[-1] or 8)
+        hp_max = max(1, sides + con_mod)
+        hp["max"] = hp_max
+    try:
+        hp_cur = int(hp.get("current") or 0)
+    except (TypeError, ValueError):
+        hp_cur = 0
+    if hp_cur <= 0 or hp_cur > hp_max:
+        hp["current"] = hp_max
+    hp.setdefault("temp", 0)
+
+    ss = char_data.get("spell_slots")
+    if not isinstance(ss, dict):
+        ss = {}
+        char_data["spell_slots"] = ss
+    try:
+        ss_max = int(ss.get("max") or 0)
+    except (TypeError, ValueError):
+        ss_max = 0
+    if ss_max <= 0:
+        slot_table = _SPELL_SLOTS_BY_LEVEL.get(canon_cls)
+        expected = slot_table.get(level, slot_table.get(1, 0)) if slot_table else 0
+        if expected > 0:
+            char_data["spell_slots"] = {"current": expected, "max": expected}
+
+    race_s = str(char_data.get("race") or "").lower()
+    _sp = str(char_data.get("speed") or "").strip()
+    if not _sp or "<" in _sp:  # tomt eller modelskrevt platshållartext
+        slow = any(k in race_s for k in ("dvärg", "dwarf", "halfling", "halvl"))
+        char_data["speed"] = "25 ft" if slow else "30 ft"
+
+    # ── Skills (2026-08-08): säkerställ att alla 18 standard-5e-skills finns.
+    # LLM:n kan glömma dem — fyll ut (proficient=False) så bladet alltid är
+    # komplett; befintliga/valda skills behålls och valideras.
+    SKILL_ABILITIES = [
+        ("Athletics", "STR"),
+        ("Acrobatics", "DEX"), ("Sleight of Hand", "DEX"), ("Stealth", "DEX"),
+        ("Arcana", "INT"), ("History", "INT"), ("Investigation", "INT"),
+        ("Nature", "INT"), ("Religion", "INT"),
+        ("Animal Handling", "WIS"), ("Insight", "WIS"), ("Medicine", "WIS"),
+        ("Perception", "WIS"), ("Survival", "WIS"),
+        ("Deception", "CHA"), ("Intimidation", "CHA"), ("Performance", "CHA"),
+        ("Persuasion", "CHA"),
+    ]
+    _skills_in = char_data.get("skills")
+    _SKILL_ABIL_BY_NAME = {n.lower(): ab for n, ab in SKILL_ABILITIES}
+    clean_skills = []
+    if isinstance(_skills_in, list):
+        for s in _skills_in:
+            if not isinstance(s, dict) or not s.get("name"):
+                continue
+            sname = str(s.get("name", "")).strip()[:60]
+            sab = str(s.get("ability", "")).strip().upper()[:3]
+            if not sab or sab not in ("STR", "DEX", "INT", "WIS", "CHA"):
+                sab = _SKILL_ABIL_BY_NAME.get(sname.lower(), "STR")
+            clean_skills.append({
+                "name": sname,
+                "ability": sab,
+                "proficient": bool(s.get("proficient")),
+            })
+    existing_names = {s["name"].lower() for s in clean_skills}
+    for sk_name, sk_ab in SKILL_ABILITIES:
+        if sk_name.lower() not in existing_names:
+            clean_skills.append({"name": sk_name, "ability": sk_ab, "proficient": False})
+    char_data["skills"] = clean_skills
+
+    # ── Features + inspiration (2026-08-08): safe defaults.
+    if not isinstance(char_data.get("features"), list):
+        char_data["features"] = []
+    char_data.setdefault("inspiration", False)
+
+    # ── Resistanser/sårbarheter/immuniteter (P2): safe defaults.
+    # Rensa till lowercase-strängar; enstaka sträng ("fire") → lista.
+    for _f in ("resistances", "vulnerabilities", "immunities"):
+        _raw = char_data.get(_f)
+        _clean = []
+        if isinstance(_raw, list):
+            _clean = [
+                str(x).strip().lower()
+                for x in _raw
+                if isinstance(x, str) and x.strip()
+            ]
+        elif isinstance(_raw, str) and _raw.strip():
+            _clean = [x.strip().lower() for x in re.split(r"[,;]", _raw) if x.strip()]
+        char_data[_f] = _clean
+
+    # ── Darkvision (P2): str ("60 ft") eller null.
+    _dv = char_data.get("darkvision")
+    char_data["darkvision"] = _dv.strip() if isinstance(_dv, str) and _dv.strip() else None
+
+    # ── Exhaustion (P2): int 0-6 (clamp).
+    try:
+        _ex = int(char_data.get("exhaustion", 0) or 0)
+    except (TypeError, ValueError):
+        _ex = 0
+    char_data["exhaustion"] = max(0, min(6, _ex))
+
+    # ── Training (P2): lista {name, days_spent, days_needed, skill}.
+    _tr = char_data.get("training")
+    if not isinstance(_tr, list):
+        char_data["training"] = []
+    else:
+        _clean_tr = []
+        for _t in _tr:
+            if not isinstance(_t, dict) or not _t.get("name"):
+                continue
+            _tname = str(_t.get("name", "")).strip()[:60]
+            _clean_tr.append({
+                "name": _tname,
+                "days_spent": int(_t.get("days_spent", 0) or 0),
+                "days_needed": int(_t.get("days_needed", 10) or 10),
+                "skill": str(_t.get("skill", _tname)).strip()[:60],
+            })
+        char_data["training"] = _clean_tr
+
+    # ── Besvärjelser (v28): säkerställ att 'spells' alltid är en lista med
+    # namngivna spells — LLM:n kan glömma den eller skicka skräp.
+    _spells = char_data.get("spells")
+    clean_spells = []
+    if isinstance(_spells, list):
+        for sp in _spells:
+            if not isinstance(sp, dict) or not sp.get("name"):
+                continue
+            clean_spells.append({
+                "name": str(sp.get("name", "")).strip()[:80],
+                "level": int(sp.get("level", 0) or 0),
+                "school": str(sp.get("school", "")).strip()[:40] or "Okänd",
+                "casting_time": str(sp.get("casting_time", "")).strip()[:40] or "",
+                "damage_dice": str(sp.get("damage_dice", "")).strip()[:40] or None,
+                "description": str(sp.get("description", "")).strip()[:300] or "",
+            })
+    elif isinstance(_spells, dict):
+        # Enstaka spell som dict — slå in i lista
+        if _spells.get("name"):
+            clean_spells = [_spells]
+    char_data["spells"] = clean_spells
+
+    # Flytta startutrustning till state["inventory"] (där frontend läser den)
+    inventory = char_data.pop("inventory", None)
+    clean = []
+    if isinstance(inventory, list):
+        # ITEM_SCHEMA-normalisering (guardian.py _normalize_item) — samma
+        # form som Guardian items_add och PATCH inventory. Lore får
+        # fallback om LLM:n glömde den (steg 1 Aug 2026).
+        for it in inventory:
+            if not isinstance(it, dict) or not it.get("name"):
+                continue
+            norm = _normalize_item(it, lang=lang)
+            _keep_unknown_item_keys(norm, it)  # W3-M2: price_gp m.fl. överlever
+            clean.append(norm)
+
+    # ── Säkerhetsnät (fix 2026-07-31): gear-strängen kan innehålla startitems
+    # som LLM:n glömde i inventory-arrayen (t.ex. "benplåtssköld" + "flätat
+    # likrep" hos Merrick Sotfot). Lägg till gear-items som inte redan finns
+    # (fuzzy namnmatch) så startutrustningen ALDRIG tappas.
+    gear = char_data.get("gear", "") or ""
+    if gear:
+        _existing = [c["name"].lower() for c in clean]
+        for raw in re.split(r"\s*[·|]\s*", gear):
+            raw = raw.strip()
+            if not raw:
+                continue
+            qty = 1
+            m = re.match(r"^(.*?)\s*\((\d+)\)\s*$", raw)
+            if m:
+                raw, qty = m.group(1).strip(), int(m.group(2))
+            if not raw:
+                continue
+            low = raw.lower()
+            if any(low in ex or ex in low for ex in _existing):
+                continue
+            clean.append(_normalize_item({
+                "name": raw, "type": "Annat" if lang == "sv" else "Other",
+                "qty": qty, "weight": 1.0, "lore": None, "equipped": False, "rarity": "normal",
+            }, lang=lang))
+            _existing.append(low)
+
+    return char_data, clean, inventory is not None
+
+
+def _finalize_character(char_data: dict, state: dict, lang: str) -> dict:
+    """Normalisera + skriv till kampanj-state (generate_character + stream)."""
+    char_data, clean, had_inv = _finalize_character_data(char_data, lang)
+    if clean or had_inv:
+        state["inventory"] = clean
+
+    state["character"] = char_data
+    store.save(state)
+
+    return {"ok": True, "character": char_data, "inventory": state.get("inventory", [])}
+
+
+@app.post("/api/character/generate/stream")
+async def generate_character_stream(req: CharacterRequest, morkrets_token: str | None = Cookie(None)):
+    """Karaktärsgenerering med SSE-streaming — frontend visar modellens
+    reasoning_content LIVE medan den väver karaktären (qwen3.8 tänker
+    i ~160s innan JSON:et börjar; spelaren ska se att något händer).
+
+    SSE-events:
+      data: {"type":"reasoning","text":"..."}   — live reasoning-content
+      data: {"type":"content","text":"..."}     — live content (karaktärs-JSON)
+      data: {"type":"done","character":{...},"inventory":[...]}
+      data: {"type":"error","message":"..."}
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    # Icke-admin spelare begränsas till tillåtna modeller; free-tier → step-3.7-flash (FAS A)
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
+
+    # ── Turn-tak (2026-08-04, security audit P1): streamad karaktärsgenerering
+    # förbrukar en turn — samma gate som chatten, mot kostnadsmissbruk.
+    _gate_turn_quota(username)
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    lang = _get_lang(state)
+    char_prompt = CHARACTER_PROMPT_SV if lang == "sv" else CHARACTER_PROMPT_EN
+    user_msg = (f"Skapa en karaktär: {req.prompt}" if lang == "sv"
+                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang) \
+        + get_char_sheet_output_directive(lang)
+
+    messages = [
+        {"role": "system", "content": char_prompt},
+        {"role": "user", "content": user_msg},
+    ]
+
+    _consume_turn(username, action="char_gen", model=req.model_id)
+
+    async def event_stream():
+        buf = ""
+        reasoning_buf = ""
+        t0 = time.time()
+        usage: dict | None = None
+        try:
+            async for r_delta, c_delta, u in _stream_llm(
+                req.model_id, messages, temperature=0.95, max_tokens=8000,
+                thinking_cap=8000, reasoning_effort="high",
+            ):
+                if u:
+                    usage = u
+                if r_delta:
+                    reasoning_buf += r_delta
+                    yield f"data: {json.dumps({'type': 'reasoning', 'text': r_delta}, ensure_ascii=False)}\n\n"
+                if c_delta:
+                    buf += c_delta
+                    yield f"data: {json.dumps({'type': 'content', 'text': c_delta}, ensure_ascii=False)}\n\n"
+
+            char_data = _extract_json(buf)
+            result = _finalize_character(char_data, state, lang)
+            # Bokför karaktärsgenererings-tokens (livstid, överlever radering)
+            _add_character_creation(username, usage)
+            elapsed = round(time.time() - t0, 1)
+            result["tokens"] = usage or {}
+            result["time_s"] = elapsed
+            result["reasoning_len"] = len(reasoning_buf)
+            yield f"data: {json.dumps({'type': 'done', **result}, ensure_ascii=False)}\n\n"
+        except HTTPException as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e.detail)}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            err = _err("Karaktären kunde inte vävas", "The character could not be woven", lang)
+            yield f"data: {json.dumps({'type': 'error', 'message': f'{err}: {e}'}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ═══════════════════════════════════════
+# THE FORGE — fristående karaktärsvalv (vault)
+# Karaktärer som skapas oberoende av kampanjer och återanvänds.
+# ═══════════════════════════════════════
+
+
+class VaultGenRequest(BaseModel):
+    prompt: str
+    model_id: str
+    lang: str = "en"
+
+
+@app.post("/api/vault/generate/stream")
+async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None = Cookie(None)):
+    """Fristående karaktärsgenerering för valvet — kräver INGEN aktiv kampanj.
+    Samma SSE-protokoll som /api/character/generate/stream, men resultatet
+    skrivs inte till något kampanj-state; frontend visar preview med
+    Save/Reroll."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
+
+    # Språk: normalisera via languages (i18n B1) — 'de'/'fr'/'es'/'it' behålls,
+    # skräp → 'en'. Promptval: 'sv' → SV, allt annat → EN; prose-direktivet
+    # (get_char_sheet_output_directive) styr målspråket i arket.
+    raw = (req.lang or "en").strip().lower()
+    lang = raw if is_supported(raw) else "en"
+    char_prompt = CHARACTER_PROMPT_SV if lang == "sv" else CHARACTER_PROMPT_EN
+    user_msg = (f"Skapa en karaktär: {req.prompt}" if lang == "sv"
+                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang) \
+        + get_char_sheet_output_directive(lang)
+    messages = [
+        {"role": "system", "content": char_prompt},
+        {"role": "user", "content": user_msg},
+    ]
+
+    async def event_stream():
+        buf = ""
+        reasoning_buf = ""
+        t0 = time.time()
+        usage: dict | None = None
+        try:
+            async for r_delta, c_delta, u in _stream_llm(
+                req.model_id, messages, temperature=0.95, max_tokens=8000,
+                thinking_cap=8000, reasoning_effort="high",
+            ):
+                if u:
+                    usage = u
+                if r_delta:
+                    reasoning_buf += r_delta
+                    yield f"data: {json.dumps({'type': 'reasoning', 'text': r_delta}, ensure_ascii=False)}\n\n"
+                if c_delta:
+                    buf += c_delta
+                    yield f"data: {json.dumps({'type': 'content', 'text': c_delta}, ensure_ascii=False)}\n\n"
+
+            char_data = _extract_json(buf)
+            char_data, inventory, _had = _finalize_character_data(char_data, lang)
+            # Bokför karaktärsgenererings-tokens (livstid, överlever radering)
+            _add_character_creation(username, usage)
+            elapsed = round(time.time() - t0, 1)
+            result = {"ok": True, "character": char_data, "inventory": inventory}
+            result["tokens"] = usage or {}
+            result["time_s"] = elapsed
+            result["reasoning_len"] = len(reasoning_buf)
+            yield f"data: {json.dumps({'type': 'done', **result}, ensure_ascii=False)}\n\n"
+        except HTTPException as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e.detail)}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            err = _err("Karaktären kunde inte vävas", "The character could not be woven", lang)
+            yield f"data: {json.dumps({'type': 'error', 'message': f'{err}: {e}'}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+def _vault_story_snippet(story, limit: int = 220) -> str:
+    """Klipp berättelsen VID ORDGÄNSET — aldrig mitt i ett ord.
+
+    Rå `story[:220]` kapade biosar mitt i ordet ("...not to save her, bu")
+    utan elliptis, vilket såg ut som en bugg på vault-korten. Klipp vid
+    senaste mellanslag + ' …' om text fortsätter.
+    LLM-biosar innehåller också rå markdown (`*The Viper's Kiss*`) —
+    betoningen tas bort innan klippen tas.
+    """
+    s = " ".join(str(story or "").split())
+    s = re.sub(r"\*\*(.+?)\*\*", r"\1", s)  # **bold**
+    s = re.sub(r"\*([^*]+)\*", r"\1", s)    # *emfas*
+    s = s.strip()
+    if len(s) <= limit:
+        return s
+    cut = s[:limit]
+    sp = cut.rfind(" ")
+    if sp > limit // 2:
+        cut = cut[:sp]
+    return cut.rstrip(",;:. ") + " …"
+
+
+def _vault_summary(entry: dict) -> dict:
+    """Kompakt vault-post för listningar (frontend-kort)."""
+    ch = entry.get("character") or {}
+    abilities = ch.get("abilities") or {}
+    hp = ch.get("hp") or {}
+    return {
+        "id": entry.get("id"),
+        "name": ch.get("name") or "Nameless",
+        "race": ch.get("race") or "",
+        "class": ch.get("class") or "",
+        "level": ch.get("level") or 1,
+        "alignment": ch.get("alignment") or "",
+        "background": ch.get("background") or "",
+        "hp_max": hp.get("max") if isinstance(hp, dict) else hp,
+        "ac": ch.get("ac"),
+        "story": _vault_story_snippet(ch.get("story")),
+        "saved_at": entry.get("saved_at"),
+        "campaign_name": entry.get("campaign_name") or "",
+        "has_avatar": bool((entry.get("avatar") or {}).get("disk_name")),
+        "item_count": len(entry.get("inventory") or []),
+        "str": (abilities.get("STR") or {}).get("score"),
+        "dex": (abilities.get("DEX") or {}).get("score"),
+        "con": (abilities.get("CON") or {}).get("score"),
+        "int": (abilities.get("INT") or {}).get("score"),
+        "wis": (abilities.get("WIS") or {}).get("score"),
+        "cha": (abilities.get("CHA") or {}).get("score"),
+    }
+
+
+@app.get("/api/vault/characters")
+async def vault_list(morkrets_token: str | None = Cookie(None)):
+    """Lista alla sparade karaktärer för inloggad användare."""
+    payload = _get_current_user(morkrets_token)
+    entries = vault.list(payload["sub"])
+    return {"ok": True, "characters": [_vault_summary(e) for e in entries]}
+
+
+@app.get("/api/vault/characters/{char_id}")
+async def vault_get(char_id: str, morkrets_token: str | None = Cookie(None)):
+    """Fullständig vault-post (inspektionsvy)."""
+    payload = _get_current_user(morkrets_token)
+    entry = vault.get(payload["sub"], char_id)
+    if not entry:
+        raise HTTPException(404, "Character not found")
+    return {"ok": True, "entry": entry}
+
+
+@app.post("/api/vault/characters")
+async def vault_save(body: dict, morkrets_token: str | None = Cookie(None)):
+    """Spara en karaktär till valvet.
+
+    Två lägen:
+      - from_campaign: true → spara den aktiva kampanjens character+inventory
+      - annars: body.character (+ body.inventory) direkt från frontend
+        (t.ex. preview efter fristående generering).
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    campaign_name = ""
+    state = None
+    if body.get("from_campaign"):
+        state = store.get(username)
+        if not state or not state.get("character"):
+            raise HTTPException(404, "No active character in the current campaign")
+        character = state["character"]
+        inventory = state.get("inventory") or []
+        campaign_name = state.get("meta", {}).get("campaign_name") or ""
+    else:
+        character = body.get("character")
+        inventory = body.get("inventory") or []
+        if not character or not isinstance(character, dict) or not character.get("name"):
+            raise HTTPException(400, "No character to save")
+
+    entry = None
+    # Overwrite-stöd: om frontend skickar overwrite_id och posten finns,
+    # uppdatera den befintliga posten i stället för att skapa en duplikat.
+    overwrite_id = (body.get("overwrite_id") or "").strip()
+    # Länkad valvpost? Kampanjer som startades FRÅN valvet bär meta.vault_id —
+    # exportera då tillbaka till SAMMA kort (nivå, gear och story behålls;
+    # produktlöftet "no more adventurer-twins" 2026-09-13).
+    if not overwrite_id and state is not None:
+        linked = str((state.get("meta") or {}).get("vault_id") or "").strip()
+        if linked and re.fullmatch(r"[0-9a-f]{10}", linked) and vault.get(username, linked):
+            overwrite_id = linked
+    # Security (2026-08-04, P0): vault-id:n är uuid-hex (10) — blockera
+    # traversal-försök innan vault.get/update bygger sökvägen.
+    if overwrite_id and not re.fullmatch(r"[0-9a-f]{10}", overwrite_id):
+        raise HTTPException(400, "Invalid overwrite id.")
+    existing = vault.get(username, overwrite_id) if overwrite_id else None
+
+    if existing is not None:
+        existing["character"] = character
+        existing["inventory"] = inventory
+        if campaign_name:
+            existing["campaign_name"] = campaign_name
+        existing["saved_at"] = _now_iso()
+        entry = existing
+    else:
+        entry = vault.save(username, character, campaign_name=campaign_name, inventory=inventory)
+
+    # Om kampanjkaraktären har en spelar-avatar → kopiera in den i valvet.
+    # Vid overwrite skrivs vault_{samma_id}.png → gamla avataren ersätts.
+    if state is not None:
+        av = (state.get("avatars") or {}).get("player")
+        if av and av.get("disk_name"):
+            cid = state["meta"]["campaign_id"]
+            src = CAMPAIGNS_DIR / username / cid / "avatars" / av["disk_name"]
+            if src.exists():
+                av_dir = vault.avatars_dir(username)
+                dst = av_dir / f"vault_{entry['id']}.png"
+                dst.write_bytes(src.read_bytes())
+                entry["avatar"] = {"disk_name": dst.name, "seed": av.get("seed"),
+                                   "ai_generated": av.get("ai_generated", False)}
+
+    # Persist: ny post skrevs redan av vault.save(); overwrite-posten skrivs här
+    # (och ny post med avatar uppdateras så avatar-fältet följer med).
+    if existing is not None:
+        if not vault.update(username, entry):
+            raise HTTPException(404, "Character not found")
+    elif entry.get("avatar"):
+        vault.update(username, entry)
+
+    return {"ok": True, "id": entry["id"], "overwritten": existing is not None,
+            "summary": _vault_summary(entry)}
+
+
+@app.delete("/api/vault/characters/{char_id}")
+async def vault_delete(char_id: str, morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    if not vault.delete(payload["sub"], char_id):
+        raise HTTPException(404, "Character not found")
+    return {"ok": True}
+
+
+def _campaign_has_progress(state: dict) -> bool:
+    """True om kampanjen har riktig spelhistorik (inte bara nyss skapad).
+
+    Används av /api/vault/characters/{id}/use för att ALDRIG tyst byta ut
+    hjälten i ett pågående äventyr — det bytte bort 91 turer av tillväxt för
+    spelaren hero1 2026-10-03 (Qhilvorum niv 2 → valv-snapshot niv 1).
+    """
+    if not isinstance(state, dict):
+        return False
+    meta = state.get("meta") or {}
+    try:
+        if int(meta.get("turn_count") or 0) > 0:
+            return True
+    except (TypeError, ValueError):
+        return True
+    ch = state.get("character") or {}
+    if isinstance(ch, dict):
+        if ch.get("updates"):
+            return True
+        try:
+            if int(ch.get("level") or 1) > 1:
+                return True
+        except (TypeError, ValueError):
+            return True
+        xp = ch.get("xp") or {}
+        if isinstance(xp, dict):
+            try:
+                if int(xp.get("current") or 0) > 0:
+                    return True
+            except (TypeError, ValueError):
+                return True
+    return False
+
+
+@app.post("/api/vault/characters/{char_id}/use")
+async def vault_use(char_id: str, body: dict | None = None, morkrets_token: str | None = Cookie(None)):
+    """Lyft en valv-karaktär till den aktiva kampanjen: character + inventory
+    (+ spelar-avatar om valvet har en) skrivs in i kampanj-state.
+
+    SÄKERHET (2026-10-04): om den aktiva kampanjen redan har spelhistorik
+    krävs {"confirm_replace": true} — annars 409. Ett pågående äventyr får
+    aldrig tystas ned till en valv-snapshot; vill spelaren ha hjälten i en
+    NY kampanj ska kampanjen skapas först (mode "new" i UI:t).
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    body = body or {}
+    confirm_replace = bool(body.get("confirm_replace"))
+
+    entry = vault.get(username, char_id)
+    if not entry:
+        raise HTTPException(404, "Character not found")
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "No active campaign — create one first")
+
+    if _campaign_has_progress(state) and not confirm_replace:
+        cur_ch = state.get("character") or {}
+        cur_name = cur_ch.get("name") or "the current hero"
+        try:
+            turns = int((state.get("meta") or {}).get("turn_count") or 0)
+        except (TypeError, ValueError):
+            turns = 0
+        raise HTTPException(
+            409,
+            f"Your active adventure already has a hero — {cur_name} "
+            f"({turns} turns). Start a new adventure to keep it untouched. "
+            "Replacing the hero discards their progress.",
+        )
+
+    char_data = entry.get("character") or {}
+    # Backup-beräkning av härledda värden för gamla valv-poster
+    abilities = char_data.get("abilities") or {}
+    str_score = int((abilities.get("STR") or {}).get("score", 10) or 10)
+    char_data.setdefault("max_weight_lbs", str_score * 15)
+
+    state["character"] = char_data
+    inv = entry.get("inventory") or []
+    if inv:
+        state["inventory"] = inv
+
+    # Länka kampanjen till valvposten → exporten (from_campaign) uppdaterar
+    # SAMMA kort med aktuell nivå/gear i stället för att skapa en tvilling.
+    try:
+        state.setdefault("meta", {})["vault_id"] = char_id
+    except (TypeError, AttributeError):
+        pass
+
+    # Kopiera avatar-bild till kampanjen om valvet har en
+    av = entry.get("avatar") or {}
+    if av.get("disk_name"):
+        src = VAULTS_DIR / username / "avatars" / av["disk_name"]
+        if src.exists():
+            cid = state["meta"]["campaign_id"]
+            av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+            av_dir.mkdir(parents=True, exist_ok=True)
+            (av_dir / "player.png").write_bytes(src.read_bytes())
+            avatars = state.setdefault("avatars", {})
+            avatars["player"] = {
+                "disk_name": "player.png",
+                "ext": ".png",
+                "size": src.stat().st_size,
+                "ai_generated": av.get("ai_generated", False),
+                "seed": av.get("seed"),
+                "uploaded": datetime.now(timezone.utc).isoformat(),
+            }
+
+    store.save(state)
+    return {"ok": True, "character": char_data}
+
+
+@app.post("/api/vault/characters/{char_id}/avatar/generate")
+async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | None = Cookie(None)):
+    """AI-avatar för en valv-karaktär (prompt byggs från karaktärsarket)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    # TIERS: AI-bildgenerering ligger bakom 10€-unlåset. Motorer: Wan 2.7 /
+    # Qwen Image 3 Pro. (StepFun step-image-edit-2 pensionerad 2026-10-10 —
+    # legacy-värden 'stepfun'/okänt normaliseras till wan så gamla cachade
+    # frontend-versioner inte skickar anrop mot en nedlagd API.)
+    provider = str((body or {}).get("provider", "") or "").strip().lower()
+    if provider not in ("wan", "qwen"):
+        provider = "wan"
+    _require_image_gen_tier(username, provider, payload)
+    # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
+    _consume_wan_quota(username)
+
+    entry = vault.get(username, char_id)
+    if not entry:
+        raise HTTPException(404, "Character not found")
+
+    seed = (body or {}).get("seed")
+    if not isinstance(seed, int):
+        seed = random.randint(0, 999999)
+
+    # Återanvänd kampanjens prompt-byggare med en state-liknande dict
+    fake_state = {
+        "character": entry.get("character") or {},
+        "inventory": entry.get("inventory") or [],
+        "lore": [],
+        "npcs": [],
+        "world": {},
+    }
+    # Fri användarprompt (valfri). mode=new: skickas HELT REN — ingen
+    # auto-prompt, ingen pre-injektion. mode=edit: bygg från state-snapshot
+    # (HP/inventory) så valv-karaktären följer sin utveckling.
+    user_prompt = ((body or {}).get("prompt") or "").strip()
+    mode = (body or {}).get("mode", "new")
+    if mode == "edit":
+        sheet_prompt = _build_sheet_update_prompt(fake_state)
+        if user_prompt:
+            prompt = _trim_prompt(f"{user_prompt}\nThe character's current state: {sheet_prompt}")
+        else:
+            prompt = _trim_prompt(sheet_prompt)
+    elif user_prompt:
+        prompt = _trim_prompt(user_prompt)
+    else:
+        prompt = _trim_prompt(_build_avatar_prompt(fake_state, "player", seed))
+
+    av_dir = vault.avatars_dir(username)
+
+    content: bytes = b""
+    try:
+        if provider == "wan":
+            # Wan 2.7 (Token Plan) — text-to-image. Patron får Wan 2.7 Pro
+            # (2048², features.wan1080), övriga standard 1024².
+            wan_model, wan_size = _wan_model_and_size(username)
+            content = await _token_plan_image(wan_model, prompt, wan_size, seed)
+        else:
+            # Qwen Image 3 Pro (Token Plan) — premium (2026-08-15).
+            qwen_model, qwen_size = _qwen_image_model_and_size()
+            content = await _token_plan_image(qwen_model, prompt, qwen_size, seed)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("🎨 Vault avatar (provider=%s) failed: %s", provider, e)
+        raise HTTPException(502, f"Could not reach {provider}: {e}")
+
+    disk_name = f"vault_{char_id}.png"
+    (av_dir / disk_name).write_bytes(content)
+    entry["avatar"] = {
+        "disk_name": disk_name, "ext": ".png", "size": len(content),
+        "ai_generated": True, "seed": seed,
+        "uploaded": datetime.now(timezone.utc).isoformat(),
+    }
+    vault.update(username, entry)
+    # Bokför en AI-bildgenerering (iteration), livstid
+    img_model = ("wan2.7-image" if provider == "wan"
+                 else "qwen-image-3.0-pro")
+    _add_image_gen(username, img_model)
+    return {"ok": True, "seed": seed, "url": f"/api/vault/characters/{char_id}/avatar"}
+
+
+@app.get("/api/vault/characters/{char_id}/avatar")
+async def vault_avatar_serve(char_id: str, morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    entry = vault.get(username, char_id)
+    if not entry:
+        raise HTTPException(404, "Character not found")
+    av = entry.get("avatar") or {}
+    if not av.get("disk_name"):
+        raise HTTPException(404, "No avatar for this character")
+    path = VAULTS_DIR / username / "avatars" / av["disk_name"]
+    if not path.exists():
+        raise HTTPException(404, "Avatar image missing on disk")
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-cache"})
+
+
+# ═══════════════════════════════════════
+# KARAKTÄRSUPPDATERING + BILAGOR
+# ═══════════════════════════════════════
+
+ATTACHMENT_EXTS = {".pdf", ".md", ".txt"}
+ATTACHMENT_MEDIA = {
+    ".pdf": "application/pdf",
+    ".md": "text/markdown; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+}
+
+
+# ── Karaktärsval i codexen (2026-10-21) ────────────────────────────────────
+# Spelaren fick tidigare bara redigera notes/max_weight_lbs: char-genens
+# antaganden om spells/feats/fighting style gick inte att rätta någonstans
+# (spelarfeedback 2026-10-21: "the system assumed spells and feats i did not
+# want … i cant change them in the codex"). Nu får spelaren rätta sina egna
+# VAL. abilities/hp/ac/xp är fortfarande server-/Guardian-ägda.
+_SHEET_NAME_MAX = 80
+_SHEET_DESC_MAX = 400
+_SHEET_LIST_MAX = 60
+
+
+def _clean_sheet_spells(raw) -> list[dict]:
+    """Validera/normalisera en spell-lista från PATCH /api/campaign/character."""
+    if not isinstance(raw, list):
+        raise HTTPException(400, "spells must be a list")
+    if len(raw) > _SHEET_LIST_MAX:
+        raise HTTPException(400, f"too many spells (max {_SHEET_LIST_MAX})")
+    out: list[dict] = []
+    seen: set[str] = set()
+    for it in raw:
+        if not isinstance(it, dict):
+            raise HTTPException(400, "each spell must be an object")
+        name = str(it.get("name", "") or "").strip()
+        if not name:
+            raise HTTPException(400, "spell name required")
+        key = _norm_sheet_name(name)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        try:
+            lvl = int(it.get("level", 0) or 0)
+        except (TypeError, ValueError):
+            raise HTTPException(400, f"bad level for spell {name}")
+        if lvl < 0 or lvl > 9:
+            raise HTTPException(400, f"bad level for spell {name}")
+        out.append({
+            "name": name[:_SHEET_NAME_MAX],
+            "level": lvl,
+            "school": str(it.get("school", "") or "").strip()[:40],
+            "casting_time": str(it.get("casting_time", "") or "").strip()[:40],
+            "damage_dice": (str(it.get("damage_dice", "") or "").strip()[:40] or None),
+            "description": str(it.get("description", "") or "").strip()[:_SHEET_DESC_MAX],
+        })
+    return out
+
+
+def _clean_sheet_features(raw) -> list[dict]:
+    """Validera/normalisera en feature/feat-lista från PATCH."""
+    if not isinstance(raw, list):
+        raise HTTPException(400, "features must be a list")
+    if len(raw) > _SHEET_LIST_MAX:
+        raise HTTPException(400, f"too many features (max {_SHEET_LIST_MAX})")
+    out: list[dict] = []
+    seen: set[str] = set()
+    for it in raw:
+        if not isinstance(it, dict):
+            raise HTTPException(400, "each feature must be an object")
+        name = str(it.get("name", "") or "").strip()
+        if not name:
+            raise HTTPException(400, "feature name required")
+        key = _norm_sheet_name(name)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        try:
+            lvl = int(it.get("level", 0) or 0)
+        except (TypeError, ValueError):
+            raise HTTPException(400, f"bad level for feature {name}")
+        if lvl < 0 or lvl > 20:
+            raise HTTPException(400, f"bad level for feature {name}")
+        out.append({
+            "name": name[:_SHEET_NAME_MAX],
+            "level": lvl,
+            "description": str(it.get("description", "") or "").strip()[:_SHEET_DESC_MAX],
+        })
+    return out
+
+
+def _sheet_diff_text(old, new, label: str) -> str:
+    """Kort mänsklig diff ('spells: added X; removed Y') för updates-loggen."""
+    def _names(items):
+        return [str(x.get("name", "") or "").strip() for x in (items or []) if isinstance(x, dict)]
+    old_n, new_n = _names(old), _names(new)
+    old_l = {n.lower() for n in old_n}
+    new_l = {n.lower() for n in new_n}
+    added = [n for n in new_n if n.lower() not in old_l]
+    removed = [n for n in old_n if n.lower() not in new_l]
+    parts = []
+    if added:
+        parts.append("added " + ", ".join(added))
+    if removed:
+        parts.append("removed " + ", ".join(removed))
+    return f"{label}: " + "; ".join(parts) if parts else ""
+
+
+@app.get("/api/campaign/sheet-limits")
+async def campaign_sheet_limits(morkrets_token: str | None = Cookie(None)):
+    """5e-grindarna för codex-rättelser: vad får läggas till på den här nivån?
+
+    UI:t använder svaret för att bara erbjuda giltiga spell-nivåer, visa
+    "spells known 3/4" och stänga formuläret mitt i en strid. Själva
+    valideringen görs ändå i PATCH — endpointen är bara sanningen för UI:t.
+    """
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    char = state.get("character") or {}
+    combat = (state.get("world") or {}).get("combat") or {}
+    lim = spell_limits(char)
+    lim["combat_active"] = bool(combat.get("active"))
+    return {"ok": True, "limits": lim}
+
+
+@app.patch("/api/campaign/character")
+async def update_character(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Uppdatera valda fält på den aktiva karaktären.
+
+    2026-10-21: spelaren får rätta sina egna VAL (spells, features,
+    fighting_style). Tidigare fanns ingen write-path utanför char-gen, så
+    "the system assumed spells and feats i did not want … i cant change them
+    in the codex" gick inte att lösa (spelarfeedback 2026-10-21).
+    abilities / hp / ac / xp är FORTFARANDE spärrade — de ägs av Guardian.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    # Validera FÖRE låset: ett dåligt payload ska aldrig ta kampanjlåset.
+    new_spells = _clean_sheet_spells(req["spells"]) if "spells" in req else None
+    new_features = _clean_sheet_features(req["features"]) if "features" in req else None
+    _fs_in_req = "fighting_style" in req
+    new_fs = ""
+    if _fs_in_req:
+        _fs_raw = req.get("fighting_style")
+        if _fs_raw not in (None, ""):
+            if not isinstance(_fs_raw, str):
+                raise HTTPException(400, "fighting_style must be a string")
+            new_fs, _fs_desc = _canonical_fighting_style(_fs_raw)
+            if not new_fs:
+                raise HTTPException(400, "fighting_style must not be empty")
+
+    campaign_id = state.get("meta", {}).get("campaign_id", "")
+    async with _state_lock(username, campaign_id):
+        state = store.get(username, campaign_id) or state
+        char = state.setdefault("character", {})
+        # ── 5e-grindar (2026-10-21): rättelse, inte förstärkning ──
+        _lim = spell_limits(char)
+        # Baslinjen måste fångas FÖRE rättelsen (annars tappar vi det arket
+        # redan hade: ta bort en av tre spells → taket sjunker till 5e-nivån).
+        if new_spells is not None or new_features is not None or _fs_in_req:
+            _note_sheet_allowance(char, _lim)
+        _combat = (state.get("world") or {}).get("combat") or {}
+        if _combat.get("active") and (new_spells is not None or new_features is not None or _fs_in_req):
+            raise HTTPException(409, "Finish the fight first — the codex is locked for sheet changes until the scene is over.")
+        if new_spells is not None:
+            _cant = [s for s in new_spells if s["level"] == 0]
+            _lev = [s for s in new_spells if s["level"] > 0]
+            if len(_cant) > _lim["allow_cantrips"]:
+                raise HTTPException(400, (
+                    f"{_lim['class'] or 'This class'} knows {_lim['max_cantrips']} cantrips at level {_lim['level']} — "
+                    f"{len(_cant)} is too many. Remove one first."
+                ))
+            if len(_lev) > _lim["allow_spells"]:
+                raise HTTPException(400, (
+                    f"{_lim['class'] or 'This class'} knows {_lim['max_spells']} spells at level {_lim['level']} — "
+                    f"{len(_lev)} is too many. Swap one out instead of adding."
+                ))
+            _too_high = [s for s in _lev if s["level"] > _lim["allow_level"]]
+            if _too_high:
+                raise HTTPException(400, (
+                    f"Level {max(s['level'] for s in _too_high)} spells are out of reach at level {_lim['level']} — "
+                    f"the highest you can hold is level {_lim['allow_level']}."
+                ))
+        if new_features is not None and len(new_features) > _lim["max_features"]:
+            raise HTTPException(400, (
+                f"The sheet holds {_lim['max_features']} features at level {_lim['level']} — "
+                "swap one for another instead of adding an extra."
+            ))
+        if new_fs and new_fs not in _lim["fighting_styles"]:
+            raise HTTPException(400, (
+                f"{new_fs} is not a {_lim['class'] or 'available'} fighting style. "
+                f"Choose one of: {', '.join(_lim['fighting_styles'])}."
+            ))
+        # notes + max_weight_lbs som förut
+        for key in ("notes", "max_weight_lbs"):
+            if key in req:
+                if key == "max_weight_lbs":
+                    char[key] = float(req[key])
+                else:
+                    char[key] = str(req[key])
+
+        _edits: list[str] = []
+        if new_spells is not None:
+            _diff = _sheet_diff_text(char.get("spells") or [], new_spells, "spells")
+            if _diff:
+                _edits.append(_diff)
+            char["spells"] = new_spells
+        if new_features is not None:
+            _diff = _sheet_diff_text(char.get("features") or [], new_features, "features")
+            if _diff:
+                _edits.append(_diff)
+            char["features"] = new_features
+        if _fs_in_req:
+            _old_fs = str(char.get("fighting_style") or "").strip()
+            if new_fs:
+                char["fighting_style"] = new_fs
+                # Codexen renderar feature-listan → valet ska synas där också
+                # (och gamla fritext-varianter ersätts, inte dubbleras)
+                _name, _desc = _canonical_fighting_style(new_fs)
+                _set_fighting_style_feature(char, _name, _desc)
+                if _old_fs.lower() != new_fs.lower():
+                    _edits.append(f"fighting style {_old_fs or 'unset'} → {new_fs}")
+            else:
+                char.pop("fighting_style", None)
+                if _old_fs:
+                    _edits.append(f"fighting style cleared (was {_old_fs})")
+
+        if _edits:
+            # Sann logg: growth-kortet i codexen och DM-contexten ser rättelsen.
+            char.setdefault("updates", []).append({
+                "field": "sheet",
+                "text": "Player corrected the sheet — " + "; ".join(_edits) + ".",
+                "turn": state.get("meta", {}).get("turn_count", 0),
+            })
+            # Baslinjen för 5e-grindarna får bara stiga (sticky grandfather);
+            # den noterades redan före rättelsen (se ovan).
+            logger.info("📖 Sheet edit by %s: %s", username, "; ".join(_edits)[:200])
+
+        # Säkerställ att bärvikten alltid finns: max_weight_lbs = STR × 15 (D&D 5e)
+        if "max_weight_lbs" not in char:
+            _abilities = char.get("abilities") or {}
+            _str_score = int((_abilities.get("STR") or {}).get("score", 10) or 10)
+            char["max_weight_lbs"] = _str_score * 15
+        store.save(state)
+    return {"ok": True, "character": char}
+
+
+@app.patch("/api/campaign/language")
+async def update_campaign_language(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Uppdatera kampanjens språk (DM:ns berättelsespråk).
+
+    Används av newgame.html när spelaren byter språk-pill på en BEFINTLIG
+    kampanj — tidigare sattes språket bara vid skapelse, så en svensk
+    spelstart på en gammal kampanj fick engelsk DM.
+    """
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    language = str(req.get("language", "")).strip().lower()
+    # API-gate (CONTRACT A4): alla stödda koder (en/sv/de/fr/es/it) OK, annat 400.
+    if not is_supported(language):
+        raise HTTPException(400, "language must be one of: en, sv, de, fr, es, it")
+
+    old_lang = state.get("meta", {}).get("language", "en")
+    state.setdefault("meta", {})["language"] = language
+
+    # Om äventyret inte startat än (awakening pågår): rulla om öppningen
+    # så den matchar det nya språket.
+    if state["meta"].get("awakening") and old_lang != language:
+        style_key, style_desc = random.choice(get_opening_styles(language))
+        state["meta"]["opening_style"] = style_desc
+        state["meta"]["opening_key"] = style_key
+
+    store.save(state)
+    logger.info("🌍 Campaign language %s → %s", old_lang, language)
+    return {"ok": True, "language": language}
+
+
+@app.patch("/api/campaign/guardian-model")
+async def update_guardian_model(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Välj Guardian-modell för aktiv kampanj.
+
+    Admin kan välja fritt; icke-admin klampas till PLAYER_MODELS
+    (samma modelllista som DM — se _clamp_player_model).
+    Körs under per-kampanj-låset så en bakgrundsuppgift (Guardian/
+    extraction) aldrig sparar över valet med en gammal state-kopia.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state.get("meta", {}).get("campaign_id", "")
+
+    async with _state_lock(username, campaign_id):
+        state = store.get(username, campaign_id) or state
+        model_id = str(req.get("guardian_model", "")).strip()
+        if model_id:
+            if payload.get("role") != "admin":
+                model_id = _clamp_player_model(model_id, tier=_tier_for(username))
+            # Validera att modellen finns i registret (eller är en känd orfree:)
+            if not _validate_model_id(model_id):
+                raise HTTPException(400, f"Okänd modell: {model_id}")
+            state.setdefault("meta", {})["guardian_model"] = model_id
+        else:
+            state.get("meta", {}).pop("guardian_model", None)
+
+        store.save(state)
+    logger.info("🛡️ Guardian model → %s", model_id or "(default)")
+    return {"ok": True, "guardian_model": model_id or GUARDIAN_MODEL}
+
+
+# PATCH /api/campaign/local-pipeline BORTTAGEN 2026-10-01 (rostad): den binära
+# "Story only / Story + rules"-växlaren ersattes av PER-ROLL-lokala modeller —
+# spelaren väljer en 🏮 local:*-modell direkt i Lorekeeper-/Background-väljaren
+# (PATCH /api/campaign/guardian-model respektive /api/campaign/extraction-model
+# accepterar redan local:*-id:n via _clamp_player_model/_validate_model_id).
+# Kedjeläget härleds per drag ur meta (_local_role_flags). Legacy-kampanjer med
+# meta.local_pipeline=='full' carvar fortfarande båda rollerna (skim).
+
+
+@app.patch("/api/campaign/extraction-model")
+async def update_extraction_model(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Välj extraction-modell (bakgrund: fakta, dagbok, summaries) för aktiv kampanj.
+
+    Spelaren väljer detta inför nytt game — samma frihet som DM/Guardian-valet.
+    Extraction-modellen körs alltid med thinking=disabled (strukturerade
+    JSON-anrop) — se _call_llm. Körs under per-kampanj-låset (se guardian).
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state.get("meta", {}).get("campaign_id", "")
+
+    async with _state_lock(username, campaign_id):
+        state = store.get(username, campaign_id) or state
+        model_id = str(req.get("extraction_model", "")).strip()
+        if model_id:
+            if payload.get("role") != "admin":
+                model_id = _clamp_player_model(model_id, tier=_tier_for(username))
+            # Validera att modellen finns i registret (eller är en känd orfree:)
+            if not _validate_model_id(model_id):
+                raise HTTPException(400, f"Okänd modell: {model_id}")
+            state.setdefault("meta", {})["extraction_model"] = model_id
+        else:
+            state.get("meta", {}).pop("extraction_model", None)
+
+        store.save(state)
+    logger.info("🧠 Extraction model → %s", model_id or "(default)")
+    return {"ok": True, "extraction_model": model_id or EXTRACTION_MODEL}
+
+
+@app.patch("/api/campaign/dm-model")
+async def update_dm_model(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Spara DM-modellen per kampanj (server-side).
+
+    Frontend anropar detta när spelaren byter DM-modell i settings, så att
+    valet behålls när man lämnar och återvänder till kampanjen. Samma
+    clamp-regler som Guardian/Extraction: icke-admin får bara PLAYER_MODELS.
+    Chat-endpointen sparar även dm_model automatiskt vid varje tur, så
+    även utan PATCH-anropet behålls senast använda modell.
+    Körs under per-kampanj-låset (se guardian).
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state.get("meta", {}).get("campaign_id", "")
+
+    async with _state_lock(username, campaign_id):
+        state = store.get(username, campaign_id) or state
+        model_id = str(req.get("dm_model", "")).strip()
+        if model_id:
+            if payload.get("role") != "admin":
+                model_id = _clamp_player_model(model_id, tier=_tier_for(username))
+            # Validera att modellen finns i registret (eller är en känd orfree:)
+            if not _validate_model_id(model_id):
+                raise HTTPException(400, f"Okänd modell: {model_id}")
+            state.setdefault("meta", {})["dm_model"] = model_id
+        else:
+            state.get("meta", {}).pop("dm_model", None)
+
+        store.save(state)
+    logger.info("🔮 DM model → %s", model_id or "(default)")
+    return {"ok": True, "dm_model": model_id or DEFAULT_PLAYER_MODEL}
+
+
+@app.post("/api/campaign/attachments")
+async def upload_attachment(
+    file: UploadFile = File(...),
+    morkrets_token: str | None = Cookie(None),
+):
+    """Ladda upp en bilaga (pdf/md/txt) till kampanjen."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    fname = file.filename or "bilaga.txt"
+    ext = Path(fname).suffix.lower()
+    if ext not in ATTACHMENT_EXTS:
+        raise HTTPException(400, f"Filformat ej stöd: {ext} (tillåtna: .pdf, .md, .txt)")
+
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(400, "Filen är för stor (max 5 MB)")
+
+    cid = state["meta"]["campaign_id"]
+    att_dir = CAMPAIGNS_DIR / username / cid / "attachments"
+    att_dir.mkdir(parents=True, exist_ok=True)
+
+    att_id = uuid.uuid4().hex[:12]
+    # Spara med säkert filnamn men behåll originalnamnet i metadata
+    disk_name = f"{att_id}{ext}"
+    (att_dir / disk_name).write_bytes(content)
+
+    attachments = state.setdefault("attachments", [])
+    entry = {
+        "id": att_id,
+        "name": fname,
+        "disk_name": disk_name,
+        "ext": ext,
+        "size": len(content),
+        "uploaded": datetime.now(timezone.utc).isoformat(),
+    }
+    attachments.append(entry)
+    store.save(state)
+
+    return {"ok": True, "attachment": entry}
+
+
+@app.get("/api/campaign/attachments/{att_id}")
+async def download_attachment(att_id: str, morkrets_token: str | None = Cookie(None)):
+    """Ladda ner en bilaga."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    cid = state["meta"]["campaign_id"]
+    entry = next((a for a in state.get("attachments", []) if a["id"] == att_id), None)
+    if not entry:
+        raise HTTPException(404, "Bilagan hittades inte")
+
+    path = CAMPAIGNS_DIR / username / cid / "attachments" / entry["disk_name"]
+    if not path.exists():
+        raise HTTPException(404, "Fil saknas på disk")
+
+    return FileResponse(
+        path,
+        media_type=ATTACHMENT_MEDIA.get(entry["ext"], "application/octet-stream"),
+        filename=entry["name"],
+    )
+
+
+@app.delete("/api/campaign/attachments/{att_id}")
+async def delete_attachment(att_id: str, morkrets_token: str | None = Cookie(None)):
+    """Radera en bilaga."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    cid = state["meta"]["campaign_id"]
+    attachments = state.get("attachments", [])
+    entry = next((a for a in attachments if a["id"] == att_id), None)
+    if not entry:
+        raise HTTPException(404, "Bilagan hittades inte")
+
+    path = CAMPAIGNS_DIR / username / cid / "attachments" / entry["disk_name"]
+    if path.exists():
+        path.unlink()
+
+    state["attachments"] = [a for a in attachments if a["id"] != att_id]
+    store.save(state)
+    return {"ok": True, "message": "Bilagan raderad"}
+
+
+# ═══════════════════════════════════════
+# AVATARER — spelare, DM och NPCs
+# ═══════════════════════════════════════
+
+AVATAR_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+AVATAR_MEDIA = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
+
+# ── Server thumbnails (2026-9-13) ───────────────────────────────────────
+# UI:et behöver 52–96px-porträtt i kartongen — originalen är 1024px-PNG
+# (0,5–1,5 MB) och tolv sådana per sida är ren mobilstrypning. GET-routerna
+# får därför ?w=64|128|256|512 som servern skalat till en diskcachad PNG.
+#
+# VAL AV BIBLIOTEK: PyMuPDF (fitz) — redan i requirements.txt (används för
+# PDF-inläsning ~:9352) och klarar fri skalning utan ny dep:
+#   pix = fitz.Pixmap(bytes) → fitz.Pixmap(pix, w, h) → tobytes("png").
+# Pillow vore det andra valet men adds aldrig — zero-new-deps-rule.
+# VARNING: fitz bygger utan WebP-dekodning här → webp-original klarar INTE
+# av att skalas och serveras som original (fallback nedan), inte 500.
+#
+# CACHEN: thumbs/ SIBLING med originalfilen (kampanj: avatars/thumbs/,
+# konto: user_avatars/thumbs/) uppkallad efter src-stem + bredd + originalets
+# mtime&storlek → byts originalet genereras tumnageln om automatiskt (gamla
+# filen rensas). Underkatalogen är SÄKER mot avatar-purgeln — den sveper
+# bara f.is_file() (avatar_purge.py), aldrig kataloger.
+#
+# Utan ?w = existerande beteende (original + no-cache) — backkompat för
+# lightbox/galleri som visar hela bilden.
+
+AVATAR_THUMB_WIDTHS = {64, 128, 256, 512}
+AVATAR_THUMB_CACHE_CONTROL = "public, max-age=604800"  # 7 dagar — tumnageln
+# är innehållskeyad (mtime+size i filnamnet) så den är aldrig "för gammal".
+
+
+def _avatar_thumb_dir(src: Path) -> Path:
+    return src.parent / "thumbs"
+
+
+def _avatar_thumb_path(src: Path, width: int) -> Path:
+    """Cache-sökväg för tumnagel. Innehåller src mtime+size i namnet — ett
+    ändrat original ger automatiskt ny nyckel (stale thumb blir onåbar och
+    raderas vid nästa generering)."""
+    st = src.stat()
+    return _avatar_thumb_dir(src) / f"{src.stem}__w{width}__{int(st.st_mtime)}_{st.st_size}.png"
+
+
+def _scale_avatar_to_png(src: Path, width: int) -> bytes | None:
+    """Skala src till max `width` px bred PNG. Returnerar None om bilden inte
+    kan avkodas/skalas (t.ex. webp i denna build, trasig fil) → anroparen
+    faller tillbaka till originalet i stället för att 50:a. Körs i tråd."""
+    import fitz  # local import — samma mönster som PDF-läsningen ~:9352
+    try:
+        pix = fitz.Pixmap(src.read_bytes())
+        if pix.n - pix.alpha > 3:  # CMYK m.m. → RGB om (annars kan PNG-spara faila)
+            pix = fitz.Pixmap(fitz.csRGB, pix)
+        tw = min(width, pix.width)  # skala ALDRIG upp
+        th = max(1, int(pix.height * tw / pix.width + 0.5))
+        thumb = fitz.Pixmap(pix, tw, th)
+        return thumb.tobytes("png")
+    except Exception:
+        return None
+
+
+def _drop_stale_avatar_thumbs(src: Path, width: int, keep: Path) -> None:
+    """Ta bort tumnaglar för samma original men annan cache-nyckel."""
+    d = _avatar_thumb_dir(src)
+    if not d.is_dir():
+        return
+    prefix = f"{src.stem}__w{width}__"
+    for f in d.iterdir():
+        if f.name.startswith(prefix) and f != keep:
+            try:
+                f.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+async def _avatar_file_response(path: Path, ext: str, w: int | None) -> FileResponse:
+    """Ett svar för BÅDA avatar-GET-routerna: original utan w, diskcachad
+    tumnagel med w. Auth/404-beteende lämnas orört till anroparen."""
+    media = AVATAR_MEDIA.get(ext, "image/png")
+    if w is None:
+        return FileResponse(path, media_type=media,
+                            headers={"Cache-Control": "no-cache"})
+    if w not in AVATAR_THUMB_WIDTHS:
+        raise HTTPException(400, f"Ogiltig bredd: {w} (tillåtna: {sorted(AVATAR_THUMB_WIDTHS)})")
+    dst = _avatar_thumb_path(path, w)
+    if not dst.exists():
+        data = await asyncio.to_thread(_scale_avatar_to_png, path, w)
+        if data is not None:
+            # Atomic write: unikt tmp + os.replace → aldrig halvskriven thumb
+            # även om två spelare träffar samma bild samtidigt.
+            _avatar_thumb_dir(path).mkdir(parents=True, exist_ok=True)
+            tmp = dst.with_name(f".{dst.stem}.tmp{secrets.token_hex(4)}")
+            try:
+                tmp.write_bytes(data)
+                os.replace(tmp, dst)
+                _drop_stale_avatar_thumbs(path, w, dst)
+            except OSError:
+                try:
+                    tmp.unlink(missing_ok=True)
+                except OSError:
+                    pass
+    if dst.exists():
+        return FileResponse(dst, media_type="image/png",
+                            headers={"Cache-Control": AVATAR_THUMB_CACHE_CONTROL})
+    # Skalning misslyckades (webp/trasig fil) eller disk fel → originalet.
+    return FileResponse(path, media_type=media,
+                        headers={"Cache-Control": "no-cache"})
+
+
+def _safe_avatar_key(kind: str) -> str:
+    """Normalisera avatar-nyckel: 'player', 'dm', 'npc:<nyckel>' eller
+    'item:<slug>' (föremålsmålningar, 2026-09-30)."""
+    kind = (kind or "").strip()
+    if kind in ("player", "dm"):
+        return kind
+    if kind.startswith("npc:"):
+        key = kind[4:].strip()
+        # Svartlista istället för allowlist: NPC-namn kan innehålla apostrofer
+        # ("Glazier's"), parenteser ("Guard (cellar)"), citattecken m.m. Enda
+        # förbjudna är path-separatorer (filnamnssäkerhet) och kontrolltecken.
+        if key and not re.search(r"[/\\\x00-\x1f]", key):
+            return "npc:" + key
+    if kind.startswith("item:"):
+        # Föremåls-slug: strikt allowlist (a-z, 0-9, bindestreck) — slugen
+        # genereras av oss (_item_slug), aldrig av användarinput direkt.
+        key = kind[5:].strip()
+        if key and len(key) <= 48 and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", key):
+            return "item:" + key
+    raise HTTPException(400, f"Ogiltig avatar-typ: {kind}")
+
+
+_ITEM_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _item_slug(name: str) -> str:
+    """Stabil nyckel för föremålsmålning: 'Worn Ritual Dagger' →
+    'worn-ritual-dagger'. Måste matcha frontendens _itemSlug() exakt
+    (inkl. ordningen strip → truncate → rensa trailing bindestreck)."""
+    return _ITEM_SLUG_RE.sub("-", (name or "").strip().lower()).strip("-")[:48].rstrip("-")
+
+
+# ── Avatar-gallerier (2026-08-07): varje karaktär (player/dm/npc:X) sparar
+#    upp till 5 bilder. Ny generering/uppladdning LÄGGS TILL i galleriet
+#    (äldsta bilden utanför active faller bort vid >5). Spelaren roterar
+#    1/N med pilar — bilderna är strikt separerade per karaktär.
+#    Bakåtkompatibel: entry utan 'gallery' (gammal enskild bild) normaliseras
+#    till ett 1-bildsgalleri. Top-level-fälten (disk_name m.fl.) speglar
+#    ALLTID den AKTIVA bilden så äldre kod/exports fortsätter fungera. ──
+MAX_AVATAR_GALLERY = 5
+_AVATAR_ITEM_FIELDS = ("disk_name", "ext", "size", "uploaded", "seed", "ai_generated")
+
+
+def _avatar_gallery(entry: dict) -> list:
+    """Returnera (och normalisera) entryns gallery-lista."""
+    gal = entry.get("gallery")
+    if not isinstance(gal, list):
+        item = {k: entry[k] for k in _AVATAR_ITEM_FIELDS if k in entry}
+        gal = [item] if item.get("disk_name") else []
+        entry["gallery"] = gal
+        entry["gallery_index"] = 0
+    return gal
+
+
+def _avatar_set_active(entry: dict, idx: int) -> int:
+    """Sätt aktiv bild i galleriet; spegla fälten på top-level. Returnerar idx."""
+    gal = _avatar_gallery(entry)
+    if not gal:
+        raise HTTPException(404, "Avataren hittades inte")
+    idx = idx % len(gal)
+    entry["gallery_index"] = idx
+    active = gal[idx]
+    for k in _AVATAR_ITEM_FIELDS:
+        if k in active:
+            entry[k] = active[k]
+        else:
+            entry.pop(k, None)
+    return idx
+
+
+def _avatar_gallery_add(entry: dict, item: dict) -> dict | None:
+    """Lägg till ny bild i galleriet + gör den aktiv. Returnerar den post som
+    eventuellt föll bort (cap MAX_AVATAR_GALLERY) så anroparen kan radera filen."""
+    gal = _avatar_gallery(entry)
+    gal.append(item)
+    dropped = None
+    if len(gal) > MAX_AVATAR_GALLERY:
+        dropped = gal.pop(0)
+    _avatar_set_active(entry, len(gal) - 1)
+    return dropped
+
+
+def _avatar_gallery_remove(entry: dict, idx: int) -> dict | None:
+    """Ta bort bild idx ur galleriet. Aktiv bild blir den närmast intill.
+    Returnerar den borttagna posten (för filradering) eller None."""
+    gal = _avatar_gallery(entry)
+    if not gal:
+        return None
+    idx = idx % len(gal)
+    removed = gal.pop(idx)
+    if not gal:
+        entry["gallery_index"] = 0
+        for k in _AVATAR_ITEM_FIELDS:
+            entry.pop(k, None)
+        return removed
+    cur = int(entry.get("gallery_index") or 0)
+    if idx < cur:
+        cur -= 1
+    elif idx == cur:
+        cur = min(cur, len(gal) - 1)
+    _avatar_set_active(entry, cur)
+    return removed
+
+
+def _new_avatar_disk_name(avatar_key: str, ext: str) -> str:
+    """Unikt filnamn per bild i galleriet (krockar aldrig vid flera bilder)."""
+    return f"{avatar_key.replace(':', '_')}__{secrets.token_hex(4)}{ext}"
+
+
+@app.post("/api/campaign/avatar")
+async def upload_avatar(
+    kind: str = Form(...),
+    file: UploadFile = File(...),
+    morkrets_token: str | None = Cookie(None),
+):
+    """Ladda upp en avatar för spelaren, DM eller en NPC. Uppladdningen LÄGGS
+    TILL i karaktärens galleri (upp till 5 bilder) och blir den aktiva bilden."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    # TIERS: avatar-uppladdning är tier1+ (samma gate som AI-generering —
+    # free → 403 med uppgraderingshänvisning; UI:et låser + hänvisar).
+    _require_avatar_tier(payload, username)
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+
+    fname = file.filename or "avatar.png"
+    ext = Path(fname).suffix.lower()
+    if ext not in AVATAR_EXTS:
+        raise HTTPException(400, f"Filformat ej stöd: {ext} (tillåtna: png, jpg, webp, gif)")
+
+    content = await file.read()
+    if len(content) > 3 * 1024 * 1024:
+        raise HTTPException(400, "Bilden är för stor (max 3 MB)")
+
+    cid = state["meta"]["campaign_id"]
+    av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+    av_dir.mkdir(parents=True, exist_ok=True)
+
+    disk_name = _new_avatar_disk_name(avatar_key, ext)
+    (av_dir / disk_name).write_bytes(content)
+
+    avatars = state.setdefault("avatars", {})
+    entry = avatars.setdefault(avatar_key, {})
+    item = {
+        "disk_name": disk_name,
+        "ext": ext,
+        "size": len(content),
+        "uploaded": datetime.now(timezone.utc).isoformat(),
+    }
+    dropped = _avatar_gallery_add(entry, item)
+    if dropped and dropped.get("disk_name"):
+        try:
+            (av_dir / dropped["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
+    store.save(state)
+
+    return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}",
+            "gallery_count": len(_avatar_gallery(entry)), "gallery_index": int(entry.get("gallery_index") or 0)}
+
+
+@app.get("/api/campaign/avatar/{kind:path}")
+async def get_avatar(kind: str, idx: int | None = None, w: int | None = None,
+                     morkrets_token: str | None = Cookie(None)):
+    """Hämta en avatar-bild. ?idx=N hämtar bild N ur galleriet; utan idx → den
+    aktiva bilden. ?w=64|128|256|512 → server-genererad tumnagel (diskcachad
+    PNG, lång Cache-Control); utan w → original (backkompat)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+    entry = state.get("avatars", {}).get(avatar_key)
+    if not entry:
+        raise HTTPException(404, "Avataren hittades inte")
+
+    gal = _avatar_gallery(entry)
+    if gal:
+        item = gal[(idx if idx is not None else int(entry.get("gallery_index") or 0)) % len(gal)]
+    else:
+        item = entry
+
+    cid = state["meta"]["campaign_id"]
+    path = CAMPAIGNS_DIR / username / cid / "avatars" / item.get("disk_name", "")
+    if not item.get("disk_name") or not path.exists():
+        raise HTTPException(404, "Bild saknas på disk")
+
+    return await _avatar_file_response(path, item.get("ext"), w)
+
+
+@app.patch("/api/campaign/avatar/gallery/{kind:path}")
+async def rotate_avatar(kind: str, body: dict, morkrets_token: str | None = Cookie(None)):
+    """Rotera aktiv bild i karaktärens galleri: {'index': N} (eller 'delta': ±1)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+    entry = state.get("avatars", {}).get(avatar_key)
+    if not entry:
+        raise HTTPException(404, "Avataren hittades inte")
+    gal = _avatar_gallery(entry)
+    if not gal:
+        raise HTTPException(404, "Avataren hittades inte")
+
+    cur = int(entry.get("gallery_index") or 0)
+    delta = (body or {}).get("delta")
+    if isinstance(delta, int):
+        idx = cur + delta
+    else:
+        idx = (body or {}).get("index")
+        if not isinstance(idx, int):
+            raise HTTPException(400, "Ange index eller delta")
+    new_idx = _avatar_set_active(entry, idx)
+    store.save(state)
+    return {"ok": True, "kind": avatar_key, "gallery_index": new_idx, "gallery_count": len(gal)}
+
+
+@app.delete("/api/campaign/avatar/gallery/{kind:path}/{idx:int}")
+async def delete_avatar_image(kind: str, idx: int, morkrets_token: str | None = Cookie(None)):
+    """Ta bort EN bild ur galleriet (den visade bilden i modalen)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+    avatars = state.get("avatars", {})
+    entry = avatars.get(avatar_key)
+    if not entry or not _avatar_gallery(entry):
+        raise HTTPException(404, "Avataren hittades inte")
+
+    removed = _avatar_gallery_remove(entry, idx)
+    cid = state["meta"]["campaign_id"]
+    av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+    if removed and removed.get("disk_name"):
+        try:
+            (av_dir / removed["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
+    # Galleriet tomt → ta bort hela posten
+    if avatar_key in avatars and not _avatar_gallery(avatars[avatar_key]):
+        avatars.pop(avatar_key, None)
+    store.save(state)
+    return {"ok": True, "gallery_count": len(_avatar_gallery(avatars[avatar_key])) if avatar_key in avatars else 0}
+
+
+@app.delete("/api/campaign/avatar/{kind:path}")
+async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
+    """Ta bort alla bilder för en karaktär (återgår till standard-sprite)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+    avatars = state.get("avatars", {})
+    entry = avatars.get(avatar_key)
+    if not entry:
+        raise HTTPException(404, "Avataren hittades inte")
+
+    cid = state["meta"]["campaign_id"]
+    av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+    # Radera ALLA bilder i galleriet (inkl. legacy enskild bild)
+    for item in list(_avatar_gallery(entry)):
+        p = av_dir / item.get("disk_name", "")
+        if item.get("disk_name") and p.exists():
+            try:
+                p.unlink()
+            except OSError:
+                pass
+
+    del avatars[avatar_key]
+    store.save(state)
+    return {"ok": True, "message": "Avataren borttagen"}
+
+
+# ── 🧹 Diskstädning: gamla porträtt som inte är aktiva avatarer (2026-08-08) ──
+# Varje karaktär håller upp till MAX_AVATAR_GALLERY bilder som spelaren kan
+# bläddra tillbaka till. Bilder som varken är den AKTIVA avataren eller har
+# rörts på 30 dagar raderas — plus föräldralösa filer som inte refereras av
+# någon state. Körs dagligen i bakgrunden + manuellt via admin-endpointen.
+AVATAR_PURGE_INTERVAL_S = 24 * 3600
+
+
+@app.post("/api/admin/avatars/purge")
+async def admin_purge_avatars(
+    body: dict | None = None, morkrets_token: str | None = Cookie(None)
+):
+    """Städa bort porträtt som inte är satta som aktiva avatarer.
+
+    Body: {"days": 30, "dry_run": false}. dry_run=true rapporterar utan att
+    radera något — kör alltid det först om du är osäker.
+    """
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    body = body or {}
+    days = body.get("days", avatar_purge.PURGE_AFTER_DAYS)
+    days = int(days) if isinstance(days, (int, float, str)) and str(days).isdigit() else avatar_purge.PURGE_AFTER_DAYS
+    dry_run = bool(body.get("dry_run"))
+    stats = await asyncio.to_thread(
+        avatar_purge.purge_all,
+        CAMPAIGNS_DIR,
+        _user_avatar_path("x").parent,
+        older_than_days=max(1, days),
+        dry_run=dry_run,
+    )
+    return {"ok": True, **stats}
+
+
+async def _avatar_purge_loop():
+    """Daglig diskstädning av inaktiva porträtt (30 dagar)."""
+    # Vänta lite vid uppstart så att första requesten inte konkurrerar med
+    # en full katalogskanning.
+    await asyncio.sleep(300)
+    while True:
+        try:
+            await asyncio.to_thread(
+                avatar_purge.purge_all,
+                CAMPAIGNS_DIR,
+                _user_avatar_path("x").parent,
+                older_than_days=avatar_purge.PURGE_AFTER_DAYS,
+            )
+        except Exception as e:
+            logger.warning("🧹 Avatar purge misslyckades: %s", e)
+        await asyncio.sleep(AVATAR_PURGE_INTERVAL_S)
+
+
+def _bootstrap_selfhost_admin() -> None:
+    """Self-host build: create the operator's admin account on first start.
+
+    A fresh clone has no users.json at all, and public signup only ever creates
+    "player" accounts — without this, nobody could reach the admin panel on a
+    brand-new install. Runs only when SELFHOST=1 and both ADMIN_USER and
+    ADMIN_PASSWORD are set, and NEVER touches an account that already exists:
+    a restart must not reset a password the operator has changed.
+    """
+    if not selfhost.enabled():
+        return
+    user = normalize_username(os.getenv("ADMIN_USER", ""))
+    password = (os.getenv("ADMIN_PASSWORD") or "").strip()
+    if not user or not password:
+        logger.info("🖥️ selfhost: ADMIN_USER/ADMIN_PASSWORD not set — no admin bootstrapped")
+        return
+    err = validate_username(user) or validate_password(password)
+    if err:
+        logger.warning("🖥️ selfhost: cannot bootstrap admin %r — %s", user, err)
+        return
+    with _USER_LOCK:
+        users = load_users()
+        if user in users:
+            return
+        users[user] = {
+            "password_hash": hash_password(password),
+            "role": "admin",
+            "created_at": _now_iso(),
+            "last_login": None,
+            "turn_cap": 0,                  # unlimited in the self-host build anyway
+            "turns_used": 0,
+            "promo_bonus": 0,
+            "turn_bonus": 0,
+            "reset_date": _today_str(),
+            "subscription_status": "lifetime",
+            "subscription_until": None,
+            "features": {},
+            "wan_used_today": 0,
+            "wan_reset_date": None,
+        }
+        save_users(users)
+    logger.info("🖥️ selfhost: admin account %r created from ADMIN_USER/ADMIN_PASSWORD", user)
+
+
+@asynccontextmanager
+async def _lifespan(app_: FastAPI):
+    """Starta bakgrundsuppgifter vid uppstart, städa vid nedstängning."""
+    task = asyncio.create_task(_avatar_purge_loop())
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
+
+    # 🆓 Förvärm OpenRouter-free-listan: allow-listen (or_free._KNOWN) måste vara
+    # fylld innan första spelaren väljer en påfylld modell, annars klampas den
+    # tyst till default av _clamp_player_model. Fel sväljs i warm_free_models().
+    try:
+        from or_free import warm_free_models
+        warm = asyncio.create_task(warm_free_models())
+        _BACKGROUND_TASKS.add(warm)
+        warm.add_done_callback(_BACKGROUND_TASKS.discard)
+    except Exception as e:  # pragma: no cover
+        logger.warning("🆓 free-model warmup kunde inte startas: %s", e)
+
+    if selfhost.enabled():
+        # Self-host build: seed the admin account and warm the Ollama model
+        # cache so the first /api/config and the model picker are instant.
+        try:
+            _bootstrap_selfhost_admin()
+        except Exception as e:  # pragma: no cover
+            logger.warning("🖥️ selfhost: admin bootstrap failed: %s", e)
+        try:
+            asyncio.create_task(asyncio.to_thread(selfhost.discover_models))
+        except Exception as e:  # pragma: no cover
+            logger.warning("🖥️ selfhost: Ollama warm-up failed: %s", e)
+
+    try:
+        yield
+    finally:
+        task.cancel()
+
+
+app.router.lifespan_context = _lifespan
+
+
+# ═══════════════════════════════════════
+# SPELARPROFILENS AVATAR (konto — SEPARAT från äventyraren)
+# ═══════════════════════════════════════
+# Profilavataren hör till KONTOT (headerns porträtt) — inte till kampanjens
+# äventyrare/NPC/DM-kort. Målas med Wan 2.7 / Qwen Image 3 Pro via
+# provider-fältet. (StepFun step-image-edit-2 pensionerad 2026-10-10.)
+
+
+@app.get("/api/me/avatar")
+async def me_avatar(idx: int | None = None, w: int | None = None,
+                    morkrets_token: str | None = Cookie(None)):
+    """Spelarprofilens avatar-bild (konto). ?idx=N → bild N ur galleriet;
+    utan idx → den aktiva bilden. ?w=64|128|256|512 → server-genererad
+    tumnagel (diskcachad PNG); utan w → original (backkompat)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    if not gal:
+        raise HTTPException(404, "Ingen profilavatar")
+    item = gal[(idx if idx is not None else int(data.get("gallery_index") or 0)) % len(gal)]
+    path = _user_avatar_path(username).parent / item.get("disk_name", "")
+    if not path.exists():
+        raise HTTPException(404, "Bild saknas på disk")
+    return await _avatar_file_response(path, item.get("ext"), w)
+
+
+@app.get("/api/me/avatar/gallery")
+async def me_avatar_gallery(morkrets_token: str | None = Cookie(None)):
+    """Kontots porträtt-galleri: antal bilder + aktivt index."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    return {"ok": True, "gallery_count": len(gal),
+            "gallery_index": (int(data.get("gallery_index") or 0) % len(gal)) if gal else 0}
+
+
+@app.patch("/api/me/avatar/gallery")
+async def me_avatar_gallery_rotate(body: dict, morkrets_token: str | None = Cookie(None)):
+    """Rotera kontots aktiva porträtt: {'index': N} eller {'delta': ±1}."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    if not gal:
+        raise HTTPException(404, "Ingen profilavatar")
+    cur = int(data.get("gallery_index") or 0)
+    delta = (body or {}).get("delta")
+    if isinstance(delta, int):
+        idx = cur + delta
+    else:
+        idx = (body or {}).get("index")
+        if not isinstance(idx, int):
+            raise HTTPException(400, "Ange index eller delta")
+    data["gallery_index"] = idx % len(gal)
+    _save_user_avatar_gallery(username, data)
+    return {"ok": True, "gallery_index": data["gallery_index"], "gallery_count": len(gal)}
+
+
+@app.delete("/api/me/avatar/gallery/{idx:int}")
+async def me_avatar_gallery_delete_one(idx: int, morkrets_token: str | None = Cookie(None)):
+    """Ta bort EN bild ur kontots porträtt-galleri."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    if not gal:
+        raise HTTPException(404, "Ingen profilavatar")
+    idx = idx % len(gal)
+    removed = gal.pop(idx)
+    if not gal:
+        data["gallery_index"] = 0
+    else:
+        cur = int(data.get("gallery_index") or 0)
+        if idx < cur:
+            cur -= 1
+        elif idx == cur:
+            cur = min(cur, len(gal) - 1)
+        data["gallery_index"] = cur
+    data["gallery"] = gal
+    _save_user_avatar_gallery(username, data)
+    av_dir = _user_avatar_path(username).parent
+    if removed.get("disk_name"):
+        try:
+            (av_dir / removed["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
+    # Galleriet tomt → rensa avatar-flaggan på kontot
+    if not gal:
+        users = load_users()
+        if isinstance(users.get(username), dict):
+            users[username].pop("avatar", None)
+            save_users(users)
+    return {"ok": True, "gallery_count": len(gal)}
+
+
+@app.post("/api/me/avatar/generate")
+async def me_avatar_generate(body: dict | None = None, morkrets_token: str | None = Cookie(None)):
+    """Måla profilavataren — Wan 2.7 / Qwen Image 3 Pro (Token Plan) via
+    provider-fältet ('wan'|'qwen', default wan; okänt/'stepfun' → wan —
+    StepFun step-image-edit-2 pensionerad 2026-10-10). Spelarens egna
+    ord (fri prompt) eller en standardporträtt-prompt om ingen text ges."""
+    if selfhost.enabled():
+        _selfhost_absent("Image generation")
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    provider = str((body or {}).get("provider", "") or "").strip().lower()
+    if provider not in ("wan", "qwen"):
+        provider = "wan"
+    _require_image_gen_tier(username, provider, payload)
+    # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
+    _consume_wan_quota(username)
+
+    user_prompt = ((body or {}).get("prompt") or "").strip()[:450]
+    seed = (body or {}).get("seed")
+    if not isinstance(seed, int):
+        seed = random.randint(0, 999999)
+    # FREE-PROMPT-läge (2026-08-05): om spelaren skriver egna ord används BARA
+    # dem — ingen default-suffix, ingen auto-prompt (samma mönster som vault-
+    # generate). Tom prompt → standardporträtt + fotorealistisk stil (2026-08-07).
+    prompt = _trim_prompt(user_prompt) if user_prompt else _trim_prompt(_PROFILE_AVATAR_DEFAULT + " " + STEP_PORTRAIT_STYLE)
+
+    content: bytes = b""
+    try:
+        if provider == "wan":
+            # Wan 2.7 (Token Plan) — text-to-image. Patron får Wan 2.7 Pro
+            # (2048², features.wan1080), övriga standard 1024². Samma mönster
+            # som vault/campaign wan-grenen (wan2.7-image(-pro), size, seed).
+            wan_model, wan_size = _wan_model_and_size(username)
+            content = await _token_plan_image(wan_model, prompt, wan_size, seed)
+        else:
+            # Qwen Image 3 Pro (Token Plan) — premium (2026-08-15).
+            qwen_model, qwen_size = _qwen_image_model_and_size()
+            content = await _token_plan_image(qwen_model, prompt, qwen_size, seed)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("🎨 Profile avatar (provider=%s) failed: %s", provider, e)
+        raise HTTPException(502, f"Kunde inte nå {provider}: {e}")
+
+    USER_AVATARS_DIR = _user_avatar_path(username).parent
+    USER_AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+    # Galleri (2026-08-07): varje målning LÄGGS TILL (max 5 bilder, äldsta
+    # faller bort) — spelaren roterar 1/N med pilar i profil-popupen.
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    disk_name = f"{username}__{secrets.token_hex(4)}.png"
+    (USER_AVATARS_DIR / disk_name).write_bytes(content)
+    gal.append({
+        "disk_name": disk_name,
+        "ext": ".png",
+        "size": len(content),
+        "ai_generated": True,
+        "seed": seed,
+        "uploaded": datetime.now(timezone.utc).isoformat(),
+    })
+    dropped = None
+    if len(gal) > MAX_AVATAR_GALLERY:
+        dropped = gal.pop(0)
+    data["gallery"] = gal
+    data["gallery_index"] = len(gal) - 1
+    _save_user_avatar_gallery(username, data)
+    if dropped and dropped.get("disk_name"):
+        try:
+            (USER_AVATARS_DIR / dropped["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    users = load_users()
+    if isinstance(users.get(username), dict):
+        users[username]["avatar"] = True
+        save_users(users)
+
+    return {"ok": True, "url": "/api/me/avatar", "seed": seed, "provider": provider,
+            "gallery_count": len(gal), "gallery_index": data["gallery_index"]}
+
+
+@app.delete("/api/me/avatar")
+async def me_avatar_delete(morkrets_token: str | None = Cookie(None)):
+    """Ta bort alla kontots porträtt (återgår till standard-ikon)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    av_dir = _user_avatar_path(username).parent
+    for item in gal:
+        if item.get("disk_name"):
+            try:
+                (av_dir / item["disk_name"]).unlink(missing_ok=True)
+            except OSError:
+                pass
+    gp = _user_gallery_path(username)
+    if gp.exists():
+        try:
+            gp.unlink()
+        except OSError:
+            pass
+    legacy = _user_avatar_path(username)
+    if legacy.exists():
+        legacy.unlink()
+    users = load_users()
+    if isinstance(users.get(username), dict):
+        users[username].pop("avatar", None)
+        save_users(users)
+    return {"ok": True, "message": "Profilavatar borttagen"}
+
+
+# ═══════════════════════════════════════
+# AI-AVATAR-GENERERING (Wan 2.7 / Qwen Image 3 Pro)
+# ═══════════════════════════════════════
+
+# StepFun step-image-edit-2 pensionerad 2026-10-10 (leverantören serverar
+# inte bild-API:n). Modellsträngen finns kvar i _MEDIA_PROV/_OVERVIEW_MEDIA_PROV
+# så historiska bildanrop tetapporteras i admin-vyn.
+# Stilsträngar (2026-08-07): ALLTID fotorealistiskt, aldrig animerat/illustrerat.
+# Anti-animations-direktivet ligger i FÖRSTA meningen så det överlever
+# _trim_prompt(490) även när prompten klipps bakifrån.
+STEP_PORTRAIT_STYLE = (
+    "Photorealistic cinematic portrait, never animated or illustrated — beautifully "
+    "detailed lifelike face, richly detailed gear and clothing, evocative in-world "
+    "background, film-grade dramatic lighting, real photographic textures. "
+    "No text, no watermark."
+)
+# Öppen komposition för icke-porträtt (DM, maskiner, varelser) — kompakt variant
+# som får plats i prompt-budgeten tillsammans med arketyp/direktiv/lore-flourish.
+STEP_OPEN_STYLE = (
+    "Photorealistic cinematic image, never animated or illustrated — film-grade "
+    "dramatic lighting, ultra-detailed realistic materials and textures, "
+    "atmospheric depth. No text, no watermark."
+)
+# Default för spelarprofilens avatar (fri prompt lämnas alltid ren).
+_PROFILE_AVATAR_DEFAULT = (
+    "A moody dark-fantasy portrait of the player, beautifully detailed lifelike "
+    "face, dramatic chiaroscuro lighting, brooding atmosphere."
+)
+
+
+# ── DM-avatar: slumpade arketyper (v28) ──
+# Öppen tolkning av "DM" — aldrig samma motiv två gånger. Seed gör valet
+# deterministiskt (samma seed = samma avatar), så "Reroll" med ny seed ger ny.
+_DM_AVATAR_ARCHETYPES = [
+    "an ancient hooded scholar, face hidden in shadow, floating arcane tomes and glowing glyphs orbiting them",
+    "a benevolent ancient dragon spirit, scales like molten gold, wisps of smoke and embers curling around them",
+    "a celestial oracle wrapped in veils of starlight, a faint halo of constellation light, the cosmos reflected in their eyes",
+    "a mysterious shadow weaver, their silhouette dissolving into threads of darkness, violet strands of magic stitching the air",
+    "an ancient forest elder, bark and moss on their skin, tiny woodland spirits gathering at their shoulders",
+    "a towering crystal being, faceted body refracting candlelight into rainbows, soft humming energy at their core",
+    "a fey trickster with an ever-shifting expression, motes of will-o-wisp light dancing around them, mushrooms at their feet",
+    "a being of the cosmic void, stars scattered across their dark cloak, a tiny galaxy slowly turning in their palm",
+    "an armored warlord of old, battle-worn plate, a glowing war table with tiny moving tokens before them",
+    "a masked librarian of forbidden knowledge, endless shelves of glowing books behind them, one candle burning",
+    "a hooded harbinger with a raven on their shoulder, feathers and loose ink drifting on a moonlit breeze",
+    "an arcane clockwork being, gold gears visible through translucent skin, floating clock-hands circling like needles",
+    "a blind seer with stitched-shut eyes, threads of prophecy unspooling from their fingertips, faint red sigils in the air",
+    "a regal lich-lord of forgotten lineage, a crown of dark iron, spectral courtiers whispering at the edges of the light",
+    "a storm-touched augur, hair crackling with static, a miniature thundercloud circling above their outstretched hand",
+    "a silver-masked duelist of fate, playing cards of light flickering between their fingers, a coiled whip of shadow",
+    "a stone-faced rune carver, glowing runes climbing their arms, a floating anvil and hammer of light beside them",
+    "a moonlit witch of the old roads, a cauldron of stars at their side, wisps of pale blue magic braided through their hair",
+    "a swarm of sleek surveillance drones, red sensor eyes pulsing in unison, orbiting like slow fireflies",
+    "a sentient nebula, a coiled storm of violet gas and newborn stars, vast and patient",
+    "an ancient machine oracle, a floating core of polished alloy and crackling energy, data-glyphs streaming from its surface",
+    "a biomechanical archivist, chrome ribs and threads of optic light woven through a silhouette of living light",
+    "a holographic emissary of a long-dead civilization, flickering static wrapped around a composed, serene face",
+    "a planet spirit glimpsed at dusk, continents drifting across a translucent body like ink in water",
+    "a clockwork void-wisp, a knot of wire and gravity folding lamplight into rings",
+    "a fungal starfarer, tendrils of bioluminescent mycelium trailing behind it like a comet's tail",
+    "a weather entity of a gas giant, crowned with perpetual lightning, raining softly inside its own storm",
+    "a memory of a god, half-erased by time, gilded cracks across its form showing the void beneath",
+]
+
+_DM_AVATAR_MOODS = [
+    "candlelit and intimate",
+    "lit by cold blue moonlight",
+    "warm hearth glow",
+    "flickering torchlight",
+    "eerie green witchlight",
+    "golden hour warmth",
+    "storm-lit by distant lightning",
+    "soft lantern glow",
+    "dim ritual chamber light",
+    "dawn light through high windows",
+]
+
+_DM_AVATAR_PALETTES = [
+    "deep purples and gold",
+    "emerald and bone white",
+    "crimson and obsidian",
+    "teal and copper",
+    "arcane violet and silver",
+    "forest green and amber",
+    "midnight blue and pale gold",
+    "ash grey and ember orange",
+    "sapphire and platinum",
+]
+
+
+def _build_dm_avatar_prompt(seed: int, state: dict | None = None) -> str:
+    """Öppen, slumpad tolkning av DM:n — aldrig samma motiv (seed-styrd).
+    Bygger ENDAST på arketyp/mood/palett — ingen kampanjdata/DM-lore läcker
+    in i avatar-prompten (2026-08-07). Ordning: stil + form-direktiv FÖRE
+    scene så de överlever _trim_prompt(490)."""
+    rng = random.Random(seed or 0)
+    archetype = rng.choice(_DM_AVATAR_ARCHETYPES)
+    mood = rng.choice(_DM_AVATAR_MOODS)
+    palette = rng.choice(_DM_AVATAR_PALETTES)
+    return (
+        f"The Dungeon Master of this tale, imagined as: {archetype}. "
+        + STEP_OPEN_STYLE + " "
+        "Depict this presence EXACTLY as described — it may be a person, machine, "
+        "swarm, nebula or abstract form, never forced into a human. "
+        f"Scene: {mood}, color palette of {palette}."
+    )
+
+
+# ── Klass-specifika visuella ledtrådar (v30) ──
+# Utan dessa smälter alla klasser ihop till en generic "western fantasy rogue".
+# Substring-match på class-fältet (lower) så "Druid (Circle of the Moon)" träffar.
+# Okänd klass → tom sträng (ingen tvingad stil — bildmotorn tolkar fritt).
+# Cues hålls ~110–160 tecken så de + identitet + stil får plats i 490-budgeten.
+_CLASS_VISUAL_CUES = {
+    "druid": (
+        "visibly a wild druid: leaves and moss woven into their look, antlers or bark "
+        "garments, a raven or stag gathered close as companion, one who speaks the tongue of beasts"
+    ),
+    "ranger": (
+        "a weathered wilderness scout in a worn cloak, bow slung at the shoulder, keen "
+        "watchful eyes, trail dust on their boots"
+    ),
+    "wizard": (
+        "a scholarly spellcaster in rune-etched robes, arcane glyphs and glowing tomes "
+        "orbiting them, starlight caught in their sleeves"
+    ),
+    "trollkarl": (
+        "a scholarly spellcaster in rune-etched robes, arcane glyphs and glowing tomes "
+        "orbiting them, starlight caught in their sleeves"
+    ),
+    "sorcerer": (
+        "a spellcaster with raw innate magic crackling across their skin, glowing eyes, "
+        "sparks and embers swirling around them"
+    ),
+    "warlock": (
+        "a pact-bound occultist with unsettling otherworldly sigils, shadowy tendrils, "
+        "a patron's mark glowing faintly nearby"
+    ),
+    "cleric": (
+        "a devoted holy figure in layered vestments, a sacred symbol glowing at their "
+        "chest, gentle divine light around their hands"
+    ),
+    "präst": (
+        "a devoted holy figure in layered vestments, a sacred symbol glowing at their "
+        "chest, gentle divine light around their hands"
+    ),
+    "paladin": (
+        "a radiant oath-sworn knight in battle-worn armor, a holy aura, banner-light "
+        "gleaming on polished steel"
+    ),
+    "bard": (
+        "a charismatic performer with an instrument in hand, notes of light drifting in "
+        "the air, flamboyant traveling clothes"
+    ),
+    "skald": (
+        "a charismatic performer with an instrument in hand, notes of light drifting in "
+        "the air, flamboyant traveling clothes"
+    ),
+    "rogue": (
+        "a shadow-walker in a hooded cloak, daggers glinting at their belt, half their "
+        "face lost in shadow, quick and sly"
+    ),
+    "barbarian": (
+        "a fierce warrior of the wilds in scarred hide and furs, war-paint and trophies "
+        "of old hunts, raw power barely contained"
+    ),
+    "monk": (
+        "a serene unarmed mystic in simple traveling garments, prayer beads, faint "
+        "ki-light around their hands, balanced posture"
+    ),
+}
+
+
+def _class_visual_cues(cls: str | None) -> str:
+    """Visuell klassignatur till avatar-prompten. Tom sträng om klassen är okänd."""
+    c = (cls or "").lower()
+    for key, cue in _CLASS_VISUAL_CUES.items():
+        if key in c:
+            return cue
+    return ""
+
+
+# NPC-prompt: rader med fysiska drag (utseende) lyfts fram före handlingslogg,
+# så porträttet visar PERSONEN — inte vad den senast gjorde ('stood by the
+# notice board' fick dominera och gav samma scen varje gång, 2026-08-07).
+_NPC_APPEARANCE_RE = re.compile(
+    r"(hair|scar|eye|wear|clad|tall|build|aged?|young|old|beard|skin|freckle|voice|"
+    r"cloak|armor|robe|scarred|silver|tattoo|stature|complexion)",
+    re.I,
+)
+# Maskin/varelse-ord i lore → behåll 'depict AS THAT'-direktivet (drönare ska
+# förbli drönare). Saknas orden får NPC:n ett mänskligt porträttdirektiv i
+# stället — annars tolkar bildmotorn 'machine' i stiltexten som cyborg.
+_NPC_MACHINE_RE = re.compile(
+    r"(machine|drone|construct|robot|mechanical|clockwork|automaton|golem|"
+    r"energy being|spirit|undead|skeleton|animated)", re.I,
+)
+_NPC_META_PREFIX_RE = re.compile(r"^(identitet avslöjad|identity revealed)\s*[:–-]\s*", re.I)
+
+
+def _npc_avatar_prompt(state: dict, npc_name: str) -> str:
+    """Bygg NPC-avatar-prompt från kampanjlore.
+
+    Samma namn kan finnas i FLERA poster — Guardian skapar ibland en ny post
+    vid identitetsavslöjande ('Mysterious informant' visar sig vara en fen-
+    scout). Alla posters notes slås ihop så identitet/utseende från avslöjandet
+    inte går förlorat, och fysiska beskrivningar får företräde i prompten.
+    """
+    matches = [
+        n for n in state.get("npcs", [])
+        if str(n.get("name", "")).lower() == npc_name.lower()
+    ]
+    if not matches:
+        return (
+            f"{npc_name}, a mysterious figure in the world of this story. "
+            "Depict them exactly as described — they may be humanoid, machine, creature, "
+            "energy being, object or abstract form, never forced into a person. "
+            + STEP_OPEN_STYLE
+        )
+    matches.sort(key=lambda n: len(str(n.get("notes") or "")), reverse=True)
+    role = next(
+        (str(n.get("role") or "").strip() for n in matches if (n.get("role") or "").strip()),
+        "",
+    )
+    notes_all = " ".join(str(n.get("notes") or "").strip() for n in matches).strip()
+    app_lines, rest_lines = [], []
+    for line in notes_all.split("•"):
+        # strip FÖRE prefix-regexen — raden har ledande mellanslag efter
+        # bullet-spliten och ^-ankaret kräver start-på-rad (2026-08-07).
+        line = _NPC_META_PREFIX_RE.sub("", line.strip()).strip()
+        if not line:
+            continue
+        (app_lines if _NPC_APPEARANCE_RE.search(line) else rest_lines).append(line)
+    desc_parts = [role] if role else []
+    if app_lines:
+        desc_parts.append(" ".join(app_lines[:3]))
+    if rest_lines:
+        desc_parts.append(" ".join(rest_lines)[:180])
+    desc = " ".join(desc_parts).strip()
+    # Stil + direktiv FÖRE desc så de överlever _trim_prompt(490) även när
+    # notes är långa. Maskiner/varelser får öppen komposition (inget
+    # "lifelike face"-krav), människor får porträttstil. (2026-08-07)
+    if _NPC_MACHINE_RE.search(notes_all + " " + role):
+        directive = (
+            "Depict the character EXACTLY as described — if they are a machine, drone, "
+            "creature, energy being or abstract entity, depict them AS THAT, never as a human."
+        )
+        style = STEP_OPEN_STYLE
+    else:
+        directive = (
+            "Depict the character exactly as described in the lore — a human with their "
+            "described features unless the lore says otherwise, never a robot or cyborg."
+        )
+        style = STEP_PORTRAIT_STYLE
+    return f"{npc_name}. {directive} {style} Their lore: {desc}."
+
+
+def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
+    """Bygg bildprompten AUTOMATISKT från karaktärens egna data — användaren
+    promptar aldrig själv. (2026-08-07) Innehåll: identitet + klass-ledtråd +
+    fotorealistisk stil + backstory + equipment + senaste loggpost. DM-lore
+    och "Recent events" är BORTTAGNA — avatar-prompten ska inte läcka in
+    DM-världen, bara beskriva KARAKTÄREN."""
+    if avatar_key == "dm":
+        return _build_dm_avatar_prompt(seed, state)
+    if avatar_key.startswith("npc:"):
+        return _npc_avatar_prompt(state, avatar_key[4:])
+    if avatar_key.startswith("item:"):
+        return _item_avatar_prompt(state, avatar_key[5:])
+
+    # Player / standard — bygg från character sheet + inventory + loggbok
+    ch = state.get("character", {}) or {}
+    name = ch.get("name") or "The Adventurer"
+    race = ch.get("race") or "human"
+    cls = ch.get("class") or "adventurer"
+    gear_s = str(ch.get("gear") or "").strip()[:220]
+    inv_names = [it.get("name", "") for it in (state.get("inventory") or []) if isinstance(it, dict)][:8]
+    inv_s = ", ".join(n for n in inv_names if n) or gear_s
+    story = str(ch.get("story") or "").strip()[:220]
+    # Senaste loggpost (världsaktiviteten just nu) — ger bakgrunden liv.
+    lb = (state.get("world", {}) or {}).get("logbook") or []
+    last_entry = ""
+    if isinstance(lb, list) and lb:
+        last_text = str(lb[-1].get("text") or "").strip() if isinstance(lb[-1], dict) else str(lb[-1]).strip()
+        last_entry = last_text[:140]
+
+    # Ordning spelar roll: _trim_prompt klipper BAKIFRÅN (490 tecken). Det som
+    # definierar bilden ligger FÖRST — identitet, klass-ledtråd och stil — så
+    # de aldrig klipps bort. Backstory/equipment/loggpost (det som kan tummas
+    # på) kommer sist och klipps före något viktigt.
+    parts = [f"{name}, a {race} {cls}."]
+    cue = _class_visual_cues(cls)
+    if cue:
+        parts.append(f"They are {cue}.")
+    parts.append(STEP_PORTRAIT_STYLE)
+    if story:
+        parts.append(f"Backstory: {story}.")
+    if inv_s:
+        parts.append(f"Equipment: {inv_s}.")
+    if last_entry:
+        parts.append(f"Recent journal entry: {last_entry}.")
+    return " ".join(parts)
+
+
+def _item_avatar_prompt(state: dict, slug: str) -> str:
+    """Bildprompt för ETT föremål i inventoryt (2026-09-30). Byggs från
+    föremålets egna fält (namn, typ, sällsynthet, beskrivning, lore,
+    effekter) — samma princip som karaktärsavataren: spelaren promptar
+    aldrig själv, arket är prompten. Stil: still-life-artefakt på mörk
+    bakgrund, aldrig porträtt."""
+    inv = state.get("inventory") or []
+    item = None
+    for it in inv:
+        if isinstance(it, dict) and _item_slug(str(it.get("name") or "")) == slug:
+            item = it
+            break
+    if item is None:
+        # Slug träffar inget föremål (namnbytt/ borttaget) — måla utifrån
+        # slugen själv i stället för att falla tillbaka på karaktären.
+        name = slug.replace("-", " ")
+        parts = [f"A {name}, a single adventuring item."]
+        parts.append(STEP_OPEN_STYLE)
+        return " ".join(parts)
+
+    name = str(item.get("name") or "an item")
+    # Ordning spelar roll: _trim_prompt klipper BAKIFRÅN (490 tecken).
+    # Motiv + stil + komposition FÖRST — beskrivning/lore/effekter sist
+    # (det som kan tummas på), samma princip som karaktärsavataren.
+    parts = [f"{name}, a single fantasy item ({item.get('type') or 'adventuring gear'}), alone on display."]
+    parts.append(STEP_OPEN_STYLE)
+    parts.append(
+        "Composition: museum-display still life, the item resting on dark aged "
+        "wood or stone, single dramatic light source, shallow depth of field."
+    )
+    rarity = item.get("rarity")
+    if rarity in ("magic", "rare", "legendary"):
+        parts.append(f"It is a {rarity} item with a subtle enchanted presence.")
+    desc = str(item.get("description") or "").strip()[:200]
+    if desc:
+        parts.append(f"It looks like this: {desc}.")
+    effects = str(item.get("effects") or "").strip()[:120]
+    if effects:
+        parts.append(f"Magical effects: {effects}.")
+    lore = str(item.get("lore") or "").strip()[:120]
+    if lore:
+        parts.append(f"Lore: {lore}.")
+    return " ".join(parts)
+
+
+def _trim_prompt(p: str, limit: int = 490) -> str:
+    """Klipp prompt till max 'limit' tecken (budget: StepFun-bildmotorn tillät
+    max 512 — gränsen behålls för korta, tydliga prompts).
+    Klipper vid sista mellanslag så inget ord trunkeras."""
+    p = p.strip()
+    if len(p) <= limit:
+        return p
+    cut = p[:limit]
+    if " " in cut:
+        cut = cut[: cut.rfind(" ")]
+    return cut.rstrip(" ,.") + "."
+
+
+def _build_sheet_update_prompt(state: dict) -> str:
+    """Bygg en 'Update from sheet'-prompt från FAKTISK kampanjstate — inte
+    från generisk story. Tar det som syns på arket och i världen just nu:
+    HP, inventory, location (och klass/utseende-ledtråd). (2026-08-04)"""
+    ch = state.get("character", {}) or {}
+    name = ch.get("name") or "The Adventurer"
+    race = ch.get("race") or "human"
+    cls = ch.get("class") or "adventurer"
+    hp = ch.get("hp") or {}
+    hp_cur = hp.get("current")
+    hp_max = hp.get("max")
+    hp_s = f"{hp_cur}/{hp_max}" if hp_cur is not None and hp_max is not None else ""
+    inv = []
+    for it in (state.get("inventory") or []):
+        if isinstance(it, dict) and it.get("name"):
+            inv.append(str(it["name"]))
+        elif isinstance(it, str):
+            inv.append(it)
+        if len(inv) >= 6:
+            break
+    inv_s = ", ".join(inv) if inv else "modest belongings"
+    world = state.get("world") or {}
+    loc = (world.get("current_location") or state.get("current_location") or "").strip()
+    parts = [f"{name}, a {race} {cls}."]
+    # Stilen direkt efter identiteten — _trim_prompt klipper BAKIFRÅN, så
+    # fotorealism-direktivet måste ligga FÖRE state-detaljerna (HP/inv/loc)
+    # som får tummas på. Utan stilen föll bildmotorn på anime-default (2026-08-07).
+    parts.append(STEP_PORTRAIT_STYLE)
+    if hp_s:
+        parts.append(f"Current health: {hp_s}.")
+    parts.append(f"Carrying: {inv_s}.")
+    if loc:
+        parts.append(f"Currently at: {loc}.")
+    cue = _class_visual_cues(cls)
+    if cue:
+        parts.append(f"They are {cue}.")
+    return " ".join(parts)
+
+
+@app.post("/api/campaign/avatar/generate")
+async def generate_avatar(
+    body: dict,
+    morkrets_token: str | None = Cookie(None),
+):
+    """Generera en AI-avatar (Wan 2.7 / Qwen Image 3 Pro) baserat på kampanjdata.
+    Prompten byggs automatiskt från character sheet / NPC-data — ingen
+    användarprompt krävs. 'seed' styr slumpen (samma seed = samma bild).
+    (2026-08-07) Varje anrop målar en HELT NY bild från text — ingen
+    image-to-image-iteration på föregående avatar."""
+    if selfhost.enabled():
+        _selfhost_absent("Image generation")
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    # TIERS: AI-bildgenerering ligger bakom 10€-unlåset. Motorer: Wan 2.7 /
+    # Qwen Image 3 Pro. (StepFun step-image-edit-2 pensionerad 2026-10-10 —
+    # legacy-värden 'stepfun'/okänt normaliseras till wan så gamla cachade
+    # frontend-versioner inte skickar anrop mot en nedlagd API.)
+    provider = str((body or {}).get("provider", "") or "").strip().lower()
+    if provider not in ("wan", "qwen"):
+        provider = "wan"
+    _require_image_gen_tier(username, provider, payload)
+    # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
+    _consume_wan_quota(username)
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    kind = (body or {}).get("kind", "player")
+    avatar_key = _safe_avatar_key(kind)
+    seed = (body or {}).get("seed")
+    if not isinstance(seed, int):
+        seed = random.randint(0, 999999)
+    # mode: "new" = auto-prompt från sheet/dossier, "edit" = state-snapshot
+    # (HP/inventory/plats). BÅDA målar en helt ny bild — ingen iteration på
+    # föregående avatar (2026-08-07).
+    mode = (body or {}).get("mode", "new")
+    if mode not in ("new", "edit"):
+        mode = "new"
+
+    # Fri användarprompt (valfri). mode=new: skickas HELT REN — ingen
+    # auto-prompt, ingen pre-injektion. Spelarens ord ÄR prompten.
+    user_prompt = ((body or {}).get("prompt") or "").strip()
+    if mode == "edit":
+        # Update from sheet: bygg från FAKTISK state (HP, inventory,
+        # location) så avataren följer karaktärens utveckling. Fri text
+        # väger tyngst om den finns, annars state-snapshot:et.
+        sheet_prompt = _build_sheet_update_prompt(state)
+        if user_prompt:
+            prompt = _trim_prompt(f"{user_prompt}\nThe character's current state: {sheet_prompt}")
+        else:
+            prompt = _trim_prompt(sheet_prompt)
+    elif user_prompt:
+        prompt = _trim_prompt(user_prompt)
+    else:
+        prompt = _trim_prompt(_build_avatar_prompt(state, avatar_key, seed))
+    logger.info("🎨 AI avatar: %s (mode=%s, seed %d, provider=%s)", avatar_key, mode, seed, provider)
+    logger.info("🎨 Avatar prompt (%s): %.280s", avatar_key, prompt)
+
+    cid = state["meta"]["campaign_id"]
+    av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+
+    content: bytes = b""
+    try:
+        if provider == "wan":
+            # ── Wan 2.7 (DashScope Token Plan) — text-to-image. Patron (30€)
+            #    får Wan 2.7 Pro 2048² (features.wan1080); övriga 1024².
+            #    n=1, watermark=false, thinking_mode=false. Seed för
+            #    reproducerbarhet. Edit-läge = färsk målning från sheet-data.
+            wan_model, wan_size = _wan_model_and_size(username)
+            content = await _token_plan_image(wan_model, prompt, wan_size, seed)
+        else:
+            # ── Qwen Image 3 Pro (DashScope Token Plan) — premium
+            #    (2026-08-15). Samma endpoint/payload som Wan 2.7.
+            qwen_model, qwen_size = _qwen_image_model_and_size()
+            content = await _token_plan_image(qwen_model, prompt, qwen_size, seed)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("🎨 AI avatar (provider=%s) failed: %s", provider, e)
+        raise HTTPException(502, f"Kunde inte nå {provider}: {e}")
+
+    av_dir.mkdir(parents=True, exist_ok=True)
+    # Galleri (2026-08-07): varje målning LÄGGS TILL i karaktärens galleri
+    # (max 5 bilder, äldsta faller bort) — spelaren roterar 1/N med pilar.
+    disk_name = _new_avatar_disk_name(avatar_key, ".png")
+    (av_dir / disk_name).write_bytes(content)
+
+    avatars = state.setdefault("avatars", {})
+    entry = avatars.setdefault(avatar_key, {})
+    item = {
+        "disk_name": disk_name,
+        "ext": ".png",
+        "size": len(content),
+        "ai_generated": True,
+        "seed": seed,
+        "uploaded": datetime.now(timezone.utc).isoformat(),
+    }
+    dropped = _avatar_gallery_add(entry, item)
+    if dropped and dropped.get("disk_name"):
+        try:
+            (av_dir / dropped["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
+    store.save(state)
+    # Bokför en AI-bildgenerering (iteration), livstid
+    img_model = ("wan2.7-image" if provider == "wan"
+                 else "qwen-image-3.0-pro")
+    _add_image_gen(username, img_model)
+
+    return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}", "seed": seed,
+            "edit_mode": mode == "edit",
+            "gallery_count": len(_avatar_gallery(entry)), "gallery_index": int(entry.get("gallery_index") or 0)}
+
+
+# ═══════════════════════════════════════
+# SCENE ART (2026-10-27) — opt-in: spelaren målar scenen hen just läste
+# ═══════════════════════════════════════
+
+@app.post("/api/campaign/scene")
+async def generate_scene_image(body: dict, morkrets_token: str | None = Cookie(None)):
+    """Måla den scen spelaren klickade på.
+
+    Kostar 1 turn + 1 av dygnets 10 premiumbilder (SAMMA delade räknare som
+    avatarerna — wan_used_today) och ligger bakom 10€-unlåset. Prompten byggs
+    ur statet + den narration som klickades, aldrig ur spelarens fantasi.
+    body: {text?: str, provider?: 'wan'|'qwen', seed?: int}
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    provider = str((body or {}).get("provider", "") or "").strip().lower()
+    if provider not in ("wan", "qwen"):
+        provider = "wan"
+    _require_image_gen_tier(username, provider, payload)
+    _consume_wan_quota(username)  # 1 turn + 1 dygnsplats, dras FÖRE anropet
+
+    from scene_art import build_scene_prompt
+    excerpt = str((body or {}).get("text", "") or "")
+    lang = str((state.get("meta") or {}).get("language") or "en")
+    prompt = build_scene_prompt(state, excerpt, lang)
+    seed = (body or {}).get("seed")
+    if not isinstance(seed, int):
+        seed = random.randint(0, 999999)
+
+    try:
+        if provider == "wan":
+            model, size = _wan_model_and_size(username)
+        else:
+            model, size = _qwen_image_model_and_size()
+        content = await _token_plan_image(model, prompt, size, seed)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("🖼 Scene image (%s) failed: %s", provider, exc)
+        raise HTTPException(502, f"Kunde inte nå {provider}: {exc}")
+
+    cid = state["meta"]["campaign_id"]
+    turn = int((state.get("meta") or {}).get("turn_count") or 0)
+    scene_dir = CAMPAIGNS_DIR / username / cid / "scenes"
+    scene_dir.mkdir(parents=True, exist_ok=True)
+    disk_name = f"scene-{turn:04d}-{secrets.token_hex(4)}.png"
+    (scene_dir / disk_name).write_bytes(content)
+
+    # state["images"] är exportens bildkälla (images/ i zippen) — scenen följer
+    # alltså med spelaren ut, precis som porträtten.
+    state.setdefault("images", []).append({
+        "path": str(scene_dir / disk_name),
+        "url": f"/api/campaign/scene/{disk_name}",
+        "turn": turn,
+        "seed": seed,
+        "provider": provider,
+        "prompt": prompt,
+        "created": datetime.now(timezone.utc).isoformat(),
+    })
+    store.save(state)
+    _add_image_gen(username, "wan2.7-image" if provider == "wan" else "qwen-image-3.0-pro")
+    logger.info("🖼 Scene painted: %s (turn %d, %s, seed %d)", disk_name, turn, provider, seed)
+    return {"ok": True, "url": f"/api/campaign/scene/{disk_name}", "seed": seed,
+            "provider": provider, "turn": turn}
+
+
+@app.get("/api/campaign/scene/{name}")
+async def serve_scene_image(name: str, morkrets_token: str | None = Cookie(None)):
+    """Servera en målad scen ur den AKTIVA kampanjens scenes/-mapp."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,90}", name or ""):
+        raise HTTPException(400, "Bad scene name")
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    path = CAMPAIGNS_DIR / username / state["meta"]["campaign_id"] / "scenes" / name
+    if not path.is_file():
+        raise HTTPException(404, "Scene not found")
+    return FileResponse(path, media_type="image/png",
+                        headers={"Cache-Control": "private, max-age=31536000, immutable"})
+
+
+# ═══════════════════════════════════════
+# EXPORT
+# ═══════════════════════════════════════
+
+
+# ═══════════════════════════════════════
+# CAMPAIGN EXPORT — markdown-renderare (2026-09-30, rostad: "allt relevant,
+# snyggt strukturerat"). Zip-layout (engelsk chrome — spelets UI-språk):
+#   README.md               översikt + innehållsförteckning
+#   campaign.json           komplett rått state (maskinläsbart)
+#   character/sheet.md|json karaktärsark + inventory.md (utrustning & kassa)
+#   transcript/session-*    .md (läsbart: Player/DM/Lorekeeper) + .jsonl (rått)
+#   world/                  npcs.md, locations.md, quests.md, lore.md, facts.md
+#   journal/                logbook.md, summaries.md, chapters.md, arcs.md
+#   attachments/            spelarens uppladdade filer (originalnamn)
+#   images/                 genererade bilder + images/avatars/ (porträtt)
+# Tidigare luckor som denna version stänger: quests, inventory/currency,
+# facts-registret, loggboken, chapter/arc-sammanfattningar (globben tog bara
+# summary-*.json), attachments, guardian-rader (labbades som "Spelare"),
+# __VAKNA_DM__-sentinel (läckte i transkriptet), svensk README i engelsk UI.
+# ═══════════════════════════════════════
+
+_ABILITY_KEYS = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
+
+
+def _export_signed(v) -> str:
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return str(v if v is not None else "?")
+    return f"+{n}" if n >= 0 else str(n)
+
+
+def _export_quest_mark(status: str) -> str:
+    s = (status or "").strip().lower()
+    if s in ("slutförd", "completed", "klar"):
+        return "✅"
+    if s in ("misslyckad", "failed"):
+        return "💀"
+    return "⚑"
+
+
+def _export_char_sheet_md(char: dict) -> str:
+    """Läsbart karaktärsark (markdown)."""
+    if not char or not char.get("name"):
+        return "# Character\n\n_No character created yet._\n"
+    L = [f"# {char['name']}"]
+    sub = " · ".join(
+        str(x) for x in (
+            char.get("race"), char.get("class"),
+            f"Level {char.get('level', 1)}", char.get("alignment"),
+        ) if x
+    )
+    if sub:
+        L.append(f"\n*{sub}*\n")
+    if char.get("background"):
+        L.append(f"**Background:** {char['background']}\n")
+
+    hp = char.get("hp") or {}
+    L.append("## Vitals\n")
+    temp = f" (+{hp['temp']} temp)" if hp.get("temp") else ""
+    L.append(f"- **HP:** {hp.get('current', '?')}/{hp.get('max', '?')}{temp}")
+    L.append(
+        f"- **AC:** {char.get('ac', '?')} · **Initiative:** {char.get('initiative', '?')}"
+        f" · **Speed:** {char.get('speed', '?')}"
+    )
+    L.append(f"- **Perception:** {char.get('perception', '?')} · **Proficiency:** {_export_signed(char.get('proficiency', 2))}")
+    xp = char.get("xp") or {}
+    if xp:
+        L.append(f"- **XP:** {xp.get('current', 0)} / {xp.get('next_level', '?')}")
+    ss = char.get("spell_slots") or {}
+    if ss.get("max"):
+        L.append(f"- **Spell slots:** {ss.get('current', 0)}/{ss.get('max', 0)}")
+    if char.get("inspiration"):
+        L.append("- **Inspiration:** ✦ yes")
+    if char.get("exhaustion"):
+        L.append(f"- **Exhaustion:** level {char['exhaustion']}")
+
+    ab = char.get("abilities") or {}
+    keys = [k for k in _ABILITY_KEYS if k in ab]
+    if keys:
+        L.append("\n## Abilities\n")
+        L.append("| | " + " | ".join(keys) + " |")
+        L.append("|---" * (len(keys) + 1) + "|")
+        L.append("| Score | " + " | ".join(str((ab.get(k) or {}).get("score", "?")) for k in keys) + " |")
+        L.append("| Mod | " + " | ".join(_export_signed((ab.get(k) or {}).get("mod")) for k in keys) + " |")
+
+    saves = char.get("saves") or []
+    prof_saves = [s.get("name", "?") for s in saves if isinstance(s, dict) and s.get("prof")]
+    if prof_saves:
+        L.append(f"\n**Saving throws proficient:** {', '.join(prof_saves)}")
+
+    skills = char.get("skills") or []
+    if skills:
+        L.append("\n## Skills\n")
+        for s in skills:
+            if not isinstance(s, dict):
+                continue
+            mark = "●" if s.get("proficient") else "○"
+            L.append(f"- {mark} {s.get('name', '?')} ({s.get('ability', '?')})")
+
+    feats = char.get("features") or []
+    if feats:
+        L.append("\n## Features\n")
+        for ft in feats:
+            if not isinstance(ft, dict):
+                L.append(f"- {ft}")
+                continue
+            head = f"- **{ft.get('name', '?')}**"
+            if ft.get("level"):
+                head += f" (level {ft['level']})"
+            L.append(head)
+            if ft.get("description"):
+                L.append(f"  {ft['description']}")
+
+    spells = char.get("spells") or []
+    if spells:
+        L.append("\n## Spells\n")
+        by_level: dict[int, list] = {}
+        for sp in spells:
+            if not isinstance(sp, dict):
+                continue
+            by_level.setdefault(int(sp.get("level", 0) or 0), []).append(sp)
+        for lvl in sorted(by_level):
+            L.append(f"\n### {'Cantrips' if lvl == 0 else f'Level {lvl}'}\n")
+            for sp in by_level[lvl]:
+                bits = [b for b in (sp.get("school"), sp.get("casting_time")) if b]
+                L.append(f"- **{sp.get('name', '?')}**" + (f" _({' · '.join(bits)})_" if bits else ""))
+                if sp.get("damage_dice"):
+                    L.append(f"  - Damage: {sp['damage_dice']}")
+                if sp.get("description"):
+                    L.append(f"  - {sp['description']}")
+
+    traits = char.get("traits") or []
+    if traits:
+        L.append("\n## Traits\n")
+        for t in traits:
+            L.append(f"- {t}")
+
+    cond = []
+    if char.get("resistances"):
+        cond.append(f"**Resistances:** {', '.join(str(r) for r in char['resistances'])}")
+    if char.get("vulnerabilities"):
+        cond.append(f"**Vulnerabilities:** {', '.join(str(v) for v in char['vulnerabilities'])}")
+    if char.get("immunities"):
+        cond.append(f"**Immunities:** {', '.join(str(i) for i in char['immunities'])}")
+    if char.get("darkvision"):
+        cond.append(f"**Darkvision:** {char['darkvision']}")
+    if cond:
+        L.append("\n## Senses & Resistances\n")
+        L.extend(f"- {c}" for c in cond)
+
+    training = char.get("training") or []
+    if training:
+        L.append("\n## Training\n")
+        for tr in training:
+            if isinstance(tr, dict):
+                L.append(f"- {tr.get('name', '?')} — {tr.get('days_spent', 0)}/{tr.get('days_needed', '?')} days"
+                         + (f" ({tr['skill']})" if tr.get("skill") else ""))
+            else:
+                L.append(f"- {tr}")
+
+    if char.get("gear"):
+        L.append(f"\n## Starting Gear\n\n{char['gear']}")
+    if char.get("story"):
+        L.append(f"\n## Story\n\n> {char['story']}")
+    if char.get("notes"):
+        L.append(f"\n## Your Notes\n\n{char['notes']}")
+    return "\n".join(L) + "\n"
+
+
+def _export_inventory_md(inventory: list, currency: dict, char: dict) -> str:
+    """Utrustning + kassa (läsbar markdown)."""
+    L = ["# Inventory & Treasury", "\n## Treasury\n"]
+    cur = currency or {}
+    coins = " · ".join(f"**{cur.get(k, 0)}** {k.upper()}" for k in ("pp", "gp", "sp", "cp") if cur.get(k))
+    L.append(coins if coins else "_No coin._")
+    items = [it for it in (inventory or []) if isinstance(it, dict)]
+    if not items:
+        L.append("\n## Equipment\n\n_Pockets empty._")
+        return "\n".join(L) + "\n"
+    L.append("\n## Equipment\n")
+    total_w = sum(float(it.get("weight") or 0) * int(it.get("qty") or 1) for it in items)
+    cap = char.get("max_weight_lbs") if char else None
+    if cap:
+        L.append(f"_Carrying {total_w:g} / {cap:g} lbs. ✦ = equipped_\n")
+    else:
+        L.append("_✦ = equipped_\n")
+    by_cat: dict[str, list] = {}
+    for it in items:
+        cat = str(it.get("category") or it.get("type") or "other").title()
+        by_cat.setdefault(cat, []).append(it)
+    for cat in sorted(by_cat):
+        L.append(f"\n### {cat}\n")
+        for it in by_cat[cat]:
+            star = " ✦" if it.get("equipped") else ""
+            qty = f" ×{it['qty']}" if int(it.get("qty") or 1) > 1 else ""
+            rar = it.get("rarity") or "normal"
+            rar_s = f" _({rar})_" if rar != "normal" else ""
+            L.append(f"- **{it.get('name', '?')}**{qty}{star}{rar_s}")
+            bits = []
+            if it.get("damage"):
+                bits.append(str(it["damage"]))
+            elif it.get("damage_dice"):
+                bits.append(str(it["damage_dice"]) + (f" {it['damage_type']}" if it.get("damage_type") else ""))
+            if it.get("ac_bonus"):
+                bits.append(f"AC {it['ac_bonus']}")
+            if it.get("magic_bonus"):
+                bits.append(f"+{it['magic_bonus']}")
+            if it.get("range"):
+                bits.append(str(it["range"]))
+            if it.get("properties"):
+                bits.append(", ".join(str(p) for p in it["properties"]))
+            if it.get("weight"):
+                bits.append(f"{float(it['weight']):g} lbs")
+            if it.get("charges") is not None and it.get("max_charges"):
+                bits.append(f"charges {it['charges']}/{it['max_charges']}")
+            if bits:
+                L.append(f"  - {' · '.join(bits)}")
+            desc = it.get("description") or it.get("lore")
+            if desc:
+                L.append(f"  - {desc}")
+    return "\n".join(L) + "\n"
+
+
+def _export_npcs_md(npcs: list) -> str:
+    L = ["# NPCs"]
+    alive: list = []
+    fallen: list = []
+    for n in npcs or []:
+        if not isinstance(n, dict):
+            continue
+        (alive if n.get("alive", True) else fallen).append(n)
+    if not alive and not fallen:
+        return "# NPCs\n\n_No one met yet._\n"
+
+    def block(n: dict) -> list[str]:
+        bits = [b for b in (n.get("role"), n.get("relation")) if b]
+        out = [f"\n## {n.get('name', '?')}"]
+        if bits:
+            out.append(f"*{' · '.join(str(b) for b in bits)}*")
+        if n.get("notes"):
+            out.append(f"\n{n['notes']}")
+        return out
+
+    for n in alive:
+        L.extend(block(n))
+    if fallen:
+        L.append("\n---\n\n# Fallen\n")
+        for n in fallen:
+            L.extend(block(n))
+    return "\n".join(L) + "\n"
+
+
+def _export_locations_md(state: dict) -> str:
+    """Kända platser (med restid — ren beräkning, ingen LLM) + reslogg."""
+    # get_locations_with_travel muterar loc-dicts (sätter x/y) — kör på en kopia
+    # så exporten aldrig rör live-state.
+    try:
+        probe = {**state, "locations": [dict(l) for l in state.get("locations", []) if isinstance(l, dict)]}
+        locs = get_locations_with_travel(probe, lang="en")
+    except Exception:
+        locs = []
+    L = ["# Locations"]
+    if not locs:
+        L.append("\n_No places discovered yet._")
+    else:
+        for loc in locs:
+            tag = " 📍 _You are here_" if loc.get("current") else (" ◆ visited" if loc.get("visited") else " ◇ known")
+            L.append(f"\n## {loc.get('name', '?')}{tag}\n")
+            if loc.get("description"):
+                L.append(f"{loc['description']}")
+            if loc.get("lore"):
+                L.append(f"\n> {loc['lore']}")
+            meta_bits = []
+            if loc.get("terrain") and loc["terrain"] != "okänd":
+                meta_bits.append(f"terrain: {loc['terrain']}")
+            if not loc.get("current") and loc.get("travel_text"):
+                meta_bits.append(str(loc["travel_text"]))
+            if loc.get("landmarks"):
+                meta_bits.append("landmarks: " + ", ".join(str(x) for x in loc["landmarks"]))
+            if meta_bits:
+                L.append("\n_" + " · ".join(meta_bits) + "_")
+    travel_log = (state.get("world") or {}).get("travel_log") or []
+    if travel_log:
+        L.append("\n---\n\n## Journeys\n")
+        for t in travel_log:
+            if isinstance(t, dict):
+                L.append(f"- Day {t.get('day', '?')}: {t.get('from', '?')} → {t.get('to', '?')}")
+    return "\n".join(L) + "\n"
+
+
+def _export_quests_md(quests: list) -> str:
+    qs = [q for q in quests or [] if isinstance(q, dict)]
+    if not qs:
+        return "# Quests\n\n_No quests yet._\n"
+    groups = {"⚑ Active": [], "✅ Completed": [], "💀 Failed": []}
+    order = {"⚑": "⚑ Active", "✅": "✅ Completed", "💀": "💀 Failed"}
+    for q in qs:
+        groups[order[_export_quest_mark(q.get("status", ""))]].append(q)
+    L = ["# Quests"]
+    for title in ("⚑ Active", "✅ Completed", "💀 Failed"):
+        group = groups[title]
+        if not group:
+            continue
+        L.append(f"\n## {title}\n")
+        for q in group:
+            L.append(f"\n### {q.get('name', '?')}\n")
+            if q.get("description"):
+                L.append(f"{q['description']}\n")
+            bits = []
+            if q.get("reward"):
+                bits.append(f"reward: {q['reward']}")
+            if q.get("xp_reward"):
+                bits.append(f"{q['xp_reward']} XP")
+            if q.get("gold_reward"):
+                bits.append(f"{q['gold_reward']} gp")
+            if q.get("created_turn") is not None:
+                bits.append(f"given at turn {q['created_turn']}")
+            if q.get("completed_turn") is not None:
+                bits.append(f"closed at turn {q['completed_turn']}")
+            if bits:
+                L.append("*" + " · ".join(bits) + "*")
+    return "\n".join(L) + "\n"
+
+
+def _export_facts_md(active: list, superseded: list, archived: list, pinned: list) -> str:
+    if not (active or superseded or archived or pinned):
+        return "# Facts\n\n_No facts recorded yet._\n"
+    L = ["# Facts"]
+    if pinned:
+        L.append("\n## Pinned by you\n")
+        for p in pinned:
+            L.append(f"- 📌 {p}")
+    by_cat: dict[str, list] = {}
+    for f in active:
+        by_cat.setdefault(str(f.get("category", "world")), []).append(f)
+    for cat in sorted(by_cat):
+        L.append(f"\n## {cat.title()}\n")
+        for f in sorted(by_cat[cat], key=lambda x: x.get("source_turn", 0)):
+            L.append(f"- {f.get('text', '')} _(turn {f.get('source_turn', '?')})_")
+    if superseded:
+        L.append("\n## Superseded (older truths)\n")
+        for f in superseded:
+            s = f"- ~~{f.get('text', '')}~~ _(turn {f.get('source_turn', '?')})_"
+            if f.get("replaced_by_text"):
+                s += f" → replaced by: {f['replaced_by_text']}"
+            L.append(s)
+    if archived:
+        L.append("\n## Forgotten (archived)\n")
+        for f in archived:
+            L.append(f"- {f.get('text', '')} _(turn {f.get('source_turn', '?')})_")
+    return "\n".join(L) + "\n"
+
+
+def _export_logbook_md(state: dict) -> str:
+    """Äventyrsjournal — LLM-cachen (logbook_llm) först, sedan Guardian-dagar."""
+    world = state.get("world") or {}
+    llm = world.get("logbook_llm") or {}
+    days = llm.get("days") or []
+    title = llm.get("title") or "Journal"
+    if days:
+        L = [f"# {title}"]
+        if llm.get("summary"):
+            L.append(f"\n> {llm['summary']}")
+        for d in days:
+            if not isinstance(d, dict):
+                continue
+            head = f"\n## Day {d.get('day', '?')}"
+            if d.get("title"):
+                head += f" — {d['title']}"
+            L.append(head + "\n")
+            if d.get("mood"):
+                L.append(f"*Mood: {d['mood']}*")
+            if d.get("location"):
+                L.append(f"*Location: {d['location']}*")
+            for ev in d.get("events") or []:
+                L.append(f"- {ev}")
+            if d.get("npcs_met"):
+                L.append(f"\n_NPCs met: {', '.join(str(m) for m in d['npcs_met'])}_")
+            if d.get("quests"):
+                L.append(f"_Quests: {'; '.join(str(q) for q in d['quests'])}_")
+        return "\n".join(L) + "\n"
+    guard = world.get("logbook") or []
+    if isinstance(guard, list) and guard:
+        by_day: dict = {}
+        for e in guard:
+            if not isinstance(e, dict):
+                continue
+            by_day.setdefault(e.get("day", 1), []).append(e)
+        L = ["# Journal"]
+        for day in sorted(by_day):
+            L.append(f"\n## Day {day}\n")
+            for e in by_day[day]:
+                turn = e.get("turn")
+                prefix = f"_(turn {turn})_ " if turn is not None else ""
+                L.append(f"- {prefix}{e.get('text', '')}")
+        return "\n".join(L) + "\n"
+    return "# Journal\n\n_No journal entries yet._\n"
+
+
+def _export_summary_books(sdir: Path) -> tuple[str, str, str]:
+    """(scenes, chapters, arcs) markdown ur summaries/ — ALLA tre nivåerna
+    (gamla exporten globbade bara summary-*.json och tappade chapter/arc)."""
+    def load(pattern: str) -> list[dict]:
+        out = []
+        if sdir.exists():
+            for f in sorted(sdir.glob(pattern)):
+                try:
+                    d = json.loads(f.read_text())
+                    if isinstance(d, dict):
+                        out.append(d)
+                except (json.JSONDecodeError, OSError):
+                    continue
+        return out
+
+    scenes = load("summary-*.json")
+    chapters = load("chapter-*.json")
+    arcs = load("campaign-arc-*.json")
+
+    if scenes:
+        L = ["# Scene Summaries"]
+        for s in scenes:
+            L.append(f"\n## Turn {s.get('turn', '?')}\n\n{s.get('text', '')}\n")
+        scenes_md = "\n".join(L) + "\n"
+    else:
+        scenes_md = "# Scene Summaries\n\n_None yet._\n"
+
+    if chapters:
+        L = ["# Chapters"]
+        for c in chapters:
+            created = f" _({str(c['created'])[:10]})_" if c.get("created") else ""
+            L.append(f"\n## Chapter {c.get('chapter', '?')}{created}\n\n{c.get('text', '')}\n")
+        chapters_md = "\n".join(L) + "\n"
+    else:
+        chapters_md = "# Chapters\n\n_None yet._\n"
+
+    if arcs:
+        L = ["# Campaign Arcs"]
+        for a in arcs:
+            created = f" _({str(a['created'])[:10]})_" if a.get("created") else ""
+            L.append(f"\n## Arc {a.get('arc', '?')}{created}\n\n{a.get('text', '')}\n")
+        arcs_md = "\n".join(L) + "\n"
+    else:
+        arcs_md = "# Campaign Arcs\n\n_None yet._\n"
+
+    return scenes_md, chapters_md, arcs_md
+
+
+def _export_transcript_md(tfile: Path) -> str:
+    """JSONL → läsbar markdown med ROLLRÄTT etikett (guardian = Lorekeeper,
+    inte 'Spelare' som förr) och utan interna sentinel-rader (__VAKNA_DM__)."""
+    title = tfile.stem.replace("-", " ").title()
+    L = [f"# {title}"]
+    try:
+        lines = tfile.read_text().splitlines()
+    except OSError:
+        return f"# {title}\n\n_Transcript unavailable._\n"
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        content = entry.get("content") or ""
+        if content == "__VAKNA_DM__":
+            continue
+        meta = entry.get("meta") or {}
+        role = entry.get("role", "?")
+        if meta.get("log"):
+            label = "📣 System"
+        elif role == "assistant":
+            label = "🧙 Dungeon Master"
+        elif role == "guardian":
+            label = "🦉 Lorekeeper"
+        else:
+            label = "⚔️ Player"
+        ts = str(entry.get("ts", ""))[:16].replace("T", " ")
+        stamp = f" · {ts}" if ts else ""
+        L.append(f"\n### {label}{stamp}\n\n{content}\n")
+    return "\n".join(L) + "\n"
+
+
+@app.get("/api/campaign/export")
+async def export_campaign(morkrets_token: str | None = Cookie(None)):
+    """Exportera kampanjen som zip (3€ Support-förmån — features.export).
+
+    Komplett arkiv 2026-09-30: README + rått state + karaktärsark + inventarie
+    + transkript (md + jsonl) + värld (NPCs/platser/quests/lore/facts)
+    + journal (loggbok/scener/kapitel/bågar) + attachments + alla bilder.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    # Betalvägg (2026-10-01): exporten ligger hos DONATIONEN (any amount 1€+,
+    # permanent) — inte längre hos 10€-unlocken. _is_supporter täcker även
+    # legacy tier1/tier2/lifetime (de har betalat) så ingen gammal köpare tappar
+    # exporten. Samma 403-form som bild/TTS-grindarna.
+    _require_supporter(username, payload, "export",
+                       "Campaign export is part of the supporter unlock — any donation "
+                       "(1€ or more) unlocks it permanently.")
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    meta = state["meta"]
+    cid = meta.get("campaign_id", "")
+    char = state.get("character") or {}
+    world = state.get("world") or {}
+
+    # ── Fakta (Codex Facts-flikens register) — active / superseded / archived ──
+    facts_active: list[dict] = []
+    facts_superseded: list[dict] = []
+    facts_archived: list[dict] = []
+    try:
+        register = FactRegister(username, cid)
+        for f in register._facts:
+            d = f.model_dump()
+            if f.superseded_by:
+                by_id = {x.id: x for x in register._facts}
+                repl = by_id.get(f.superseded_by)
+                d["replaced_by_text"] = repl.text if repl else None
+                facts_superseded.append(d)
+            elif f.archived:
+                facts_archived.append(d)
+            else:
+                facts_active.append(d)
+    except Exception:
+        pass
+    pinned = state.get("pinned_facts") or []
+
+    # ── Journal-böcker (scener/kapitel/bågar) ──
+    sdir = store.get_summaries_dir(state)
+    scenes_md, chapters_md, arcs_md = _export_summary_books(sdir)
+
+    # ── Transkript-filer ──
+    tdir = store.get_transcripts_dir(state)
+    tfiles = sorted(tdir.glob("session-*.jsonl")) if tdir.exists() else []
+
+    # ── Attachments (originalnamn, dedup) ──
+    att_dir = CAMPAIGNS_DIR / username / cid / "attachments"
+    att_items: list[tuple[str, bytes]] = []
+    used_names: set[str] = set()
+    for a in state.get("attachments") or []:
+        if not isinstance(a, dict) or not a.get("disk_name"):
+            continue
+        src = att_dir / str(a["disk_name"])
+        if not src.exists():
+            continue
+        name = Path(str(a.get("name") or a["disk_name"])).name or str(a["disk_name"])
+        base, ext = os.path.splitext(name)
+        n = 1
+        while name.lower() in used_names:
+            n += 1
+            name = f"{base} ({n}){ext}"
+        used_names.add(name.lower())
+        try:
+            att_items.append((name, src.read_bytes()))
+        except OSError:
+            continue
+
+    # ── Bilder: legacy state["images"] + avatars-porträtt (ALDRIG tumnaglar) ──
+    img_items: list[tuple[str, bytes]] = []
+    for img in state.get("images") or []:
+        if isinstance(img, dict) and img.get("path"):
+            img_path = Path(str(img["path"]))
+            if img_path.exists():
+                try:
+                    img_items.append((f"images/{img_path.name}", img_path.read_bytes()))
+                except OSError:
+                    pass
+    av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+    if av_dir.exists():
+        for avf in sorted(av_dir.rglob("*")):
+            # thumbs/ är derivat av avatars/ — hoppa över (rostad: "alla bilder
+            # följer med" = originalsen; tumnaglar är bara mindre kopior).
+            if avf.is_file() and "thumbs" not in avf.relative_to(av_dir).parts[:-1]:
+                try:
+                    img_items.append((f"images/avatars/{avf.name}", avf.read_bytes()))
+                except OSError:
+                    continue
+
+    # ── README — översikt + innehållsförteckning ──
+    quests = [q for q in state.get("quests") or [] if isinstance(q, dict)]
+    active_quests = sum(1 for q in quests if _export_quest_mark(q.get("status", "")) == "⚑")
+    npcs = [n for n in state.get("npcs") or [] if isinstance(n, dict)]
+    exported_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    hero_line = (
+        f"**{char.get('name')}** — Level {char.get('level', 1)} {char.get('race', '?')} {char.get('class', '?')}"
+        if char.get("name") else "_No character created yet._"
+    )
+    readme = f"""# {meta.get('campaign_name', "The Lore Weaver's Cauldron")}
+
+> Exported from **The Lore Weaver's Cauldron** · {exported_at}
+
+| | |
+|---|---|
+| **Campaign ID** | `{cid}` |
+| **Created** | {str(meta.get('created', ''))[:16].replace('T', ' ')} |
+| **Last updated** | {str(meta.get('last_updated', ''))[:16].replace('T', ' ')} |
+| **Turns played** | {meta.get('turn_count', 0)} |
+| **Sessions** | {len(tfiles) or meta.get('session_count', 1)} |
+
+## Hero
+
+{hero_line}
+
+## Where the story stands
+
+- **Location:** {world.get('current_location') or 'Unknown'}
+- **In-game time:** {world.get('time') or 'Unknown'}
+- **Quests:** {active_quests} active · {len(quests)} total
+- **NPCs met:** {len(npcs)}
+- **Facts recorded:** {len(facts_active) + len(facts_superseded)}
+
+## What's in this archive
+
+| Path | Contents |
+|---|---|
+| `campaign.json` | Complete raw campaign state (machine-readable) |
+| `character/sheet.md` | Character sheet — readable |
+| `character/sheet.json` | Character sheet — raw data |
+| `character/inventory.md` | Equipment & treasury |
+| `transcript/session-*.md` | The full story — readable (Player, DM, Lorekeeper) |
+| `transcript/session-*.jsonl` | Raw transcript data |
+| `world/npcs.md` | Everyone you have met |
+| `world/locations.md` | Known places, journeys & travel times |
+| `world/quests.md` | The quest log |
+| `world/lore.md` | World lore |
+| `world/facts.md` | The fact register (incl. superseded truths) |
+| `journal/logbook.md` | The adventure journal, day by day |
+| `journal/summaries.md` | Scene summaries |
+| `journal/chapters.md` | Chapter summaries |
+| `journal/arcs.md` | Campaign arcs |
+| `attachments/` | Files you uploaded ({len(att_items)}) |
+| `images/` | Generated artwork & portraits ({len(img_items)}) |
+
+_May your story outlive the table. ✦_
+"""
+
+    # ── Lore ──
+    lore = state.get("lore", [])
+    if isinstance(lore, list):
+        lore_md = "\n\n".join(f"- {item}" for item in lore) if lore else "_No lore yet._"
+    else:
+        lore_md = str(lore)
+
+    # ── Bygg zippen ──
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("README.md", readme)
+        zf.writestr("campaign.json", json.dumps(state, ensure_ascii=False, indent=2, default=str))
+
+        zf.writestr("character/sheet.md", _export_char_sheet_md(char))
+        zf.writestr("character/sheet.json", json.dumps(char, ensure_ascii=False, indent=2, default=str))
+        zf.writestr("character/inventory.md",
+                    _export_inventory_md(state.get("inventory") or [], state.get("currency") or {}, char))
+
+        for tfile in tfiles:
+            zf.writestr(f"transcript/{tfile.stem}.md", _export_transcript_md(tfile))
+            try:
+                zf.writestr(f"transcript/{tfile.stem}.jsonl", tfile.read_text())
+            except OSError:
+                pass
+
+        zf.writestr("world/npcs.md", _export_npcs_md(npcs))
+        zf.writestr("world/locations.md", _export_locations_md(state))
+        zf.writestr("world/quests.md", _export_quests_md(quests))
+        zf.writestr("world/lore.md", f"# Lore\n\n{lore_md}\n")
+        zf.writestr("world/facts.md", _export_facts_md(facts_active, facts_superseded, facts_archived, pinned))
+
+        zf.writestr("journal/logbook.md", _export_logbook_md(state))
+        zf.writestr("journal/summaries.md", scenes_md)
+        zf.writestr("journal/chapters.md", chapters_md)
+        zf.writestr("journal/arcs.md", arcs_md)
+
+        for name, data in att_items:
+            zf.writestr(f"attachments/{name}", data)
+        for name, data in img_items:
+            zf.writestr(name, data)
+
+    buf.seek(0)
+    filename = f"the-lore-weavers-cauldron-{cid}.zip"
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ═══════════════════════════════════════
+# IMPORT (legacy prompt — used by /api/world/build for file extraction)
+# ═══════════════════════════════════════
+
+IMPORT_PROMPT = """Du är en dataextraktor för D&D-kampanjer. Analysera texten och extrahera strukturerad data.
+
+Svara ENDAST med giltig JSON (ingen markdown):
+{
+  "characters": [{"name": "", "race": "", "class": "", "description": ""}],
+  "npcs": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
+  "locations": [{"name": "", "description": ""}],
+  "lore": ["string — viktiga världsdetaljer, historia, myter"],
+  "quests": [{"name": "", "description": "", "status": "aktiv"}],
+  "items": [{"name": "", "type": "Annat", "description": "", "rarity": "normal"}]
+}
+
+Om en kategori saknas i texten, returnera tom array. Extrahera bara det som faktiskt finns."""
+
+IMPORT_PROMPT_EN = """You are a data extractor for D&D campaigns. Analyze the text and extract structured data.
+
+ALL user-facing output values (names, descriptions, notes, lore) MUST be written in ENGLISH — regardless of the source text's language.
+
+Reply ONLY with valid JSON (no markdown):
+{
+  "characters": [{"name": "", "race": "", "class": "", "description": ""}],
+  "npcs": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
+  "locations": [{"name": "", "description": ""}],
+  "lore": ["string — important world details, history, myths"],
+  "quests": [{"name": "", "description": "", "status": "aktiv"}],
+  "items": [{"name": "", "type": "Other", "description": "", "rarity": "normal"}]
+}
+
+ENUM VALUES ARE CODE TOKENS — write them EXACTLY as shown, never translate them:
+relation: allierad | neutral | fiende | okänd   ·   quest status: aktiv.
+If a category is missing in the text, return an empty array. Extract only what is actually there."""
+
+
+# ═══════════════════════════════════════
+# WORLD BUILDING (prompt + optional files)
+# ═══════════════════════════════════════
+
+WORLD_BUILD_PROMPT = """Du är en världsextraktor för D&D-kampanjer. Analysera spelarens beskrivning och extrahera strukturerad världdata.
+
+VIKTIGT: Världen är en PÅHITTAD fantasy-värld. Om spelaren nämner verkliga ortsnamn (svenska städer, länder, kända platser), översätt dem till stämningsfulla fantasy-namn. Använd ALDRIG verkliga ortsnamn i output.
+
+Svara ENDAST med giltig JSON (ingen markdown):
+{
+  "locations": [{"name": "", "description": ""}],
+  "npcs": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
+  "lore": ["string — viktiga världsdetaljer, historia, myter, stämning"],
+  "quests": [{"name": "", "description": "", "status": "aktiv"}]
+}
+
+Om en kategori saknas i beskrivningen, returnera tom array. Extrahera bara det som faktiskt finns."""
+
+WORLD_BUILD_PROMPT_EN = """You are a world-extractor for D&D campaigns. Analyze the player's description and extract structured world data.
+
+IMPORTANT: The world is an INVENTED fantasy world. If the player mentions real place names (cities, countries, known landmarks), translate them into evocative fantasy names. NEVER use real place names in the output.
+
+ALL user-facing output values (names, descriptions, notes, lore text, quest titles) MUST be written in ENGLISH — regardless of the language of the player's description. JSON field names stay as specified.
+
+Reply ONLY with valid JSON (no markdown):
+{
+  "locations": [{"name": "", "description": ""}],
+  "npcs": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
+  "lore": ["string — important world details, history, myths, mood"],
+  "quests": [{"name": "", "description": "", "status": "aktiv"}]
+}
+
+ENUM VALUES ARE CODE TOKENS — write them EXACTLY as shown, never translate them:
+relation: allierad | neutral | fiende | okänd   ·   quest status: aktiv.
+(JSON field names likewise stay English. Everything else you write goes in English.)
+If a category is missing from the description, return an empty array. Extract only what is actually there."""
+
+
+@app.post("/api/world/build")
+async def world_build(
+    prompt: str = Form(""),
+    model_id: str = Form("step-3.7-flash"),
+    language: str = Form(""),
+    files: list[UploadFile] = File(default=[]),
+    morkrets_token: str | None = Cookie(None),
+):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    if not prompt.strip() and not files:
+        raise HTTPException(400, "Ange en beskrivning eller ladda upp filer")
+
+    # Fix 2026-09-07 (spelarfeedback): värld-bygget använde hårkodade
+    # SVENSKA prompts oavsett kampanjspråk → engelska kampanjer fick svenska
+    # quests/NPC-roller/lore. Välj prompt + instruktionsanvisning per språk;
+    # fallback till kampanjens språk om clienten inte skickar language.
+    # EU-vågen 2026-10: bara 'sv'/tomt (kampanje-SV) ger SV-prompt — explicit
+    # client-språk (de/fr/es/it/en) behålls och går EN-grenen nedan.
+    lang = language.strip().lower() if language else _get_lang(state)
+
+    merged = {"locations": 0, "npcs": 0, "lore": 0, "quests": 0, "characters": 0, "items": 0}
+
+    # ── 1. Prompt → LLM extraktion ──
+    if prompt.strip():
+        messages = [
+            {"role": "system", "content": WORLD_BUILD_PROMPT if lang == "sv" else WORLD_BUILD_PROMPT_EN},
+            {"role": "user", "content": (f"Bygg världen utifrån denna beskrivning:\n\n{prompt.strip()}" if lang == "sv"
+                                         else f"Build the world from this description:\n\n{prompt.strip()}")},
+        ]
+        try:
+            raw = await _call_llm(model_id, messages, temperature=0.4, max_tokens=2048, thinking="disabled")
+            extracted = _extract_json(raw)
+        except ValueError as e:
+            raise HTTPException(422, f"Kunde inte tolka LLM-svar: {e}")
+        except RuntimeError as e:
+            raise HTTPException(500, str(e))
+
+        _merge_world_data(state, extracted, merged, lang=lang)
+
+    # ── 2. Filer → textextraktion → LLM ──
+    for f in files:
+        fname = f.filename or ""
+        ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+        if ext not in ("md", "pdf", "txt"):
+            continue  # Hoppa över bilder/okända format
+
+        content_bytes = await f.read()
+        if ext == "pdf":
+            try:
+                import fitz
+                doc = fitz.open(stream=content_bytes, filetype="pdf")
+                text = "\n".join(page.get_text() for page in doc)
+                doc.close()
+            except Exception:
+                continue
+        else:
+            text = content_bytes.decode("utf-8", errors="replace")
+
+        if not text.strip():
+            continue
+        if len(text) > 50000:
+            text = text[:50000] + "\n\n[... trunkerad ...]"
+
+        messages = [
+            {"role": "system", "content": IMPORT_PROMPT if lang == "sv" else IMPORT_PROMPT_EN},
+            {"role": "user", "content": (f"Extrahera data från denna text:\n\n{text}" if lang == "sv"
+                                         else f"Extract data from this text:\n\n{text}")},
+        ]
+        try:
+            raw = await _call_llm(model_id, messages, temperature=0.2, max_tokens=2048, thinking="disabled")
+            extracted = _extract_json(raw)
+        except (ValueError, RuntimeError):
+            continue  # Hoppa över filer som inte kan tolkas
+
+        _merge_world_data(state, extracted, merged, lang=lang)
+
+    store.save(state)
+
+    return {
+        "ok": True,
+        "merged": merged,
+        "locations": state.get("locations", []),
+        "npcs": state.get("npcs", []),
+        "lore": state.get("lore", []),
+        "quests": state.get("quests", []),
+    }
+
+
+def _merge_world_data(state: dict, extracted: dict, merged: dict, lang: str = "sv"):
+    """Merge extraherad data in i kampanjstate (dedup by name).
+
+    lang styr svenska default-värden (roll 'okänd') — EN-kampanjer ska inte få
+    svenska smyge-värden för fritt textinnehåll. Quest-status är kodnivå-token
+    ("aktiv"/"active" matchas båda av sökaren) — default förblir "aktiv".
+    """
+    _default_role = "okänd" if lang == "sv" else "unknown"
+    # Locations
+    for loc in extracted.get("locations", []):
+        if isinstance(loc, dict) and loc.get("name"):
+            existing = {l.get("name", "").lower() for l in state.get("locations", [])}
+            if loc["name"].lower() not in existing:
+                state.setdefault("locations", []).append(
+                    {"name": loc["name"], "description": loc.get("description", "")}
+                )
+                merged["locations"] += 1
+
+    # NPCs
+    for npc in extracted.get("npcs", []):
+        if isinstance(npc, dict) and npc.get("name"):
+            existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
+            if npc["name"].lower() not in existing:
+                state.setdefault("npcs", []).append({
+                    "name": npc["name"],
+                    "role": npc.get("role", _default_role),
+                    "relation": _normalize_relation(npc.get("relation", "neutral"), default="neutral"),
+                    "notes": npc.get("notes", ""),
+                    "alive": npc.get("alive", True),
+                })
+                merged["npcs"] += 1
+
+    # Lore
+    for item in extracted.get("lore", []):
+        if isinstance(item, str) and item.strip():
+            state.setdefault("lore", []).append(item.strip())
+            merged["lore"] += 1
+
+    # Quests
+    for q in extracted.get("quests", []):
+        if isinstance(q, dict) and q.get("name"):
+            existing = {x.get("name", "").lower() for x in state.get("quests", [])}
+            if q["name"].lower() not in existing:
+                state.setdefault("quests", []).append({
+                    "name": q["name"],
+                    "description": q.get("description", ""),
+                    "status": q.get("status") or "aktiv",
+                })
+                merged["quests"] += 1
+
+    # Items → inventory
+    for item in extracted.get("items", []):
+        if isinstance(item, dict) and item.get("name"):
+            norm = _normalize_item({
+                "id": f"import-{len(state.get('inventory', []))}",
+                "name": item["name"],
+                "type": item.get("type", ""),
+                "qty": 1,
+                "weight": 0,
+                "equipped": False,
+                "rarity": item.get("rarity", "normal"),
+                "description": item.get("description", ""),
+            }, lang=lang)
+            state.setdefault("inventory", []).append(norm)
+            merged["items"] += 1
+
+    # Characters → lore (referens)
+    for char in extracted.get("characters", []):
+        if isinstance(char, dict) and char.get("name"):
+            state.setdefault("lore", []).append(
+                f"Karaktär: {char['name']} ({char.get('race', '?')} {char.get('class', '?')}) — {char.get('description', '')}"
+            )
+            merged["characters"] += 1
+
+
+# ═══════════════════════════════════════
+# HEALTH
+# ═══════════════════════════════════════
+
+
+@app.get("/api/health")
+async def health():
+    return {
+        "status": "ok",
+        "game": "The Lore Weaver's Cauldron",
+        "selfhost": selfhost.enabled(),
+    }
+
+
+@app.get("/api/config")
+async def public_config():
+    """Public build capabilities — what THIS build can do.
+
+    No authentication: the login page needs it before anyone is signed in, and
+    it carries nothing but booleans plus the ids of local models (no keys, no
+    base URLs). The frontend uses it to hide what the build does not have.
+    """
+    sh = selfhost.enabled()
+    if not sh:
+        return {
+            "game": "The Lore Weaver's Cauldron",
+            "selfhost": False,
+            "billing": True,
+            "tts": True,
+            "images": True,
+            "byok_local_ai": True,
+            "unlimited_turns": False,
+            "models": [],
+            "default_model": None,
+        }
+    roster = selfhost.roster()
+    return {
+        "game": "The Lore Weaver's Cauldron",
+        "selfhost": True,
+        "billing": False,
+        "tts": False,
+        "images": False,
+        "byok_local_ai": False,
+        "unlimited_turns": True,
+        "models": roster,
+        "default_model": selfhost.default_model_id() or None,
+    }
+
+
+@app.get("/api/debug/logs")
+async def debug_logs(
+    since: float = 0.0,
+    level: str | None = None,
+    morkrets_token: str | None = Cookie(None),
+):
+    """🛠️ Maskinrummet — live-loggar för debug-konsolen.
+
+    Query-parametrar:
+      since  – bara loggar nyare än denna timestamp (polling)
+      level  – filtrera: DEBUG | INFO | WARNING | ERROR (inkl. högre)
+    Returnerar {logs: [...], now: <timestamp>} där 'now' skickas tillbaka
+    som 'since' vid nästa poll. Kräver inloggning (ingen admin-gate — men
+    loggarna filtreras per instans: bara den inloggade användarens aktiva
+    kampanj syns, aldrig andra användares/kampanjers)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    try:
+        active_cid = store._get_active_pointer(username)
+    except Exception:
+        active_cid = None
+    min_level = _LOG_ORDER.get((level or "DEBUG").upper(), 10)
+    out = [
+        e for e in DEBUG_LOGS
+        if e["ts"] > since
+        and e.get("user") == username
+        and (e.get("campaign") == active_cid)
+        and _LOG_ORDER.get(e["level"], 20) >= min_level
+    ]
+    return {"logs": out, "now": time.time(), "buffered": len(DEBUG_LOGS)}
+
+
+@app.get("/api/campaign/locations")
+async def campaign_locations(morkrets_token: str | None = Cookie(None)):
+    """Returnera alla kända platser med restid från nuvarande position."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    locations = get_locations_with_travel(state, lang=_get_lang(state))
+    travel_log = state.get('world', {}).get('travel_log', [])
+    return {"locations": locations, "travel_log": travel_log}
+
+
+@app.get("/api/campaign/logbook")
+async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
+    """Äventyrsjournal — cache-först, LLM bara vid första besöket."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    world = state.setdefault("world", {})
+
+    # ── Cache-först: returnera direkt om dag-entries finns ──
+    # Guardian sparar logbook som en array av {day, turn, text} i world["logbook"]
+    # LLM-genererad logbook sparas som ett objekt {title, days, summary} i world["logbook_llm"]
+    # Kontrollera båda formaten
+    logbook_llm = world.get("logbook_llm", {})
+    # Cache är språkberoende — genererad för ett annat språk än kampanjens
+    # nuvarande → räkna som miss så den återskapas på rätt språk. (fix 2026-08-15)
+    cached_days = (
+        logbook_llm.get("days", [])
+        if logbook_llm.get("language", _get_lang(state)) == _get_lang(state)
+        else []
+    )
+    if cached_days:
+        campaign_name = state.get("meta", {}).get("campaign_name", "The Lore Weaver's Cauldron")
+        return {
+            "title": logbook_llm.get("title", campaign_name),
+            "days": cached_days,
+            "summary": logbook_llm.get("summary", ""),
+            "generated_at": logbook_llm.get("generated_at", ""),
+        }
+
+    # ── Guardian-logbook: konvertera enkel {day, turn, text} → {days: [...]} ──
+    guardian_log = world.get("logbook", [])
+    if guardian_log and isinstance(guardian_log, list):
+        # Gruppera per dag + samla turn-intervall per dag
+        days_map = {}
+        day_turns = {}  # day -> [turns] för att beräkna intervall
+        for entry in guardian_log:
+            day = entry.get("day", 1)
+            turn = entry.get("turn", 0)
+            if day not in days_map:
+                days_map[day] = {
+                    "day": day,
+                    "title": "",
+                    "mood": "",
+                    "events": [],
+                    "location": "",
+                    "npcs_met": [],
+                    "quests": [],
+                }
+                day_turns[day] = []
+            days_map[day]["events"].append(entry.get("text", ""))
+            day_turns[day].append(turn)
+
+        # Beräkna turn-intervall per dag: [min_turn, nästa dags min_turn)
+        sorted_days = sorted(days_map.keys())
+        day_bounds = {}
+        for i, day in enumerate(sorted_days):
+            turns = day_turns.get(day, [0])
+            lo = min(turns)
+            if i + 1 < len(sorted_days):
+                hi = min(day_turns.get(sorted_days[i + 1], [lo + 1]))
+            else:
+                hi = max(turns) + 1  # sista dagen: öppen övre gräns
+            day_bounds[day] = (lo, hi)
+
+        # Seeda quest-chips: tilldela varje quest till den dag vars intervall
+        # innehåller questens created_turn (eller completed_turn om slutförd)
+        done_ok = ("slutförd", "completed")
+        for q in state.get("quests", []):
+            qname = q.get("name", "?")
+            status = q.get("status", "")
+            # Välj relevant turn: slutförda/misslyckade → completed_turn, annars created_turn
+            if status in done_ok or status in ("misslyckad", "failed"):
+                ref_turn = q.get("completed_turn", q.get("created_turn", 0))
+            else:
+                ref_turn = q.get("created_turn", 0)
+            # Hitta dagen
+            target_day = None
+            for day, (lo, hi) in day_bounds.items():
+                if lo <= ref_turn < hi:
+                    target_day = day
+                    break
+            if target_day is None:
+                # Ingen match — lägg på sista dagen om det finns dagar
+                if sorted_days:
+                    target_day = sorted_days[-1]
+            if target_day is not None and target_day in days_map:
+                mark = "✅" if status in done_ok else ("💀" if status in ("misslyckad", "failed") else "⚑")
+                days_map[target_day]["quests"].append(f"{mark} {qname}")
+
+        days = sorted(days_map.values(), key=lambda d: d["day"])
+        campaign_name = state.get("meta", {}).get("campaign_name", "The Lore Weaver's Cauldron")
+
+        # Om vi har Guardian-entries, returnera dem direkt (snabbt, inget LLM)
+        if days and days[0]["events"]:
+            if _get_lang(state) == "sv":
+                summary_text = f"Äventyret har {len(days)} dag(ar) med {len(guardian_log)} händelser."
+            else:
+                summary_text = f"The adventure spans {len(days)} day(s) with {len(guardian_log)} events."
+            return {
+                "title": campaign_name,
+                "days": days,
+                "summary": summary_text,
+            }
+
+    # ── Första besöket: generera via LLM och cacha ──
+    transcript = store.load_transcript(state, last_n=100)
+    t_text = "\n".join(
+        f"{e['role']}: {e['content']}" for e in transcript
+    )
+
+    summaries = store.load_summaries(state, last_n=10)
+    s_text = "\n".join(
+        f"[Tur {s['turn']}]: {s['text']}" for s in summaries
+    )
+
+    if not t_text and not s_text:
+        empty_summary = "Äventyret har inte börjat ännu." if _get_lang(state) == "sv" else "The adventure has not begun yet."
+        return {"title": "The Lore Weaver's Cauldron", "days": [], "summary": empty_summary}
+
+    campaign_name = state.get("meta", {}).get("campaign_name", "The Lore Weaver's Cauldron")
+    prompt = build_log_prompt(t_text, s_text, campaign_name, language=_get_lang(state))
+
+    # Loggboksgenerering är ett LLM-anrop — räknas som en turn (endast första
+    # besöket; cachen + guardian-snabbvägen ovan är gratis) (2026-08-08)
+    # 2026-08-14: använder kampanjens extraction-modell i stället för den
+    # hårdkodade ATMOSPHERE_MODEL (qwen3.8-max) — samma som dag-entry-genereringen.
+    _gate_turn_quota(username)
+    _logbook_model = _extraction_model_for(state)
+    _consume_turn(username, action="logbook", model=_logbook_model)
+
+    try:
+        raw = await _call_llm(
+            _logbook_model,
+            [{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=2048,
+        )
+        log_data = _extract_json(raw)
+    except Exception:
+        lang = _get_lang(state)
+        log_data = {
+            "title": campaign_name,
+            "days": [{
+                "day": 1,
+                "title": "Äventyret börjar" if lang == "sv" else "The adventure begins",
+                "mood": "Förväntansfull" if lang == "sv" else "Anticipatory",
+                "events": ["Kampanjen skapades" if lang == "sv" else "The campaign was created"],
+                "location": world.get("current_location", "Okänd" if lang == "sv" else "Unknown"),
+                "npcs_met": [n.get("name", "?") for n in state.get("npcs", [])[:5]],
+                "quests": [
+                    ("✅ " if q.get("status") in ("slutförd", "completed")
+                     else "💀 " if q.get("status") in ("misslyckad", "failed")
+                     else "⚑ ") + q.get("name", "?")
+                    for q in state.get("quests", [])[:6]
+                ],
+            }],
+            "summary": "Äventyret har just börjat. Mörkret väntar." if lang == "sv" else "The adventure has just begun. The darkness waits.",
+        }
+
+    # Cacha i world['logbook_llm'] — skiljt från Guardian's world['logbook']
+    from datetime import datetime, timezone
+    world["logbook_llm"] = {
+        "title": log_data.get("title", campaign_name),
+        "days": log_data.get("days", []),
+        "summary": log_data.get("summary", ""),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "language": _get_lang(state),
+    }
+    store.save(state)
+
+    return log_data
+
+
+# ═══════════════════════════════════════
+# Admin Dashboard
+# ═══════════════════════════════════════
+
+
+def _require_admin(payload: dict):
+    if payload.get("role") != "admin":
+        raise HTTPException(403, "Admin-rättigheter krävs")
+
+
+def _require_image_gen_tier(username: str, provider: str, payload: dict | None = None) -> None:
+    """TIERS (2026-09-27, ny prissättning): ALL AI-bildgenerering ligger bakom
+    10€-unlåset (Wan 2.7, Qwen Image 3 Pro). Free tier = ren text.
+    Varje bild kostar 1 turn. Admin har alltid tillgång. Lifetime = allt.
+    """
+    if payload and payload.get("role") == "admin":
+        return
+    tier = _tier_for(username)
+    if tier in ("tier2", "lifetime"):
+        return
+    raise HTTPException(
+        403,
+        detail={
+            "feature_locked": "image",
+            "message": "Image generation is part of the 10€ unlock (+100 turns, all Dungeon Masters, voice & images). Each image costs 1 turn.",
+        },
+    )
+
+
+def _require_avatar_tier(payload: dict, username: str):
+    """TIERS (2026-08-15): avatar-UPPLADDNING kräver Patron (tier2+).
+    Support-tieren togs bort 2026-08-15 — legacy tier1-konton med aktiva
+    förmåner passerar tills de löper ut. AI-generering är gated via
+    _require_image_gen_tier (2026-09-27: ALL bildgenerering bakom 10€-unlåset).
+    Admin har alltid tillgång."""
+    if payload.get("role") == "admin":
+        return
+    if _tier_for(username) == "free":
+        raise HTTPException(403, "Avatar uploads are part of the 10€ unlock — upgrade to add your own images.")
+
+
+def _require_supporter(username: str, payload: dict, feature: str,
+                       message: str | None = None) -> None:
+    """Betalvägg (2026-10-01): undo-knappen + kampanj-exporten kräver att
+    kontot någonsin betalat — en donation på 1€ räcker, och den gäller för alltid.
+
+    Admin går alltid förbi. Läsfel på users.json → 503, ALDRIG tyst 403: en
+    betalare ska inte se "låst" för att en transient fel läste fel.
+    """
+    if payload and payload.get("role") == "admin":
+        return
+    try:
+        ok = _is_supporter(username)
+    except Exception as e:
+        logger.warning("Supporter-gate could not read account %s: %s", username, e)
+        raise HTTPException(
+            503,
+            detail={"message": "Could not verify your account just now — try again in a moment."},
+        )
+    if ok:
+        return
+    raise HTTPException(
+        403,
+        detail={
+            "feature_locked": feature,
+            "message": message or ("This is part of the supporter unlock — any donation "
+                                   "(1€ or more) unlocks it permanently."),
+        },
+    )
+
+
+# ═══════════════════════════════════════
+# FAS D — billing ledger + admin top-up
+# ═══════════════════════════════════════
+# Intäktsledger: rad per betalningshändelse
+#   {"ts", "user", "amount_sek", "type", "stripe_sub_id", "event_id"}
+# Skapas tom om den saknas. ALDRIG commit (backend/data committas inte).
+
+# TIERS: priser i SEK (EUR → SEK ≈ 11.7; avrundat för admin-översikt).
+# unlock10 = 10€ engång (+100 turns + ALLT upplåst permanent, 2026-09-27).
+# support300 = 3€ LEGACY (stängt 2026-08-15) · patron500 = 30€ LEGACY (pensionerad 2026-09-27) · lifetime = 100€ engång.
+# tier1/tier2 = legacy-prenumeranter (MRR-bas tills de löper ut).
+TIER_PRICES_SEK = {"support300": 35, "patron500": 351, "unlock10": 117, "lifetime": 1170,
+                   "tier1": 35, "tier2": 105}  # legacy: 3€/9€ ≈ 35/105 kr
+
+_LEDGER_FILE = Path(__file__).resolve().parent / "data" / "_billing_ledger.json"
+_LEDGER_LOCK = threading.Lock()
+
+
+def _ledger_load() -> list:
+    """Läs hela ledgern (lista av dicts). Skapar filen tom om den saknas.
+
+    Tar INTE _LEDGER_LOCK (kallas även inifrån _ledger_append som redan
+    håller låset — threading.Lock är inte reentrant). Skapandet är
+    idempotent ("[]"), så en eventuell race är ofarlig."""
+    try:
+        if not _LEDGER_FILE.exists():
+            _LEDGER_FILE.parent.mkdir(parents=True, exist_ok=True)
+            _LEDGER_FILE.write_text("[]", encoding="utf-8")
+            return []
+        with open(_LEDGER_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def _ledger_append(entry: dict) -> dict:
+    """Lägg till en betalningshändelse och spara ledgern atomiskt.
+
+    entry förväntas ha ts/user/amount_sek/type/stripe_sub_id/event_id —
+    saknade nycklar backfillas med None så rader alltid har samma form."""
+    row = {
+        "ts": entry.get("ts") or _now_iso(),
+        "user": entry.get("user"),
+        "amount_sek": int(entry.get("amount_sek") or 0),
+        "type": entry.get("type"),
+        "stripe_sub_id": entry.get("stripe_sub_id"),
+        "event_id": entry.get("event_id"),
+    }
+    with _LEDGER_LOCK:
+        ledger = _ledger_load()
+        ledger.append(row)
+        tmp = _LEDGER_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(ledger, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(_LEDGER_FILE)
+    return row
+
+
+# ── Churn-datapoint (rostad 2026-08-04) ──────────────────────────────────
+# När en prenumeration sägs upp (customer.subscription.deleted) skrivs en
+# ledger-rad av typ "stripe:churn" (amount_sek=0) och en per-dag-ackumulator
+# uppdateras så adminvyn kan visa churn per dag utan att räkna om hela ledgern.
+
+_CHURN_FILE = Path(__file__).resolve().parent / "data" / "_churn.json"
+
+
+def _churn_load() -> dict:
+    """Läs churn-ackumulatorn: {dag-iso: antal}. Skapar tom om den saknas."""
+    try:
+        if not _CHURN_FILE.exists():
+            return {}
+        with open(_CHURN_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _churn_save(data: dict) -> None:
+    try:
+        _CHURN_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _CHURN_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(_CHURN_FILE)
+    except OSError:
+        logger.exception("💔 Kunde inte spara churn-ackumulatorn")
+
+
+def _churn_bump() -> None:
+    """Öka churn-ackumulatorn för idag (utan ledger-rad).
+
+    Används när en uppsägningsintention bokförs (cancel_scheduled) så
+    adminvyn ser churn direkt, utan att vänta på periodens slut.
+    Tar _LEDGER_LOCK själv (samma lås som ledgern — ackumulatorn är en
+    härledd vy av den).
+    """
+    day = datetime.now(timezone.utc).date().isoformat()
+    with _LEDGER_LOCK:
+        churn = _churn_load()
+        churn[day] = int(churn.get(day, 0) or 0) + 1
+        _churn_save(churn)
+
+
+def _churn_unbump() -> None:
+    """Minska churn-ackumulatorn för idag (återtagen uppsägning)."""
+    day = datetime.now(timezone.utc).date().isoformat()
+    with _LEDGER_LOCK:
+        churn = _churn_load()
+        cur = int(churn.get(day, 0) or 0)
+        if cur > 0:
+            churn[day] = cur - 1
+            _churn_save(churn)
+
+
+def _churn_record(username: str, sub_id: str | None = None) -> None:
+    """Bokför en uppsägning: ledger-rad (stripe:churn) + per-dag-räknare.
+
+    OBS: _ledger_append tar själv _LEDGER_LOCK — tag INTE låset här runt
+    anropet (threading.Lock är inte reentrant → deadlock). (bugg 2026-08-04)
+    """
+    day = datetime.now(timezone.utc).date().isoformat()
+    _ledger_append({
+        "user": username,
+        "amount_sek": 0,
+        "type": "stripe:churn",
+        "stripe_sub_id": sub_id,
+        "event_id": f"churn-{day}-{username}-{sub_id or ''}",
+    })
+    _churn_bump()
+
+
+def _ledger_has_event(event_id: str) -> bool:
+    """Har vi redan behandlat detta Stripe-event?
+
+    Stripe levererar om events vid retry/timeout — samma event kan komma
+    flera gånger. Utan denna koll skulle en dubbelleverans av
+    checkout.session.completed ÅTERSTÄLLA subscription_until till +30d från
+    nu (dvs förkorta en sub) och dubbla ledger-raderna.
+    """
+    if not event_id:
+        return False
+    with _LEDGER_LOCK:
+        return any(row.get("event_id") == event_id for row in _ledger_load())
+
+
+def _ledger_per_user() -> dict:
+    """Summera amount_sek per användare → {username: sek}."""
+    per_user: dict = {}
+    for row in _ledger_load():
+        user = row.get("user")
+        if not user:
+            continue
+        per_user[user] = per_user.get(user, 0) + int(row.get("amount_sek") or 0)
+    return per_user
+
+
+def _ledger_totals() -> dict:
+    """Aggregerad intäktsstatistik → {mrr, transactions, total}.
+
+    one-time-modellen (2026-08-05): support300/patron500/donation/lifetime
+    är engångsintäkter → ligger i `total`. MRR räknas ENBART för legacy-
+    prenumeranter (stripe:tier1/tier2-rader med aktiv subscription_until) —
+    efter att de löpt ut finns inga nya prenumerationer att räkna.
+    Admin-givna tiers (setTier) skriver inget till ledgern → räknas INTE."""
+    ledger = _ledger_load()
+    # Senast betalda månadstier per användare (kronologisk ledgern → sista raden vinner)
+    paid_tier: dict[str, str] = {}
+    for row in ledger:
+        user = row.get("user")
+        rtype = row.get("type") or ""
+        if not user:
+            continue
+        if rtype in ("stripe:tier1", "stripe:tier2"):
+            paid_tier[user] = rtype.split(":", 1)[1]
+    mrr = 0
+    for username, tier in paid_tier.items():
+        if tier not in TIER_PRICES_SEK:
+            continue
+        try:
+            # Räkna bara om prenumerationen fortfarande är aktiv med samma tier.
+            if _tier_for(username) == tier:
+                mrr += TIER_PRICES_SEK[tier]
+        except Exception:
+            continue
+    return {
+        "mrr": mrr,
+        # Churn-rader (uppsägningar) är INTE transaktioner — räkna allt utom dem
+        "transactions": sum(1 for r in ledger if (r.get("type") or "") != "stripe:churn"),
+        "total": sum(int(r.get("amount_sek") or 0) for r in ledger),
+        # Månadens intäkt (lokal kalendermånad, Europe/Stockholm) — rostads
+        # dashboard-siffra (2026-09-27): betalningen idag ska synas direkt,
+        # MRR är 0 i one-time-modellen.
+        "month_revenue": _ledger_month_revenue(ledger),
+        "month_key": _month_key_now(),
+    }
+
+
+# ── Intäktsnedbrytning (2026-09-27, rostad: admin dashboard v2) ──────────
+# key = ledger-radens `type` utan "stripe:"-prefix. live=True = säljs
+# fortfarande → visas ALLTID i by_product (även med 0 kr). Allt som inte
+# står här (t.ex. "stripe:support300", "topup") hamnar i "other".
+_REVENUE_PRODUCTS: dict[str, tuple[str, bool]] = {
+    "unlock10": ("10 € Unlock", True),
+    "donation": ("Donation", True),
+    "patron500": ("Patron 30 €", True),
+    "lifetime": ("Lifetime 100 €", True),
+    "tier1": ("Tier 1 (legacy sub)", False),
+    "tier2": ("Tier 2 (legacy sub)", False),
+    "renewal": ("Renewal (legacy sub)", False),
+}
+# Livscykel-rader (uppsägning/avbokning) är INTE intäkt — exkluderas helt.
+# Alla skrivs med amount_sek=0 (se _churn_record + webhookens cancel-grenar),
+# så att exkludera dem ändrar aldrig summan mot _ledger_totals()["total"].
+_REVENUE_LIFECYCLE = ("stripe:churn", "stripe:cancel_scheduled", "stripe:cancel_reverted")
+
+
+def _ledger_ts_key(ts) -> datetime:
+    """Sorterbar (aware) nyckel för en ledger-tidsstämpel — oparsbar → epoch."""
+    try:
+        dt = datetime.fromisoformat(str(ts))
+    except (ValueError, TypeError):
+        return datetime.min.replace(tzinfo=timezone.utc)
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+
+def _cached_player_country(username: str) -> tuple[str, str]:
+    """Betalarens land — ENBART ur iplog-cachen (aldrig nätverk i en request).
+
+    Okänt (ingen IP eller ingen cache-rad) → ("??", "Unknown"); privat IP →
+    ("LOCAL", "Lokal"). Samma cache-only-regel som geo_for_users (2026-09-20).
+    """
+    try:
+        ip = iplog.get_user_ip(username)
+    except Exception:
+        return ("??", "Unknown")
+    if not ip:
+        return ("??", "Unknown")
+    if iplog.is_private(ip):
+        return ("LOCAL", "Lokal")
+    g = iplog.geo_cached(ip) or {}
+    cc = str(g.get("countryCode") or "").strip().upper()
+    if not cc or cc == "??":
+        return ("??", "Unknown")
+    return (cc, str(g.get("country") or "").strip() or cc)
+
+
+def _revenue_breakdown(ledger: list | None = None) -> dict:
+    """Intäktsnedbrytning för admin-dashboarden (2026-09-27, rostad).
+
+    by_product summerar EXAKT till _ledger_totals()["total"]: livscykel-raderna
+    (churn/cancel*, alltid 0 SEK) exkluderas helt, allt annat hamnar i ett känt
+    produktnamn eller "other". by_month/by_date bucketer daglokalt
+    (Europe/Stockholm via _day_key). by_country läser betalarens land ur
+    iplog-cachen — aldrig ett nätverksanrop. by_country räknar bara rader med
+    sek>0 (en 0-rad är ingen betalning); paying = distinkta betalare per land.
+    """
+    if ledger is None:
+        ledger = _ledger_load()
+    products: dict = {}
+    months: dict = {}
+    dates: dict = {}
+    countries: dict = {}
+    cust: dict = {}
+    cust_first: dict = {}
+    cust_last: dict = {}
+    first_ts = None
+    last_ts = None
+    first_dt = None
+    last_dt = None
+    for row in ledger:
+        rtype = row.get("type") or ""
+        if rtype in _REVENUE_LIFECYCLE:
+            continue
+        user = row.get("user")
+        sek = int(row.get("amount_sek") or 0)
+        key = rtype.split(":", 1)[1] if ":" in rtype else rtype
+        if key not in _REVENUE_PRODUCTS:
+            key = "other"
+        label = _REVENUE_PRODUCTS.get(key, ("Other", False))[0]
+        p = products.setdefault(key, {"key": key, "label": label, "sek": 0, "count": 0})
+        p["sek"] += sek
+        p["count"] += 1
+        # Dag/månad i LOKAL tid — dygns- och månadsgränsen följer rostads
+        # klocka (Europe/Stockholm), inte UTC.
+        day = _day_key(row.get("ts"))
+        if day:
+            m = months.setdefault(day[:7], {"key": day[:7], "sek": 0, "count": 0})
+            m["sek"] += sek
+            m["count"] += 1
+            dates[day] = dates.get(day, 0) + sek
+        ts = row.get("ts")
+        dt = _ledger_ts_key(ts)
+        if first_dt is None or dt < first_dt:
+            first_dt, first_ts = dt, ts
+        if last_dt is None or dt >= last_dt:
+            last_dt, last_ts = dt, ts
+        if user:
+            c = cust.setdefault(user, {"user": user, "sek": 0, "payments": 0,
+                                       "first_ts": None, "last_ts": None, "products": []})
+            c["sek"] += sek
+            if sek > 0:
+                c["payments"] += 1
+            if key not in c["products"]:
+                c["products"].append(key)
+            if user not in cust_first or dt < cust_first[user][0]:
+                cust_first[user] = (dt, ts)
+            if user not in cust_last or dt >= cust_last[user][0]:
+                cust_last[user] = (dt, ts)
+            if sek > 0:
+                cc, country = _cached_player_country(user)
+                cz = countries.setdefault(cc, {"cc": cc, "country": country, "sek": 0,
+                                               "count": 0, "payers": set()})
+                cz["sek"] += sek
+                cz["count"] += 1
+                cz["payers"].add(user)
+    # Live-produkter ska synas även med 0 kr (dashboardens donut/legend).
+    for k, (label, live) in _REVENUE_PRODUCTS.items():
+        if live and k not in products:
+            products[k] = {"key": k, "label": label, "sek": 0, "count": 0}
+    customers = []
+    for user, c in cust.items():
+        c["first_ts"] = cust_first.get(user, (None, None))[1]
+        c["last_ts"] = cust_last.get(user, (None, None))[1]
+        c["products"] = sorted(c["products"])
+        customers.append(c)
+    customers.sort(key=lambda c: (-c["sek"], c["user"]))
+    by_country = [{"cc": cz["cc"], "country": cz["country"], "sek": cz["sek"],
+                   "count": cz["count"], "paying": len(cz["payers"]),
+                   # Betalarna per land → dashboardens lands-drawer kan lista
+                   # transaktionerna även när cc är "??" (ingen geo-cache-post).
+                   "users": sorted(cz["payers"])}
+                  for cz in countries.values()]
+    return {
+        "by_product": sorted(products.values(), key=lambda p: (-p["sek"], p["key"])),
+        "by_month": sorted(months.values(), key=lambda m: m["key"]),
+        "by_date": {d: dates[d] for d in sorted(dates)},
+        "by_country": sorted(by_country, key=lambda cz: (-cz["sek"], cz["cc"])),
+        "customers": customers,
+        "paying_customers": sum(1 for c in customers if c["sek"] > 0),
+        "first_ts": first_ts,
+        "last_ts": last_ts,
+    }
+
+
+def _month_key_now() -> str:
+    """Aktuell lokal månad (Europe/Stockholm) som YYYY-MM."""
+    return datetime.now(_LOCAL_TZ).strftime("%Y-%m")
+
+
+def _ledger_month_revenue(ledger: list, month_key: str | None = None) -> int:
+    """Summa amount_sek för ledger-rader inom en kalendermånad (lokal tid).
+
+    Churn-rader (amount 0) påverkar inte summan. month_key = YYYY-MM,
+    default = innevarande månad."""
+    mk = month_key or _month_key_now()
+    total = 0
+    for r in ledger:
+        ts = r.get("ts") or ""
+        try:
+            dt = datetime.fromisoformat(str(ts))
+        except (ValueError, TypeError):
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        if dt.astimezone(_LOCAL_TZ).strftime("%Y-%m") == mk:
+            total += int(r.get("amount_sek") or 0)
+    return total
+
+
+def _provider_for_model(model_name: str) -> str:
+    """Mappa transkriptets modellnamn → provider (dashscope/deepseek/stepfun/mimo/ollama).
+
+    Transkripten sparar config.api_model (t.ex. 'qwen3.8-max', 'step-3.7-flash',
+    'igorls/gemma-4-…'). Slå upp i MODELS-registret (model_id + api_model),
+    fallback på prefix, annars 'unknown'. Används för admin-dashboardens
+    token-share-per-provider (2026-08-05 v2).
+
+    OBS: mimo/ollama-prefixen är HISTORISKA — modellerna togs bort ur registret
+    2026-09-21 men gamla transkript måste fortfarande attribueras rätt i admin."""
+    if not model_name:
+        return "unknown"
+    name = str(model_name)
+    cfg = MODELS.get(name)
+    if cfg:
+        return cfg.provider
+    for cfg in MODELS.values():
+        if cfg.api_model == name:
+            return cfg.provider
+    low = name.lower()
+    if low.startswith(("qwen", "wan", "glm")) or "dashscope" in low:
+        return "dashscope"
+    if low.startswith("deepseek"):
+        return "deepseek"
+    if low.startswith(("step", "stepfun")):
+        return "stepfun"
+    if low.startswith("mimo"):
+        return "mimo"
+    if low.startswith(("ollama", "igorls", "hermes")):
+        return "ollama"
+    return "unknown"
+
+
+try:
+    from zoneinfo import ZoneInfo
+    _LOCAL_TZ = ZoneInfo("Europe/Stockholm")
+except Exception:  # pragma: no cover — saknad tzdata: fallback UTC+1
+    _LOCAL_TZ = timezone(timedelta(hours=1))
+
+
+def _day_key(ts: str) -> str:
+    """Transkriptets UTC-ISO-tid → lokal (Europe/Stockholm) daglycka YYYY-MM-DD.
+
+    Används av admin-vyns AI-calls-graf (2026-09-21) — dygnsgrensen ska följa
+    rostads klocka, inte UTC. Tobbinsbara strängar faller back på [:10]."""
+    if not ts:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(ts))
+    except (ValueError, TypeError):
+        return str(ts)[:10]
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_LOCAL_TZ).date().isoformat()
+
+
+def _scan_user_transcripts(user: str) -> dict:
+    """Skanna alla transkript för en användare och returnera token- och tursstatistik."""
+    prompt_tokens = 0
+    completion_tokens = 0
+    turns = 0
+    last_active = ""
+    sessions = []
+    tts_usage = {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0}
+    # Bakgrundsanrop (state.meta.unguarded_tokens): extraktion, sammanfattningar,
+    # dag-entries, Battle AI. De har INGEN tidsstämpel och kan därför aldrig
+    # hamna i `daily` — de redovisas separat så token-KPI:ns tre källor går att
+    # skilja åt i dashboarden (2026-09-28).
+    unguarded_tokens = 0
+    # {YYYY-MM-DD (lokal): {"calls": n, "tokens": t}} — för admin-vyns
+    # AI-calls-graf per dag/vecka/månad (2026-09-21).
+    daily: dict = {}
+    # {modell: {dag: anrop}} — anropskurvan per modell för Usage-drilldownen
+    # (2026-09-27). Kontoövergripande (inte per session) eftersom dashboarden
+    # bara frågar efter modellens dagar, aldrig efter kampanjens.
+    model_daily: dict = {}
+
+    user_dir = CAMPAIGNS_DIR / user
+    if not user_dir.exists():
+        base = _empty_account_usage()
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0,
+                "last_active": "", "sessions": sessions, "tts_usage": tts_usage, "daily": daily,
+                "model_daily": model_daily, "unguarded_tokens": 0,
+                "character_creation": base["character_creation"], "image_gen": base["image_gen"],
+                "deleted_campaigns": base["deleted"]}
+
+    # Modellattribution för bakgrundsanrop i kampanjer utan transkriptfil
+    # (annars hade de tappats ur modellraden — bara kontots summor räknas).
+    bg_model_orphans: dict = {}
+    for campaign_dir in sorted(user_dir.iterdir()):
+        if not campaign_dir.is_dir():
+            continue
+        transcript_dir = campaign_dir / "transcripts"
+        if not transcript_dir.exists():
+            continue
+        campaign_id = campaign_dir.name
+        # Kampanjens Guardian-modell (attribueras på guardian-poster som inte
+        # sparar egen modell i meta — används för per-modell-aggregering).
+        guardian_model = ""
+        try:
+            st_file = campaign_dir / "state.json"
+            if st_file.exists():
+                with open(st_file) as f:
+                    st = json.load(f)
+                guardian_model = st.get("meta", {}).get("guardian_model", "")
+        except (OSError, json.JSONDecodeError):
+            pass
+        for ts_file in sorted(transcript_dir.glob("session-*.jsonl")):
+            session_prompt = 0
+            session_completion = 0
+            session_turns = 0
+            session_last = ""
+            role_tokens: dict = {}  # {role: {prompt, completion}} per transkriptfil
+            model_tokens: dict = {}  # {model: {prompt, completion, calls}}
+            try:
+                with open(ts_file) as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            entry = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        if entry.get("role") == "assistant":
+                            turns += 1
+                            session_turns += 1
+                        meta = entry.get("meta", {})
+                        tokens = meta.get("tokens", {})
+                        p = tokens.get("prompt_tokens", 0) or 0
+                        c = tokens.get("completion_tokens", 0) or 0
+                        # Pre-DM Guardian roll-detection förbrukning (körs varje tur)
+                        # fästs på DM-posten som guardian_pre_dm_tokens — räkna med den.
+                        gpd = meta.get("guardian_pre_dm_tokens", {}) or {}
+                        gp = gpd.get("prompt_tokens", 0) or 0
+                        gc = gpd.get("completion_tokens", 0) or 0
+                        p += gp
+                        c += gc
+                        prompt_tokens += p
+                        completion_tokens += c
+                        session_prompt += p
+                        session_completion += c
+                        # Dagbokslut för AI-calls-grafen: 1 anrop per transkript-
+                        # post som har token-data (DM-anrop med fast pre-DM
+                        # Guardian räknas som 2 — stämmer med verkliga anrop).
+                        _calls_here = (1 if (tokens or meta.get("model")) else 0) + (1 if gpd else 0)
+                        if _calls_here:
+                            _dk = _day_key(entry.get("ts", ""))
+                            if _dk:
+                                _d = daily.setdefault(_dk, {"calls": 0, "tokens": 0})
+                                _d["calls"] += _calls_here
+                                _d["tokens"] += p + c
+                        # Per-roll token-uppdelning (för admin: DM vs Guardian).
+                        # DM-postens egna tokens bokförs på "assistant"; den
+                        # pre-DM Guardian-detectionen bokförs separat på "guardian".
+                        role = entry.get("role", "?")
+                        if gp or gc:
+                            g_t = role_tokens.setdefault("guardian", {"prompt_tokens": 0, "completion_tokens": 0})
+                            g_t["prompt_tokens"] += gp
+                            g_t["completion_tokens"] += gc
+                        rt = role_tokens.setdefault(role, {"prompt_tokens": 0, "completion_tokens": 0})
+                        rt["prompt_tokens"] += (tokens.get("prompt_tokens", 0) or 0)
+                        rt["completion_tokens"] += (tokens.get("completion_tokens", 0) or 0)
+                        # Per-modell-aggregation: DM-poster har meta.model,
+                        # guardian-poster får kampanjens guardian_model.
+                        m_name = meta.get("model") or ""
+                        if role == "guardian" and not m_name:
+                            m_name = guardian_model
+                        if m_name:
+                            mt = model_tokens.setdefault(m_name, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                            mt["prompt_tokens"] += p
+                            mt["completion_tokens"] += c
+                            mt["calls"] += 1
+                            # Per-modell-per-dag (2026-09-27, Usage-drilldown):
+                            # modellens anropskurva. Poster utan tidsstämpel kan
+                            # inte placeras på en dag (samma regel som `daily`),
+                            # så bakgrundstokens syns i totalen men inte i kurvan.
+                            _mdk = _day_key(entry.get("ts", ""))
+                            if _mdk:
+                                _md = model_daily.setdefault(m_name, {})
+                                _md[_mdk] = _md.get(_mdk, 0) + 1
+                        ts = entry.get("ts", "")
+                        if ts and ts > last_active:
+                            last_active = ts
+                        if ts and ts > session_last:
+                            session_last = ts
+            except OSError:
+                continue
+            sessions.append({
+                "campaign_id": campaign_id,
+                "session_file": ts_file.name,
+                "prompt_tokens": session_prompt,
+                "completion_tokens": session_completion,
+                "total_tokens": session_prompt + session_completion,
+                "turns": session_turns,
+                "last_ts": session_last,
+                "role_tokens": role_tokens,
+                "model_tokens": model_tokens,
+            })
+
+        # Bakgrunds-LLM-anrop som inte får en transkriptpost (faktextraktion,
+        # sammanfattningar, dag-entries, Battle AI, Guardian "no changes")
+        # ackumuleras i state.meta.unguarded_tokens, och TTS-förbrukningen i
+        # meta.tts_usage. state.json läses EXAKT EN gång per kampanj (2026-09-28):
+        # blocket låg förut inuti per-fil-loopen, så en kampanj med flera
+        # session-*.jsonl räknade allt en gång per fil, och en kampanj utan
+        # transkriptfil tappades helt (latent bugg — inga skarpa tal ändrades).
+        # DAGBOKSLUTSFRI: dessa har ingen tidstämpel alls (livstidsräknare), så de
+        # kan inte placeras i daily — grafen visar transkript-spårbara anrop;
+        # totalsynen (tokens/calls KPI) inkluderar fortfarande allt.
+        bg_role = {"prompt_tokens": 0, "completion_tokens": 0}
+        bg_model: dict = {}
+        bg_tts: dict = {}
+        try:
+            st_file = campaign_dir / "state.json"
+            if st_file.exists():
+                with open(st_file) as f:
+                    st = json.load(f)
+                ut = st.get("meta", {}).get("unguarded_tokens", {}) or {}
+                _up = ut.get("prompt_tokens", 0) or 0
+                _uc = ut.get("completion_tokens", 0) or 0
+                prompt_tokens += _up
+                completion_tokens += _uc
+                unguarded_tokens += _up + _uc
+                bg_role["prompt_tokens"] += _up
+                bg_role["completion_tokens"] += _uc
+                # Per-modell: by_model → modellraden (annars en grå klump)
+                for m_name, mv in (ut.get("by_model") or {}).items():
+                    _m = bg_model.setdefault(m_name, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                    _m["prompt_tokens"] += mv.get("prompt_tokens", 0) or 0
+                    _m["completion_tokens"] += mv.get("completion_tokens", 0) or 0
+                    _m["calls"] += mv.get("calls", 0) or 0
+                # Bakåtkompatibilitet: state utan by_model (gammal data) —
+                # attribuera klumpen till EXTRACTION_MODEL (vanligaste källan)
+                # så den ändå syns i modellraden, inte bara som 'background'.
+                if not (ut.get("by_model") or {}) and (_up or _uc):
+                    _m = bg_model.setdefault(EXTRACTION_MODEL, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                    _m["prompt_tokens"] += _up
+                    _m["completion_tokens"] += _uc
+                    _m["calls"] += 1
+                # TTS-förbrukning (tokens/sekunder/minuter renderat) per kampanj
+                bg_tts = st.get("meta", {}).get("tts_usage") or {}
+        except (OSError, json.JSONDecodeError):
+            pass
+        if bg_tts:
+            tts_usage["calls"] += bg_tts.get("calls", 0) or 0
+            tts_usage["api_calls"] += bg_tts.get("api_calls", 0) or 0
+            tts_usage["chars"] += bg_tts.get("chars", 0) or 0
+            tts_usage["tokens"] += bg_tts.get("tokens", 0) or 0
+            tts_usage["seconds"] += bg_tts.get("seconds", 0) or 0
+            bm = tts_usage.setdefault("by_model", {})
+            for m, n in (bg_tts.get("by_model") or {}).items():
+                bm[m] = (bm.get(m, 0) or 0) + (n or 0)
+        if bg_role["prompt_tokens"] or bg_role["completion_tokens"] or bg_model:
+            _camp_sessions = [s for s in sessions if s["campaign_id"] == campaign_id]
+            if _camp_sessions:
+                # Fäst på kampanjens sista transkriptpost: roll- och modellraden
+                # läses ur sessions[] (dossién, /api/campaign/usage). För en
+                # enkelfils-kampanj blir det exakt samma post som förut.
+                _last = _camp_sessions[-1]
+                rt = _last["role_tokens"].setdefault("background", {"prompt_tokens": 0, "completion_tokens": 0})
+                rt["prompt_tokens"] += bg_role["prompt_tokens"]
+                rt["completion_tokens"] += bg_role["completion_tokens"]
+                for m, mv in bg_model.items():
+                    _mt = _last["model_tokens"].setdefault(m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                    _mt["prompt_tokens"] += mv["prompt_tokens"]
+                    _mt["completion_tokens"] += mv["completion_tokens"]
+                    _mt["calls"] += mv["calls"]
+            else:
+                # Ingen transkriptfil kvar (raderad/roterad): kontots totaler är
+                # redan uppdaterade ovan; modellraden fångas via bg_model_orphans.
+                for m, mv in bg_model.items():
+                    _mt = bg_model_orphans.setdefault(m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                    _mt["prompt_tokens"] += mv["prompt_tokens"]
+                    _mt["completion_tokens"] += mv["completion_tokens"]
+                    _mt["calls"] += mv["calls"]
+
+    # Lägg till förbrukning från RADERADE kampanjer (beständig ackumulator)
+    # så kontots totala tokens/turns/TTS overlever kampanjradering. Uppdateras
+    # i delete_campaign via _add_deleted_campaign. Karaktärsgenerering och
+    # bildgen är livstid-räknare som inte hör till någon specifik kampanj.
+    _acc = _load_account_usage(user)
+    _del = _acc.get("deleted", {})
+    if (_del.get("total_tokens") or 0) or (_del.get("turns") or 0):
+        prompt_tokens += _del.get("prompt_tokens", 0) or 0
+        completion_tokens += _del.get("completion_tokens", 0) or 0
+        turns += _del.get("turns", 0) or 0
+        _del_tts = _del.get("tts", {}) or {}
+        for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
+            tts_usage[k] = (tts_usage.get(k, 0) or 0) + (_del_tts.get(k, 0) or 0)
+        for m, n in (_del_tts.get("by_model") or {}).items():
+            tts_usage.setdefault("by_model", {})[m] = (tts_usage["by_model"].get(m, 0) or 0) + (n or 0)
+
+    # Aggregera per-modell-förbrukning över ALLA sessioner (top-level), så
+    # admin-dashboarden kan visa token-share per provider utan att dubbelscanna.
+    model_tokens_total: dict = {}
+    for _m, _mv in bg_model_orphans.items():
+        mt = model_tokens_total.setdefault(_m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+        mt["prompt_tokens"] += _mv.get("prompt_tokens", 0) or 0
+        mt["completion_tokens"] += _mv.get("completion_tokens", 0) or 0
+        mt["calls"] += _mv.get("calls", 0) or 0
+    for _s in sessions:
+        for _m, _mv in (_s.get("model_tokens") or {}).items():
+            mt = model_tokens_total.setdefault(_m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+            mt["prompt_tokens"] += _mv.get("prompt_tokens", 0) or 0
+            mt["completion_tokens"] += _mv.get("completion_tokens", 0) or 0
+            mt["calls"] += _mv.get("calls", 0) or 0
+
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": prompt_tokens + completion_tokens,
+        "turns": turns,
+        "last_active": last_active,
+        "sessions": sessions,
+        "model_tokens": model_tokens_total,
+        "tts_usage": tts_usage,
+        "daily": daily,
+        "model_daily": {m: {d: model_daily[m][d] for d in sorted(model_daily[m])}
+                        for m in sorted(model_daily)},
+        # Källuppdelning av token-siffran (2026-09-28): bara `daily` (transkript)
+        # är daterad. `unguarded_tokens` och `deleted_campaigns` är livstidsräknare
+        # utan dag och kan därför aldrig visas i dagsgrafen.
+        "unguarded_tokens": unguarded_tokens,
+        "character_creation": _acc.get("character_creation", {}),
+        "image_gen": _acc.get("image_gen", {}),
+        "deleted_campaigns": _del,
+    }
+
+
+def _account_meta(username: str, udata: dict, campaigns: list) -> dict:
+    """Konto-metadata med backfill för konton som saknar nya fält."""
+    if not isinstance(udata, dict):
+        udata = {}
+    created_at = udata.get("created_at")
+    if not created_at:
+        created_dates = [c.get("created", "") for c in campaigns if c.get("created")]
+        created_at = min(created_dates) if created_dates else None
+    return {
+        "created_at": created_at,
+        "last_login": udata.get("last_login"),
+        "turn_cap": _turn_cap_for(username),
+        "turns_used": store.total_turns(username),
+    }
+
+
+def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict | None = None,
+                   grants_index: dict | None = None) -> dict:
+    """Gemensam per-användar-statistikrad (admin-vyn + spelarens egen profil).
+
+    Innehåller ALLT utom ip/land — geo-fälten läggs bara till när `geo`
+    skickas med (admin). Spelarens /api/me/stats exkluderar ip/land alltid.
+
+    `grants_index` (2026-09-28): färdigläst grant-ledger. Anropare som loopar
+    över alla konton skickar in den EN gång — annars läses filen per spelare.
+    """
+    udata = load_users().get(username) or {}
+    if not isinstance(udata, dict):
+        udata = {}
+    role = udata.get("role", "player")
+    campaigns = store.list_campaigns(username)
+    scan = _scan_user_transcripts(username)
+    meta = _account_meta(username, udata, campaigns)
+    tier = _tier_for(username)
+    fresh = load_users().get(username)
+    fresh = fresh if isinstance(fresh, dict) else {}
+    # 2026-08-07: admin-vyn visade STALE turns_used — period-rollover kördes
+    # bara i _user_free_info (/api/me) vid spelarens eget anrop. En spelare
+    # som inte loggat in på dagar såg ut att "ha använt turns" i admin-vyn
+    # fast perioden redan rullat. Kör samma lazy rollover här så att
+    # period_turns_used alltid är korrekt.
+    if tier != "lifetime":
+        fresh = _maybe_rollover(username, fresh)
+    tts = scan.get("tts_usage", {})
+    tts_sec = tts.get("seconds", 0) or 0
+    ledger = ledger_per_user if ledger_per_user is not None else _ledger_per_user()
+    # Turn-pott + free/paid-kodning (2026-09-28): räknas i EN funktion per
+    # koncept så tabell, dossier, CSV och drawer aldrig kan säga olika saker.
+    pool = _turn_pool(username, udata=fresh, grants_index=grants_index)
+    coding = _player_coding(username, revenue=ledger.get(username, 0) or 0, pool=pool, tier=tier)
+    row = {
+        "username": username,
+        "role": role,
+        "email": udata.get("email", ""),
+        "total_campaigns": len(campaigns),
+        "total_tokens": scan["total_tokens"],
+        "prompt_tokens": scan["prompt_tokens"],
+        "completion_tokens": scan["completion_tokens"],
+        "total_turns": scan["turns"],
+        "last_active": scan["last_active"],
+        "created_at": meta["created_at"],
+        "last_login": meta["last_login"],
+        "turn_cap": meta["turn_cap"],
+        "turns_used": meta["turns_used"],
+        "subscription_status": tier,
+        "subscription_until": fresh.get("subscription_until"),
+        "turn_bonus": int(fresh.get("turn_bonus", 0) or 0),
+        "promo_bonus": int(fresh.get("promo_bonus", 0) or 0),
+        "period_turns_used": int(fresh.get("turns_used", 0) or 0),
+        "turns_available": _turns_available(username),
+        # Turn-pott per hink + free/paid-kod (2026-09-28, rostad): EN sanning
+        # som admin-tabellen, dossién, drawern och CSV:n läser.
+        "turn_pool": _pool_compact(pool),
+        "coding": coding,
+        "features_until": _benefits_until(username, fresh),
+        "cap_until": fresh.get("cap_until"),
+        "revenue": ledger.get(username, 0),
+        "tts_calls": tts.get("calls", 0) or 0,
+        "tts_api_calls": tts.get("api_calls", 0) or 0,
+        "tts_chars": tts.get("chars", 0) or 0,
+        "tts_tokens": tts.get("tokens", 0) or 0,
+        "tts_seconds": tts_sec,
+        "tts_minutes": round(tts_sec / 60, 1),
+        # Per-modell-uppdelning (2026-08-06): TTS- och bildmodeller ska synas
+        # i admin-vyns "Calls by provider".
+        "tts_by_model": tts.get("by_model", {}),
+        "image_gen_by_model": (scan.get("image_gen", {}) or {}).get("by_model", {}),
+        "char_creation_tokens": (scan.get("character_creation", {}) or {}).get("tokens", 0) or 0,
+        "char_creation_calls": (scan.get("character_creation", {}) or {}).get("calls", 0) or 0,
+        "image_gen_calls": (scan.get("image_gen", {}) or {}).get("calls", 0) or 0,
+        "deleted_campaigns": scan.get("deleted_campaigns", {}),
+        "model_tokens": scan.get("model_tokens", {}),
+        "daily": scan.get("daily", {}),
+    }
+    if geo:
+        g = geo.get(username, {})
+        row["ip"] = g.get("ip", "")
+        row["country"] = g.get("country", "")
+        row["country_code"] = g.get("countryCode", "")
+        row["country_flag"] = iplog.country_flag(g.get("countryCode", ""))
+    return row
+
+
+# ── Admin dashboard v2 (2026-09-27): tidsfönster + "vad spelarna fick" ────
+# window = 24h | 7d | 30d | all. Dagsbucketerade serier i LOKAL tid
+# (Europe/Stockholm via _day_key): 24h = idag, 7d = idag + 6 dagar bakåt,
+# 30d = idag + 29 dagar bakåt. Routen validerar strängen (400 vid skräp).
+_WINDOW_CHOICES = ("24h", "7d", "30d", "all")
+_WINDOW_DAYS = {"24h": 1, "7d": 7, "30d": 30}
+# Kompakta användarrader i /api/admin/overview. daily/model_tokens (stora
+# per-användar-dicts) hör till drill-downen /api/admin/user/{username} — att
+# skicka dem för 159 konton blåser upp payloaden.
+_OVERVIEW_USER_FIELDS = (
+    "username", "role", "email", "subscription_status", "country",
+    "country_code", "country_flag", "total_campaigns", "total_tokens",
+    "total_turns", "revenue", "last_active", "created_at",
+    # Turn-pott + free/paid-kod (2026-09-28): kontraktet testas exakt i
+    # tests/test_admin_overview.py (set(row) == set(_OVERVIEW_USER_FIELDS)).
+    "turn_pool", "coding",
+)
+# Media-modeller → provider (samma mappning som /api/admin/stats använder för
+# TTS/bild; modulnivå-kopia så overview kan aggregera utan att röra den
+# befintliga routen).
+_OVERVIEW_MEDIA_PROV = {
+    "stepaudio-2.5-tts": "stepfun",
+    "qwen-audio-3.0-tts-plus": "dashscope",
+    "wan2.7-image": "dashscope",
+    "wan2.7-image-pro": "dashscope",
+    "step-image-edit-2": "stepfun",
+}
+
+
+def _window_since_day(window: str) -> str | None:
+    """Lokal startdag (YYYY-MM-DD) för ett tidsfönster — None för "all"/skräp."""
+    w = (window or "all").strip().lower()
+    if w not in _WINDOW_DAYS:
+        return None
+    return (datetime.now(_LOCAL_TZ).date() - timedelta(days=_WINDOW_DAYS[w] - 1)).isoformat()
+
+
+def _usage_breakdown(user_stats: list) -> tuple[dict, dict]:
+    """Token-/anropsaggregering per provider och modell → (providers, models).
+
+    Samma uppbyggnad som /api/admin/stats (LLM-tokens via MODELS-registret +
+    TTS-/bildanrop via media-mappningen) så Usage-panelen och gamla admin-vyn
+    visar identiska siffror. Sorterat på tokens (fallande), som i stats.
+    """
+    providers: dict = {}
+    models: dict = {}
+    for row in user_stats:
+        for m_name, mv in (row.get("model_tokens") or {}).items():
+            prov = _provider_for_model(m_name)
+            tok = (mv.get("prompt_tokens", 0) or 0) + (mv.get("completion_tokens", 0) or 0)
+            pt = providers.setdefault(prov, {"tokens": 0, "calls": 0})
+            pt["tokens"] += tok
+            pt["calls"] += mv.get("calls", 0) or 0
+            mm = models.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})
+            mm["tokens"] += tok
+            mm["calls"] += mv.get("calls", 0) or 0
+    for row in user_stats:
+        for m_name, n in (row.get("tts_by_model") or {}).items():
+            prov = _OVERVIEW_MEDIA_PROV.get(m_name, "unknown")
+            providers.setdefault(prov, {"tokens": 0, "calls": 0})["calls"] += n or 0
+            models.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})["calls"] += n or 0
+        for m_name, n in (row.get("image_gen_by_model") or {}).items():
+            prov = _OVERVIEW_MEDIA_PROV.get(m_name, "unknown")
+            providers.setdefault(prov, {"tokens": 0, "calls": 0})["calls"] += n or 0
+            models.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})["calls"] += n or 0
+    providers = dict(sorted(providers.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
+    models = dict(sorted(models.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
+    return providers, models
+
+
+def _model_breakdown(model: str, window: str = "all") -> dict:
+    """Drill-down för EN modell (2026-09-27, rostad: "modellanrop per spelare").
+
+    Svarar på två frågor som dashboarden inte kunde svara på alls:
+      1. modellens anropskurva per dag  (transkriptens `model_daily`)
+      2. VILKA spelare som anropat den  (per-användarens `model_tokens`)
+
+    Fönstring: LLM-modeller fönstras på `model_daily` (lokal dag, samma
+    `_day_key`-regel som resten av dashboarden) — både kurvan och
+    `calls_window`. `calls`/`tokens` är LIVSTID ur transkripten och märks
+    `lifetime: true` så ingen blandar ihop dem. TTS-/bildmodeller har ingen
+    dagserie i datat (state.meta räknar bara livstid) → då är `windowed: false`
+    och UI:t visar livstidssiffran med den etiketten i stället för att ljuga.
+    """
+    w = (window or "all").strip().lower()
+    since = _window_since_day(w)
+    provider = _provider_for_model(model)
+    day: dict = {}
+    users_out: list = []
+    calls = tokens = calls_window = 0
+    media_calls = 0
+    has_day_series = False
+
+    gusers = load_users()
+    for username in gusers:
+        try:
+            scan = _scan_user_transcripts(username)
+        except Exception:
+            logger.warning("model breakdown: transcript scan failed for %s", username)
+            continue
+        mv = (scan.get("model_tokens") or {}).get(model) or {}
+        per_calls = int(mv.get("calls", 0) or 0)
+        per_tokens = int(mv.get("prompt_tokens", 0) or 0) + int(mv.get("completion_tokens", 0) or 0)
+        per_media = int((scan.get("tts_usage", {}).get("by_model") or {}).get(model, 0) or 0)
+        per_media += int((scan.get("image_gen", {}).get("by_model") or {}).get(model, 0) or 0)
+        md = (scan.get("model_daily") or {}).get(model) or {}
+        if md:
+            has_day_series = True
+        per_window = 0
+        for d, n in md.items():
+            if since and d < since:
+                continue
+            day[d] = day.get(d, 0) + int(n or 0)
+            per_window += int(n or 0)
+        if not (per_calls or per_tokens or per_window or per_media):
+            continue
+        calls += per_calls
+        tokens += per_tokens
+        calls_window += per_window
+        media_calls += per_media
+        udata = gusers.get(username) or {}
+        users_out.append({
+            "username": username,
+            "role": udata.get("role", "player"),
+            "calls": per_calls,
+            "tokens": per_tokens,
+            "calls_window": per_window,
+            "media_calls": per_media,
+            "subscription_status": _tier_for(username),
+            "last_active": scan.get("last_active", ""),
+        })
+
+    users_out.sort(key=lambda r: (-r["calls"], -r["media_calls"], r["username"]))
+    return {
+        "model": model,
+        "provider": provider,
+        "calls": calls,
+        "tokens": tokens,
+        "calls_window": calls_window,
+        "media_calls": media_calls,
+        "window": w,
+        "windowed": bool(has_day_series and since),
+        "has_day_series": has_day_series,
+        "lifetime": True,
+        "day": {d: day[d] for d in sorted(day)},
+        "users": users_out,
+        "generated_at": _now_iso(),
+    }
+
+
+def _value_delivered(window: str = "all") -> dict:
+    """Vad spelarna FICK för pengarna (2026-09-27, rostad): turns/tokens/anrop.
+
+    turns = antal rader i backend/data/turn_ledgers/*.jsonl (en rad per
+    förbrukad turn), fönstrade med _day_key (lokal dag). Rader utan användbar
+    tidsstämpel kan inte fönstras → räknas bara i "all" och sätter
+    turns_windowed=False (dvs siffran är inte en ren fönsterräkning).
+    tokens/ai_calls = transkriptens dagböcker (_scan_user_transcripts.daily),
+    fönstrade i samma lokala dagar. OBS: dagboken är spårbar-per-transkript —
+    livstids-KPI:n totals.tokens i overview innehåller ÄVEN bakgrundstokens
+    (state.meta.unguarded_tokens) som saknar tidsstämpel.
+    tokens_per_sek / kr_per_1m_tokens är LIVSTIDS-mått (hela tokenvolymen mot
+    hela ledgern) — oberoende av fönstret, None när nämnaren är 0.
+    """
+    since = _window_since_day(window)
+    turns = 0
+    turns_windowed = True
+    turns_day: dict = {}
+    by_action: dict = {}
+    # Per hink och dag (2026-09-28): rader före 2026-09-28 saknar bucket →
+    # "unknown". `none` = ingen hink betalade (gaten borde ha stoppat det).
+    bucket_day: dict = {}
+    try:
+        if _TURN_LEDGERS_DIR.exists():
+            for p in sorted(_TURN_LEDGERS_DIR.glob("*.jsonl")):
+                try:
+                    lines = p.read_text(encoding="utf-8").splitlines()
+                except OSError:
+                    continue
+                for ln in lines:
+                    ln = ln.strip()
+                    if not ln:
+                        continue
+                    try:
+                        rec = json.loads(ln)
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(rec, dict):
+                        continue
+                    day = _day_key(rec.get("ts") or "")
+                    if not day:
+                        # Utan tidsstämpel → kan bara räknas i "all".
+                        if since is None:
+                            turns += 1
+                        turns_windowed = False
+                        continue
+                    if since and day < since:
+                        continue
+                    turns += 1
+                    # Drill-down-serier (2026-09-27): samma fönster som `turns`,
+                    # så staplarna summerar exakt mot siffran i KPI:n.
+                    turns_day[day] = turns_day.get(day, 0) + 1
+                    b = str(rec.get("bucket") or "unknown")
+                    bd = bucket_day.setdefault(day, {"free": 0, "paid": 0, "promo": 0, "none": 0, "unknown": 0})
+                    bd[b if b in bd else "unknown"] += 1
+                    act = rec.get("action") or "unknown"
+                    by_action[act] = by_action.get(act, 0) + 1
+    except Exception:
+        logger.warning("value delivered: turn ledger scan failed", exc_info=True)
+
+    lifetime_tokens = 0
+    tokens = 0
+    ai_calls = 0
+    # Token-siffrans tre källor (2026-09-28): transkript (daterad), bakgrunds-
+    # anrop och raderade kampanjer (båda rena livstidsräknare utan dag).
+    src_background = 0
+    src_deleted = 0
+    for username in load_users():
+        try:
+            scan = _scan_user_transcripts(username)
+        except Exception:
+            logger.warning("value delivered: transcript scan failed for %s", username)
+            continue
+        lifetime_tokens += int(scan.get("total_tokens", 0) or 0)
+        src_background += int(scan.get("unguarded_tokens", 0) or 0)
+        src_deleted += int((scan.get("deleted_campaigns") or {}).get("total_tokens", 0) or 0)
+        for day, dv in (scan.get("daily") or {}).items():
+            if since and day < since:
+                continue
+            ai_calls += int((dv or {}).get("calls", 0) or 0)
+            tokens += int((dv or {}).get("tokens", 0) or 0)
+
+    # Den daterade delen är resten av livstiden — aldrig en egen påhittad summa.
+    src_dated = max(0, lifetime_tokens - src_background - src_deleted)
+
+    # SEK från SAMMA ledger-total som revenue.total (ingen egen pengamatte).
+    sek = int(_ledger_totals().get("total", 0) or 0)
+    return {
+        "turns": turns,
+        "tokens": tokens,
+        "ai_calls": ai_calls,
+        "tokens_per_sek": round(lifetime_tokens / sek, 2) if sek > 0 else None,
+        "kr_per_1m_tokens": round(1e6 * sek / lifetime_tokens, 2) if lifetime_tokens > 0 else None,
+        "turns_windowed": turns_windowed,
+        # Additiva drill-down-serier (2026-09-27, rostad): staplarna i
+        # "Turns delivered per day" och "What the turns bought" summerar
+        # exakt mot `turns` — samma fönster, samma scan.
+        "turns_day": {d: turns_day[d] for d in sorted(turns_day)},
+        # Per hink och dag — staplad graf i dashboarden. Summerar mot turns_day
+        # (samma scan, samma fönster); "unknown" = rader före 2026-09-28.
+        "turns_by_bucket_day": {d: bucket_day[d] for d in sorted(bucket_day)},
+        # Token-siffran uppdelad på källa. `dated_windowed` = fönstrets daterade
+        # tokens (samma tal som `tokens`), `dated` = hela livstidens daterade.
+        # Dashboarden visar de tre källorna i stället för att blanda dem.
+        "tokens_sources": {
+            "dated": src_dated,
+            "dated_windowed": tokens,
+            "background": src_background,
+            "deleted": src_deleted,
+            "lifetime": lifetime_tokens,
+        },
+        "by_action": dict(sorted(by_action.items(), key=lambda kv: (-kv[1], kv[0]))),
+    }
+
+
+@app.get("/api/admin/stats")
+async def admin_stats(morkrets_token: str | None = Cookie(None)):
+    """Admin-only: översikt av alla användare."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    users = load_users()
+    user_stats = []
+    total_campaigns = 0
+    total_tokens = 0
+    total_turns = 0
+
+    # Batch-uppslag av IP → land för alla användare (cachat i iplog.py)
+    geo = await iplog.geo_for_users(users)
+    # FAS D: intäkter per användare (från billing-ledgern)
+    ledger_per_user = _ledger_per_user()
+    # Turn-pott (2026-09-28): grant-ledgern läses EN gång för hela listan
+    grants_index = _turn_grants_index()
+
+    for username in users:
+        row = _user_stat_row(username, geo=geo, ledger_per_user=ledger_per_user, grants_index=grants_index)
+        user_stats.append(row)
+        total_campaigns += row["total_campaigns"]
+        total_tokens += row["total_tokens"]
+        total_turns += row["total_turns"]
+
+    # Per-provider-aggregation (2026-08-05 v2): token-share + totala anrop.
+    # Aggregerar per-användarens model_tokens → provider via MODELS-registret.
+    providers: dict = {}
+    models_list: dict = {}
+    for row in user_stats:
+        for m_name, mv in (row.get("model_tokens") or {}).items():
+            prov = _provider_for_model(m_name)
+            pt = providers.setdefault(prov, {"tokens": 0, "calls": 0})
+            pt["tokens"] += (mv.get("prompt_tokens", 0) or 0) + (mv.get("completion_tokens", 0) or 0)
+            pt["calls"] += mv.get("calls", 0) or 0
+            mm = models_list.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})
+            mm["tokens"] += (mv.get("prompt_tokens", 0) or 0) + (mv.get("completion_tokens", 0) or 0)
+            mm["calls"] += mv.get("calls", 0) or 0
+
+    # TTS + bildmodeller (2026-08-06): även dessa bokförs som "anrop" så
+    # admin-vyns "Calls by provider" visar ALLA anropade modeller — inte bara
+    # LLM:erna. (Token-delen är 0 — TTS/bild har ingen token-mätare här.)
+    _MEDIA_PROV = {
+        "stepaudio-2.5-tts": "stepfun",
+        "qwen-audio-3.0-tts-plus": "dashscope",
+        "wan2.7-image": "dashscope",
+        "wan2.7-image-pro": "dashscope",
+        "step-image-edit-2": "stepfun",
+    }
+    for row in user_stats:
+        for m_name, n in (row.get("tts_by_model") or {}).items():
+            prov = _MEDIA_PROV.get(m_name, "unknown")
+            pt = providers.setdefault(prov, {"tokens": 0, "calls": 0})
+            pt["calls"] += n or 0
+            mm = models_list.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})
+            mm["calls"] += n or 0
+        for m_name, n in (row.get("image_gen_by_model") or {}).items():
+            prov = _MEDIA_PROV.get(m_name, "unknown")
+            pt = providers.setdefault(prov, {"tokens": 0, "calls": 0})
+            pt["calls"] += n or 0
+            mm = models_list.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})
+            mm["calls"] += n or 0
+
+    providers = dict(sorted(providers.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
+    models_list = dict(sorted(models_list.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
+
+    # AI-calls per dag (2026-09-21, rostad: "antal api calls per dag/vecka"):
+    # aggregera alla användares daily-dagböcker till {YYYY-MM-DD: {calls, tokens}}.
+    api_daily: dict = {}
+    for row in user_stats:
+        for dk, dv in (row.get("daily") or {}).items():
+            a = api_daily.setdefault(dk, {"calls": 0, "tokens": 0})
+            a["calls"] += dv.get("calls", 0) or 0
+            a["tokens"] += dv.get("tokens", 0) or 0
+    api_daily = dict(sorted(api_daily.items()))
+
+    # Besöksstatistik (2026-08-05, rostad): total, idag, 7 dagar, per dag + per land
+    visits = await iplog.visits_summary()
+
+    return {
+        "total_users": len(users),
+        "total_campaigns": total_campaigns,
+        "total_tokens": total_tokens,
+        "total_turns": total_turns,
+        "users": user_stats,
+        "providers": providers,
+        "models": models_list,
+        "api_daily": api_daily,
+        "visits": visits,
+    }
+
+
+@app.get("/api/admin/overview")
+async def admin_overview(window: str = "all", morkrets_token: str | None = Cookie(None)):
+    """Admin-only: EN payload för nya dashboardens första målning (2026-09-27).
+
+    window = 24h | 7d | 30d | all (default; allt annat → 400). Allt som
+    fönstras redovisas mot `window`: series.*, value.*, traffic.by_country.
+    `totals` är LIVSTIDS-räknare (accounts/players/admins/campaigns/turns/
+    tokens/ai_calls/visits) och blandas aldrig in i de fönstrade serierna.
+    Betalningar är engångsköp → revenue är livstidssumman ur ledgern (grantad
+    tier utan ledger-rad ger 0 kr, se test_mrr_ignores_admintier_without_payment).
+    Användarnas daily/model_tokens skickas INTE här (159 konton) — de hör till
+    drill-downen /api/admin/user/{username}.
+    """
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    w = (window or "all").strip().lower()
+    if w not in _WINDOW_CHOICES:
+        raise HTTPException(400, "window must be one of: 24h, 7d, 30d, all")
+    since = _window_since_day(w)
+
+    users = load_users()
+    # Batch-uppslag av IP → land (cache-only, aldrig nätverk i requesten).
+    geo = await iplog.geo_for_users(users)
+    ledger_per_user = _ledger_per_user()
+    # Turn-pott (2026-09-28): grant-ledgern läses EN gång, inte per konto.
+    grants_index = _turn_grants_index()
+    rows = [_user_stat_row(u, geo=geo, ledger_per_user=ledger_per_user, grants_index=grants_index) for u in users]
+
+    totals = {"accounts": len(users), "players": 0, "admins": 0, "campaigns": 0,
+              "turns": 0, "tokens": 0, "ai_calls": 0, "visits": 0}
+    tiers = {"free": 0, "tier1": 0, "tier2": 0, "lifetime": 0}
+    # Turn-pott (2026-09-28): free/paid-fördelning + pottsummor för urvalet.
+    coding_counts = {"paid": 0, "granted": 0, "free": 0}
+    pool_totals = {"available": 0, "free_left": 0, "promo_left": 0, "paid_left": 0,
+                   "paid_granted": 0, "unlimited_accounts": 0, "granted_known_accounts": 0}
+    api_daily: dict = {}
+    signups: dict = {}
+    compact: list = []
+    for row in rows:
+        if row.get("role") == "admin":
+            totals["admins"] += 1
+        else:
+            totals["players"] += 1
+        totals["campaigns"] += row.get("total_campaigns", 0) or 0
+        totals["turns"] += row.get("total_turns", 0) or 0
+        totals["tokens"] += row.get("total_tokens", 0) or 0
+        status = row.get("subscription_status") or "free"
+        tiers[status if status in tiers else "free"] += 1
+        for day, dv in (row.get("daily") or {}).items():
+            a = api_daily.setdefault(day, {"calls": 0, "tokens": 0})
+            a["calls"] += (dv or {}).get("calls", 0) or 0
+            a["tokens"] += (dv or {}).get("tokens", 0) or 0
+        # Registreringar per lokal dag (created_at backfillas av _account_meta
+        # från kampanjdatum för gamla konton).
+        day = _day_key(row.get("created_at") or "")
+        if day:
+            signups[day] = signups.get(day, 0) + 1
+        # Kompakt rad — BARA de fält dashboarden tabellerar.
+        cc = row.get("country_code") or ""
+        # Kompakt pott — platta tal, SAMMA form som dossiéns pott-block. Hela
+        # _turn_pool-objektet skickas inte för 160 konton (det ligger i
+        # /api/admin/user/{u}).
+        tp = row.get("turn_pool") or {}
+        coding = row.get("coding") or {}
+        # Server-side summering (UI:t ska inte räkna legend-/pott-siffror själv).
+        _code = coding.get("code") or "free"
+        coding_counts[_code if _code in coding_counts else "free"] += 1
+        if tp.get("unlimited"):
+            pool_totals["unlimited_accounts"] += 1
+        else:
+            pool_totals["available"] += int(tp.get("available") or 0)
+            pool_totals["free_left"] += int(tp.get("free_left") or 0)
+        pool_totals["promo_left"] += int(tp.get("promo_left") or 0)
+        pool_totals["paid_left"] += int(tp.get("paid_left") or 0)
+        pool_totals["paid_granted"] += int(tp.get("paid_granted") or 0)
+        if tp.get("paid_granted_known"):
+            pool_totals["granted_known_accounts"] += 1
+        compact.append({
+            "username": row.get("username"),
+            "role": row.get("role"),
+            "email": row.get("email"),
+            "subscription_status": row.get("subscription_status"),
+            "country": row.get("country") or "",
+            "country_code": cc,
+            "country_flag": row.get("country_flag") or iplog.country_flag(cc),
+            "total_campaigns": row.get("total_campaigns", 0) or 0,
+            "total_tokens": row.get("total_tokens", 0) or 0,
+            "total_turns": row.get("total_turns", 0) or 0,
+            "revenue": row.get("revenue", 0) or 0,
+            "last_active": row.get("last_active") or "",
+            "created_at": row.get("created_at"),
+            "turn_pool": tp,
+            "coding": {
+                "code": coding.get("code") or "free",
+                "tier": coding.get("tier") or "free",
+                "why": coding.get("why") or "",
+            },
+        })
+    totals["ai_calls"] = sum(v["calls"] for v in api_daily.values())
+
+    # Besök: ren cache-läsning; land- och referrer-graferna fönstras via
+    # country_range. days=400 → hela besökshistoriken följer med (annars kapade
+    # iplog grafen till 14 dagar och "window: all" ljög om fönstret).
+    visits = await iplog.visits_summary(country_range=w, days=400)
+    totals["visits"] = int(visits.get("total", 0) or 0)
+
+    def _win(series: dict) -> dict:
+        """Bara dagar inom valt fönster (lokal dag), ascending."""
+        return {k: series[k] for k in sorted(series) if not since or k >= since}
+
+    revenue = dict(_ledger_totals())
+    breakdown = _revenue_breakdown()
+    revenue.update(breakdown)
+    providers, models_list = _usage_breakdown(rows)
+    value = _value_delivered(w)
+    return {
+        "generated_at": _now_iso(),
+        "window": w,
+        "totals": totals,
+        "revenue": revenue,
+        "value": value,
+        "series": {
+            "api_calls_day": _win({d: v["calls"] for d, v in api_daily.items()}),
+            "visits_day": _win({d: int(n or 0) for d, n in (visits.get("by_day") or {}).items()}),
+            # Unika besökare per dag (distinkta IP:n) — egen serie så KPI:n
+            # "Unique visitors" kan visa unika i stället för request (2026-09-27).
+            "visits_unique_day": _win({d: int(n or 0) for d, n in (visits.get("by_day_unique") or {}).items()}),
+            "revenue_day": _win(breakdown["by_date"]),
+            "signups_day": _win(signups),
+            # Turns per dag ur turn-ledgern (2026-09-27) — samma fönster som value.turns.
+            "turns_day": _win(value.get("turns_day") or {}),
+        },
+        "usage": {"providers": providers, "models": models_list},
+        "traffic": {
+            "by_country": visits.get("by_country") or {},
+            "referrers": visits.get("by_referrer") or {},
+            "uniques": visits.get("uniques") or {},
+            # Per källa: unika besökare, länder, first/last seen (samma fönster).
+            "referrer_detail": iplog.referrer_detail(w),
+            "total": int(visits.get("total", 0) or 0),
+            "today": int(visits.get("today", 0) or 0),
+            "last_7": int(visits.get("last_7", 0) or 0),
+            "window": w,
+        },
+        "tiers": tiers,
+        # Turn-pott (2026-09-28): free/paid-legend + pottsummorna för hela
+        # urvalet, räknade server-side (UI:t ska inte summera själv).
+        "coding_summary": coding_counts,
+        "pool_totals": pool_totals,
+        "users": compact,
+    }
+
+
+@app.get("/api/admin/model/{model}")
+async def admin_model_detail(
+    model: str, window: str = "all", morkrets_token: str | None = Cookie(None)
+):
+    """Admin-only: EN modells drill-down (2026-09-27).
+
+    Kurva per dag + vilka spelare som anropat modellen. `calls`/`tokens` är
+    livstid; `calls_window`/`day` följer `window` (24h|7d|30d|all). Mediamodeller
+    (TTS/bild) har ingen dagserie → `windowed: false`, UI:t märker siffran som
+    livstid i stället för att påstå ett fönster."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    w = (window or "all").strip().lower()
+    if w not in _WINDOW_CHOICES:
+        raise HTTPException(400, "window must be one of: 24h, 7d, 30d, all")
+    name = (model or "").strip()
+    if not name or len(name) > 120:
+        raise HTTPException(400, "model must be a non-empty model name")
+    out = _model_breakdown(name, w)
+    registered = (
+        name in MODELS
+        or any((getattr(m, "model_id", "") == name or getattr(m, "api_model", "") == name)
+               for m in MODELS.values())
+    )
+    media = name in _OVERVIEW_MEDIA_PROV
+    # 2026-09-27: `known` sattes tidigare ENBART mot registret → en riktig modell
+    # utanför registret (qwen3.8-max: 291 anrop, 20 spelare — pinnad för tunga
+    # körningar, aldrig i MODELS) visades som "okänd". Kan vi attribuera en
+    # provider vet vi att modellen finns i historiken → known. `registered` är
+    # kvar som egen flagga så UI:t kan skilja "aktiv modell" från "historisk".
+    out["registered"] = bool(registered)
+    out["media"] = bool(media)
+    out["known"] = bool(registered or media or out.get("provider") not in (None, "", "unknown"))
+    return out
+
+
+@app.get("/api/admin/visits_country")
+async def admin_visits_country(
+    window: str = "all", morkrets_token: str | None = Cookie(None)
+):
+    """Admin-only: unika besökare per land i ett tidsfönster.
+
+    window = 1h | 12h | 24h | 7d | 30d | all (default). Används av
+    land-grafens filter i adminvyn (2026-08-09, rostad)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    visits = await iplog.visits_summary(country_range=window)
+    return {"by_country": visits["by_country"]}
+
+
+@app.get("/api/me/stats")
+async def me_stats(morkrets_token: str | None = Cookie(None)):
+    """Inloggad spelare ser BARA sina egna stats (exkl. ip/land).
+
+    Samma rad som adminvyn bygger (se _user_stat_row) — utan geo-fält.
+    Endpointen tar ingen user-parameter: det finns inget sätt att titta på
+    någon annans profil.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload.get("sub")
+    if not username:
+        raise HTTPException(401, "Ej inloggad")
+    row = _user_stat_row(username)
+    return {"ok": True, "stats": row}
+
+
+# ═══════════════════════════════════════
+# STRIPE (one-time 2026-08-05) — checkout + webhook
+# ═══════════════════════════════════════
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+# One-time-priser (engångsbetalningar, inga abonnemang):
+#   support300 — 3€: LEGACY (togs bort 2026-08-15) — nya köp blockeras i
+#                checkout; befintliga webhooks hedras (idempotenta).
+#   patron500  — 30€: 100 turns/dag i 30 dagar (cap_until), allt i Free +
+#                premiummodeller + Qwen TTS + Wan 2.7 Pro + Qwen Image 3 Pro
+#                + export/uppladdning i 30 dagar (stackbart)
+#   donation   — valfri summa: rensupport, inga förmåner
+STRIPE_PRICES = {
+    "support300": os.getenv("STRIPE_PRICE_SUPPORT300", ""),
+    "patron500": os.getenv("STRIPE_PRICE_PATRON500", ""),
+    "unlock10": os.getenv("STRIPE_PRICE_UNLOCK10", ""),
+    "donation": os.getenv("STRIPE_PRICE_DONATION", ""),
+    "lifetime": os.getenv("STRIPE_PRICE_LIFETIME", ""),  # legacy — behålls
+}
+STRIPE_PUBLIC_BASE = os.getenv("STRIPE_PUBLIC_BASE", "https://dnd.rostad.cc")
+# Ungefärlig EUR→SEK-kurs för ledgern (visas bara för admin).
+_EUR_TO_SEK = 11.7
+
+
+class BillingCheckoutRequest(BaseModel):
+    tier: str
+    # Valfri summa (donation): belopp i EUR (t.ex. 5.0). Används bara för tier="donation".
+    amount: float | None = None
+
+
+async def _stripe_post(path: str, data: dict) -> dict:
+    """Rå Stripe-REST (form-urlencoded, basic auth) — inga nya beroenden."""
+    url = f"https://api.stripe.com/v1/{path}"
+    async with httpx.AsyncClient(timeout=20) as client:
+        resp = await client.post(url, data=data, auth=(STRIPE_SECRET_KEY, ""))
+    if resp.status_code >= 400:
+        logger.warning("Stripe API %s → %s: %.120s", path, resp.status_code, resp.text)
+        raise HTTPException(502, "Stripe could not process the request")
+    return resp.json()
+
+
+def _stripe_verify_signature(payload: bytes, header: str) -> bool:
+    """Verifiera Stripe-signaturen (`t=ts,v1=hmac`) — HMAC-SHA256, constant-time.
+
+    Returnerar False om secret saknas (endpointen är då stängd).
+    """
+    if not STRIPE_WEBHOOK_SECRET:
+        return False
+    parts = {}
+    for item in (header or "").split(","):
+        k, _, v = item.partition("=")
+        parts[k.strip()] = v.strip()
+    ts, sig = parts.get("t"), parts.get("v1")
+    if not ts or not sig:
+        return False
+    try:
+        float(ts)
+    except ValueError:
+        return False
+    signed = str(ts).encode() + b"." + payload
+    expected = hmac.new(STRIPE_WEBHOOK_SECRET.encode(), signed, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig)
+
+
+def _selfhost_absent(feature: str):
+    """501 for endpoints that need a paid cloud API — absent in the self-host build."""
+    raise HTTPException(
+        501,
+        detail={
+            "selfhost_absent": feature,
+            "message": f"{feature} is not part of the self-host build.",
+        },
+    )
+
+
+@app.post("/api/billing/checkout")
+async def billing_checkout(req: BillingCheckoutRequest, morkrets_token: str | None = Cookie(None)):
+    """Skapa Stripe Checkout Session (hosted) — one-time purchases.
+
+    unlock10 (10€) / donation (valfri summa) / lifetime (legacy).
+    support300 (3€) togs BORT 2026-08-15 och patron500 (30€) pensionerades
+    2026-09-27 (ny prissättning) — nya köp blockeras (gamla köp/webhooks
+    hedras fortfarande tills fönstren löper ut).
+    Åtkomst ges ALDRIG här — bara via webhook (checkout.session.completed).
+    """
+    if selfhost.enabled():
+        raise HTTPException(404, "Billing is not part of the self-host build.")
+    payload = _get_current_user(morkrets_token)
+    username = payload.get("sub")
+    tier = (req.tier or "").strip().lower()
+    if tier == "support300":
+        raise HTTPException(400, "The 3€ Support pack has been retired — see the 10€ Unlock for every feature.")
+    if tier == "patron500":
+        raise HTTPException(400, "The 30€ Patron pack has been retired (2026-09-27) — the 10€ Unlock now carries every feature.")
+    if tier == "donation":
+        # Valfri summa — använder custom amount, inget Stripe Price-ID behövs
+        pass
+    elif tier not in STRIPE_PRICES or not STRIPE_PRICES[tier]:
+        raise HTTPException(400, "Tier must be unlock10, donation or lifetime")
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(503, "Payments are not configured yet")
+    # ── E-post krävs innan köp (rostad 2026-08-04): kontot måste ha en
+    # e-postadress så kvitton/återställning når spelaren. Frontend fångar
+    # detail.email_required och visar e-postformuläret. ──
+    _udata = load_users().get(username, {})
+    if not isinstance(_udata, dict) or not (_udata.get("email") or "").strip():
+        raise HTTPException(400, detail={
+            "email_required": True,
+            "message": "Add an email to your account before purchasing — it's where your receipts and reset links go.",
+        })
+
+    line_items: dict = {}
+    if tier == "donation":
+        # Valfri summa (EUR, min 1€). Stripe Checkout kräver price_data med
+        # unit_amount (ören) — ett dynamiskt engångspris per donation.
+        amount = float(req.amount or 0)
+        if amount < 1 or amount > 1000:
+            raise HTTPException(400, "Donation amount must be between €1 and €1000")
+        amount_minor = int(round(amount * 100))
+        line_items = {
+            "line_items[0][price_data][currency]": "eur",
+            "line_items[0][price_data][unit_amount]": str(amount_minor),
+            "line_items[0][price_data][product_data][name]": "Support the Cauldron",
+            "line_items[0][price_data][product_data][tax_code]": "txcd_10000000",
+            "line_items[0][quantity]": "1",
+        }
+    else:
+        price = STRIPE_PRICES[tier]
+        line_items = {
+            "line_items[0][price]": price,
+            "line_items[0][quantity]": "1",
+        }
+
+    session = await _stripe_post("checkout/sessions", {
+        "mode": "payment",
+        **line_items,
+        "success_url": f"{STRIPE_PUBLIC_BASE}/adventure.html?billing=success",
+        "cancel_url": f"{STRIPE_PUBLIC_BASE}/pricing.html",
+        "client_reference_id": username,
+        "metadata[username]": username,
+        "metadata[tier]": tier,
+    })
+    logger.info("💳 Checkout session for %s (%s)", username, tier)
+    return {"ok": True, "url": session["url"]}
+
+
+@app.post("/api/billing/portal")
+async def billing_portal(morkrets_token: str | None = Cookie(None)):
+    """Skapa en Stripe Customer Portal-session (säg upp / hantera prenumeration).
+
+    Kräver att kontot har ett stripe_customer_id (sätts vid checkout).
+    Portalen låter spelaren själv säga upp, byta kort eller byta plan.
+    """
+    if selfhost.enabled():
+        raise HTTPException(404, "Billing is not part of the self-host build.")
+    payload = _get_current_user(morkrets_token)
+    username = payload.get("sub")
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(503, "Payments are not configured yet")
+    _udata = load_users().get(username, {})
+    if not isinstance(_udata, dict) or not _udata.get("stripe_customer_id"):
+        raise HTTPException(400, detail={
+            "no_customer": True,
+            "message": "No Stripe customer linked to this account yet.",
+        })
+    try:
+        session = await _stripe_post("billing_portal/sessions", {
+            "customer": _udata["stripe_customer_id"],
+            "return_url": f"{STRIPE_PUBLIC_BASE}/adventure.html?billing=portal",
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("💳 Portal session error for %s: %s", username, e)
+        raise HTTPException(502, "Could not open the billing portal.")
+    logger.info("💳 Portal session for %s", username)
+    return {"ok": True, "url": session["url"]}
+
+
+@app.post("/api/stripe/webhook")
+async def stripe_webhook(request: Request):
+    """Stripe webhook — verifierad signatur, uppdaterar users.json.
+
+    Endpointen är OBEHÖRIG men kräver giltig Stripe-signatur. Åtkomst ges
+    endast här — aldrig i checkout-svaret.
+    """
+    if selfhost.enabled():
+        raise HTTPException(404, "Billing is not part of the self-host build.")
+    raw = await request.body()
+    header = request.headers.get("stripe-signature", "")
+    if not _stripe_verify_signature(raw, header):
+        raise HTTPException(400, "Invalid signature")
+    try:
+        event = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(400, "Bad event body")
+    etype = event.get("type", "")
+    obj = event.get("data", {}).get("object", {}) or {}
+    event_id = event.get("id", "")
+    logger.info("💳 Stripe webhook: %s (%s)", etype, event_id)
+
+    # Idempotens: Stripe levererar om events vid retry — hoppa över sådana
+    # vi redan behandlat (annars risk: dubbel grant / förkortad expiry).
+    if _ledger_has_event(event_id):
+        logger.info("💳 Stripe webhook duplicate, ignoring: %s", event_id)
+        return {"received": True}
+
+    if etype == "checkout.session.completed":
+        meta = obj.get("metadata", {}) or {}
+        username = meta.get("username") or obj.get("client_reference_id")
+        tier = (meta.get("tier") or "support300").strip().lower()
+        if not username:
+            return {"received": True}
+        if obj.get("payment_status") not in (None, "paid"):
+            return {"received": True}
+        cust = obj.get("customer")
+        sub_id = obj.get("subscription")
+        amount_total = int(obj.get("amount_total", 0) or 0)  # minor units (ören)
+        with _USER_LOCK:
+            users = load_users()
+            if username not in users:
+                return {"received": True}
+            u = users[username]
+            features = u.get("features")
+            if not isinstance(features, dict):
+                features = {}
+            if tier == "lifetime":
+                # Legacy: befintliga 100€-köpare — ∞ turns, allt
+                u["subscription_status"] = "lifetime"
+                u["subscription_until"] = None
+                u["turn_cap"] = 0
+                features["supporter"] = True   # 2026-10-01: har betalat → undo + export
+            elif tier == "support300":
+                # 3€ — +300 turns (BEHÅLLS alltid), export + StepFun i 30 dagar.
+                # Flera köp staplas: turn_bonus ackumuleras, features_until
+                # förlängs +30 dagar från max(idag, nuvarande fönster).
+                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 300
+                # Grant-ledgern (2026-09-28): "hur mycket köpte spelaren" gick
+                # inte att svara på eftersom turn_bonus bara är KVARVARANDE.
+                _append_turn_grant(username, 300, "stripe:support300")
+                features["export"] = True
+                features["supporter"] = True   # 2026-10-01: har betalat → undo + export
+                u["features"] = features
+                u["features_until"] = _stack_benefits_until(u)
+                u.pop("models_until", None)  # enhetligt fönster framåt
+            elif tier == "patron500":
+                # 30€ — 100 turns/dag i 30 dagar (cap_until) istället för +500
+                # permanenta turns (2026-08-07). Premiummodeller + Qwen TTS +
+                # Wan 2.7 Pro i 30 dagar (stackbart, se support300). Samma
+                # fönster (features_until == cap_until) → cap löper ut med
+                # förmånerna. Lazy-återställning till DEFAULT_TURN_CAP via _turn_cap_for.
+                cap_until = _stack_benefits_until(u)
+                u["turn_cap"] = PATRON_DAILY_CAP
+                u["cap_until"] = cap_until
+                features["export"] = True
+                features["wan1080"] = True
+                features["all_models"] = True
+                features["supporter"] = True   # 2026-10-01: har betalat → undo + export
+                u["features"] = features
+                u["features_until"] = cap_until
+                u.pop("models_until", None)
+                u["subscription_status"] = "tier2"
+            elif tier == "unlock10":
+                # 10€ (2026-09-27, ny prissättning): +100 turns (permanenta,
+                # turn_bonus) + ALLT upplåst PERMANENT: alla DM-modeller,
+                # Qwen+StepFun TTS, StepFun/Wan/Qwen bildgenerering, export,
+                # avatar-uppladdning. Varje TTS/bild drar 1 turn ur potten.
+                # Ingen tidsfönster-mekanik — features sätts utan utgångsdatum
+                # (features_until rensas så _benefits_active = permanent True).
+                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 100
+                # Grant-ledgern (2026-09-28): spårar köpet, inte bara saldot.
+                _append_turn_grant(username, 100, "stripe:unlock10")
+                features["export"] = True
+                features["wan1080"] = True
+                features["all_models"] = True
+                features["unlock10"] = True
+                features["supporter"] = True   # 2026-10-01: har betalat → undo + export
+                u["features"] = features
+                u["features_until"] = None  # permanent
+                u.pop("models_until", None)
+                logger.info("💳 Unlock 10€: +100 turns + permanent features for %s", username)
+            elif tier == "donation":
+                # Valfri summa — ren support, ingen feature-window, men varje
+                # € ger +100 turns. amount_total är i ören (ören/100 EUR × 100
+                # turns/€ = amount_total), så antalet turns = amount_total.
+                _don_turns = max(0, int(amount_total))
+                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + _don_turns
+                # 2026-10-01: donationen är en egen unlock — undo-knappen +
+                # kampanj-exporten, PERMANENT (ingen features_until-mekanik;
+                # flaggan läses direkt av _is_supporter). Kopiorna nedan speglar
+                # webhooken exakt så en admin-grant aldrig ger olika tillgång.
+                features["supporter"] = True
+                u["features"] = features
+                # Grant-ledgern (2026-09-28): donationens turns bokförs.
+                if _don_turns:
+                    _append_turn_grant(username, _don_turns, "stripe:donation")
+                logger.info("💳 Donation: +%d turns for %s", _don_turns, username)
+            if cust:
+                u["stripe_customer_id"] = cust
+            if sub_id:
+                u["stripe_subscription_id"] = sub_id
+            save_users(users)
+        _append_tier_log(username, tier, u.get("subscription_until") if tier != "lifetime" else None)
+        _ledger_append({
+            "user": username,
+            "amount_sek": round(amount_total / 100 * _EUR_TO_SEK),
+            "type": f"stripe:{tier}",
+            "stripe_sub_id": sub_id,
+            "event_id": event_id,
+        })
+    elif etype == "customer.subscription.updated":
+        # Uppsägning via kundportalen → Stripe sätter cancel_at/cancel_at_period_end
+        # MEN skickar bara customer.subscription.deleted vid periodens SLUT.
+        # (rostad 2026-08-04, test: friend1 sa upp via kvittot → cancel_at satt.)
+        # Vi bokför intentionen direkt så admin ser den utan att vänta 30 dagar.
+        sub_id = obj.get("id")
+        cancel_at = obj.get("cancel_at")
+        cancel_at_period_end = bool(obj.get("cancel_at_period_end"))
+        with _USER_LOCK:
+            users = load_users()
+            for uname, u in users.items():
+                if not isinstance(u, dict) or u.get("stripe_subscription_id") != sub_id:
+                    continue
+                if cancel_at or cancel_at_period_end:
+                    if not u.get("cancel_scheduled_at"):
+                        u["cancel_scheduled_at"] = _now_iso()
+                        save_users(users)
+                        _ledger_append({
+                            "user": uname,
+                            "amount_sek": 0,
+                            "type": "stripe:cancel_scheduled",
+                            "stripe_sub_id": sub_id,
+                            "event_id": event_id,
+                        })
+                        _append_tier_log(uname, "cancel_scheduled", None)
+                        logger.info("💳 Cancel scheduled (portal): %s", uname)
+                        _churn_bump()  # admin ser churn direkt vid intentionen
+                else:
+                    # Uppsägningen återtogs i portalen (cancel_at rensat)
+                    if u.get("cancel_scheduled_at"):
+                        u.pop("cancel_scheduled_at", None)
+                        save_users(users)
+                        _ledger_append({
+                            "user": uname,
+                            "amount_sek": 0,
+                            "type": "stripe:cancel_reverted",
+                            "stripe_sub_id": sub_id,
+                            "event_id": event_id,
+                        })
+                        logger.info("💳 Cancel reverted: %s", uname)
+                        _churn_unbump()  # intentionen återtagen → churn dras bort
+                break
+    elif etype == "customer.subscription.deleted":
+        sub_id = obj.get("id")
+        cust = obj.get("customer")
+        with _USER_LOCK:
+            users = load_users()
+            for uname, u in users.items():
+                if not isinstance(u, dict):
+                    continue
+                if u.get("stripe_subscription_id") == sub_id or u.get("stripe_customer_id") == cust:
+                    # Churn-datapoint (rostad 2026-08-04): logga uppsägningen i
+                    # ledgern så adminvyn kan visa churn per dag.
+                    _churn_record(uname, sub_id)
+                    u["subscription_status"] = "free"
+                    u["subscription_until"] = None
+                    u["turn_cap"] = DEFAULT_TURN_CAP
+                    u.pop("cancel_scheduled_at", None)  # intentionen realiserad
+                    save_users(users)
+                    _append_tier_log(uname, "free", None)
+                    logger.info("💳 Subscription deleted → free: %s", uname)
+                    break
+    elif etype == "invoice.paid":
+        sub_id = obj.get("subscription")
+        # Ingen prenumeration → inget att förlänga. Utan denna guard kan en
+        # test-/replay-händelse (subscription=null) matcha användare som saknar
+        # stripe_subscription_id (None != None → falskt → träff) och ge dem en
+        # falsk renewal-rad + förlängd until. (bugg 2026-08-04)
+        if not sub_id:
+            return {"received": True}
+        amount_paid = int(obj.get("amount_paid", 0) or 0)
+        with _USER_LOCK:
+            users = load_users()
+            for uname, u in users.items():
+                if not isinstance(u, dict) or not u.get("stripe_subscription_id"):
+                    continue
+                if u.get("stripe_subscription_id") != sub_id:
+                    continue
+                until = u.get("subscription_until")
+                try:
+                    base = datetime.fromisoformat(until).date() if until else datetime.now(timezone.utc).date()
+                except ValueError:
+                    base = datetime.now(timezone.utc).date()
+                u["subscription_until"] = (base + timedelta(days=30)).isoformat()
+                save_users(users)
+                _ledger_append({
+                    "user": uname,
+                    "amount_sek": round(amount_paid / 100 * _EUR_TO_SEK),
+                    "type": "stripe:renewal",
+                    "stripe_sub_id": sub_id,
+                    "event_id": event_id,
+                })
+                logger.info("💳 Invoice paid → extended: %s", uname)
+                break
+    return {"received": True}
+
+
+@app.get("/api/admin/feedback")
+async def admin_feedback(morkrets_token: str | None = Cookie(None)):
+    """Admin-only: läs all spelarfeedback från feedback.jsonl (senaste först)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    path = _FEEDBACK_DIR / "feedback.jsonl"
+    items = []
+    if path.exists():
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    items.append(json.loads(line))
+                except json.JSONDecodeError:
+                    logger.warning("Skipping malformed feedback line: %.80s", line)
+        except OSError as e:
+            logger.error("Feedback read failed: %s", e)
+            raise HTTPException(500, "Could not read feedback")
+    items.reverse()  # senaste först
+    return {"total": len(items), "items": items}
+
+
+@app.get("/api/admin/user/{username}")
+async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: detaljerad info om en specifik användare."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    users = load_users()
+    if username not in users:
+        raise HTTPException(404, f"Användare '{username}' finns inte")
+
+    store = CampaignStore()
+    campaigns = store.list_campaigns(username)
+    scan = _scan_user_transcripts(username)
+
+    # Bygg per-kampanj token-uppdelning
+    campaign_tokens = {}
+    for s in scan["sessions"]:
+        cid = s["campaign_id"]
+        if cid not in campaign_tokens:
+            campaign_tokens[cid] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0, "sessions": [], "roles": {}, "models": {}}
+        campaign_tokens[cid]["prompt_tokens"] += s["prompt_tokens"]
+        campaign_tokens[cid]["completion_tokens"] += s["completion_tokens"]
+        campaign_tokens[cid]["total_tokens"] += s["total_tokens"]
+        campaign_tokens[cid]["turns"] += s["turns"]
+        campaign_tokens[cid]["sessions"].append(s)
+        for role, rt in (s.get("role_tokens") or {}).items():
+            agg = campaign_tokens[cid]["roles"].setdefault(role, {"prompt_tokens": 0, "completion_tokens": 0})
+            agg["prompt_tokens"] += rt.get("prompt_tokens", 0) or 0
+            agg["completion_tokens"] += rt.get("completion_tokens", 0) or 0
+        for m, mt in (s.get("model_tokens") or {}).items():
+            agg = campaign_tokens[cid]["models"].setdefault(m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+            agg["prompt_tokens"] += mt.get("prompt_tokens", 0) or 0
+            agg["completion_tokens"] += mt.get("completion_tokens", 0) or 0
+            agg["calls"] += mt.get("calls", 0) or 0
+
+    enriched = []
+    for c in campaigns:
+        cid = c["campaign_id"]
+        ct = campaign_tokens.get(cid, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0, "sessions": [], "roles": {}, "models": {}})
+        roles = ct["roles"]
+        # TTS-förbrukning per kampanj — läses direkt från state.json
+        tts_usage = {}
+        try:
+            st_file = CAMPAIGNS_DIR / username / cid / "state.json"
+            if st_file.exists():
+                with open(st_file) as f:
+                    tts_usage = (json.load(f).get("meta", {}) or {}).get("tts_usage", {}) or {}
+        except (OSError, json.JSONDecodeError):
+            pass
+        enriched.append({
+            **c,
+            "prompt_tokens": ct["prompt_tokens"],
+            "completion_tokens": ct["completion_tokens"],
+            "total_tokens": ct["total_tokens"],
+            "turns": ct["turns"],
+            "sessions": ct["sessions"],
+            # Per-roll uppdelning: assistant (DM), guardian, background (extraktion/sammanfattning/dag-entry)
+            "dm_tokens": (roles.get("assistant", {}).get("prompt_tokens", 0) or 0) + (roles.get("assistant", {}).get("completion_tokens", 0) or 0),
+            "guardian_tokens": (roles.get("guardian", {}).get("prompt_tokens", 0) or 0) + (roles.get("guardian", {}).get("completion_tokens", 0) or 0),
+            "background_tokens": (roles.get("background", {}).get("prompt_tokens", 0) or 0) + (roles.get("background", {}).get("completion_tokens", 0) or 0),
+            "role_breakdown": roles,
+            # Per-modell-aggregation (t.ex. {"deepseek-v4-flash-0731": {...}})
+            "model_breakdown": ct["models"],
+            # TTS per kampanj: tokens/sekunder/minuter renderat
+            "tts_usage": tts_usage,
+        })
+
+    meta = _account_meta(username, users[username], campaigns)
+    geo = await iplog.geo_for_users({username: users[username]})
+    g = geo.get(username, {})
+    # FAS D: medlemskap + intäkter (färsk rad efter ev. premium-demote)
+    tier = _tier_for(username)
+    fresh = load_users().get(username)
+    fresh = fresh if isinstance(fresh, dict) else {}
+    # Turn-pott + kod räknas EN gång (2026-09-28) — samma objekt svarar både
+    # pott-fälten och "köpt/använt"-siffrorna i dossién.
+    pool = _turn_pool(username, udata=fresh)
+    coding = _player_coding(username, revenue=_ledger_per_user().get(username, 0) or 0,
+                            pool=pool, tier=tier)
+    return {
+        "username": username,
+        "role": users[username].get("role", "player") if isinstance(users[username], dict) else "player",
+        "total_campaigns": len(campaigns),
+        "total_tokens": scan["total_tokens"],
+        "prompt_tokens": scan["prompt_tokens"],
+        "completion_tokens": scan["completion_tokens"],
+        "total_turns": scan["turns"],
+        "last_active": scan["last_active"],
+        "created_at": meta["created_at"],
+        "last_login": meta["last_login"],
+        "turn_cap": meta["turn_cap"],
+        "turns_used": meta["turns_used"],
+        # FAS D: medlemskap + intäkter (period-räkning från users.json)
+        "subscription_status": tier,
+        "subscription_until": fresh.get("subscription_until"),
+        "turn_bonus": int(fresh.get("turn_bonus", 0) or 0),
+        "promo_bonus": int(fresh.get("promo_bonus", 0) or 0),
+        "period_turns_used": int(fresh.get("turns_used", 0) or 0),
+        "revenue": _ledger_per_user().get(username, 0),
+        "ip": g.get("ip", ""),
+        "country": g.get("country", ""),
+        "country_code": g.get("countryCode", ""),
+        "country_flag": iplog.country_flag(g.get("countryCode", "")),
+        "tts_usage": scan.get("tts_usage", {}),
+        "character_creation": scan.get("character_creation", {}),
+        "image_gen": scan.get("image_gen", {}),
+        "deleted_campaigns": scan.get("deleted_campaigns", {}),
+        # Turn-ledger: exakt förbrukning per förbrukad turn (bokföring sedan
+        # 2026-08-08) — per-åtgärd idag + totalt, och senaste 50 posterna.
+        "turn_ledger": _turn_ledger_breakdown(username),
+        "turn_ledger_today": _turn_ledger_breakdown(username, since=_today_str()),
+        "turn_ledger_recent": _read_turn_ledger(username, limit=50),
+        # ── Turn-pott per hink (2026-09-28, rostad) ─────────────────────────
+        # HELA pott-objektet (alla tre hinkarna + livstidsförbrukning), grant-
+        # ledgern (vad som köpts/beviljats — "köpt" gick inte att svara på
+        # tidigare), free/paid-koden och ledger-raderna per hink.
+        "turn_pool": _pool_detail(pool),
+        "coding": coding,
+        "turn_grants": _read_turn_grants(username, limit=100),
+        "turn_ledger_buckets": _turn_ledger_bucket_breakdown(username),
+        "turn_ledger_buckets_today": _turn_ledger_bucket_breakdown(username, since=_today_str()),
+        # ── Admin dashboard v2 (2026-09-27): dossierns Revenue/Usage-flikar ──
+        # ALLA spelarens ledger-rader, nyaste först (churn/cancel-rader har
+        # 0 SEK och visas som livscykelmarkörer). daily = transkriptens dagbok
+        # per lokal dag; model_mix = per-modell-tokens (drill-down, skickas
+        # aldrig i overview-listan).
+        "revenue_history": sorted([r for r in _ledger_load() if r.get("user") == username],
+                                  key=lambda r: _ledger_ts_key(r.get("ts")), reverse=True),
+        "daily": scan.get("daily", {}),
+        "model_mix": scan.get("model_tokens", {}),
+        "campaigns": enriched,
+    }
+
+
+@app.get("/api/admin/user/{username}/ledger")
+async def admin_user_ledger(username: str, limit: int = 100, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: turn-ledgern (bokföring per förbrukad turn) för en användare.
+
+    Varje rad = EN förbrukad turn: {ts, action, model, tokens}. `action`:
+    dm|guardian_pre|guardian_post|extraction|image|char_gen|search|repair|
+    summary|day_entry|battle_ai. `?limit=N` styr antalet poster (max 500)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    users = load_users()
+    if username not in users:
+        raise HTTPException(404, f"Användare '{username}' finns inte")
+    limit = max(1, min(int(limit or 100), 500))
+    return {
+        "ok": True,
+        "username": username,
+        "entries": _read_turn_ledger(username, limit=limit),
+        "breakdown_all": _turn_ledger_breakdown(username),
+        "breakdown_today": _turn_ledger_breakdown(username, since=_today_str()),
+        # Hink-fördelning (2026-09-28): vilken hink som betalade varje turn.
+        # `unknown` = rader skrivna före 2026-09-28 (ingen hink bokfördes då).
+        "by_bucket": _turn_ledger_bucket_breakdown(username),
+        "by_bucket_today": _turn_ledger_bucket_breakdown(username, since=_today_str()),
+    }
+
+
+# ═══════════════════════════════════════
+# STATIC FILES — serva frontend
+# ═══════════════════════════════════════
+# Monteras EFTER alla /api/ routes så att API:et har prioritet.
+# No-cache middleware för HTML/JS så att webbläsaren alltid hämtar senaste.
+
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class NoCacheStaticMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.endswith(('.html', '.js')) or path == '/':
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
+
+class AdminCreateUser(BaseModel):
+    username: str
+    password: str
+    role: str = "player"
+
+
+class AdminTurnCap(BaseModel):
+    turn_cap: int
+
+
+class AdminTurnBonus(BaseModel):
+    bonus: int
+
+
+class AdminSubscription(BaseModel):
+    status: str
+    until: str | None = None
+
+
+class AdminGrant(BaseModel):
+    tier: str  # 'support' | 'patron'
+    days: int = 30
+
+
+class AdminRole(BaseModel):
+    role: str  # 'admin' | 'player'
+
+
+@app.post("/api/admin/user")
+async def admin_create_user(req: AdminCreateUser, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: skapa ett nytt spelarkonto. Samma validering som självregistrering."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    username = normalize_username(req.username)
+    err = validate_username(username)
+    if err:
+        raise HTTPException(400, err)
+    err = validate_password(req.password)
+    if err:
+        raise HTTPException(400, err)
+
+    with _USER_LOCK:
+        users = load_users()
+        if username in users:
+            raise HTTPException(409, f"Användare '{username}' finns redan")
+
+        users[username] = {
+            "password_hash": hash_password(req.password),
+            "role": req.role if req.role in ("player", "admin") else "player",
+            "created_at": _now_iso(),
+            "last_login": None,
+            "turn_cap": DEFAULT_TURN_CAP,
+            # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
+            "turns_used": 0,
+            "promo_bonus": 0,  # intro-promon borttagen 2026-09-06
+            "turn_bonus": 0,
+            "reset_date": _today_str(),
+            "subscription_status": "free",
+            "subscription_until": None,
+            "features": {},
+            "wan_used_today": 0,
+            "wan_reset_date": None,
+        }
+        save_users(users)
+    return {"ok": True, "username": username, "role": users[username]["role"]}
+
+
+@app.put("/api/admin/user/{username}/turn-cap")
+async def admin_set_turn_cap(username: str, req: AdminTurnCap, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: sätt turn-tak för ett konto (0 = oändligt)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    if not isinstance(req.turn_cap, int) or req.turn_cap < 0:
+        raise HTTPException(400, "Turn cap must be 0 (unlimited) or a positive integer")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata["turn_cap"] = req.turn_cap
+        save_users(users)
+
+    logger.info("🎚️ Turn cap set: %s → %d", username, req.turn_cap)
+    return {"ok": True, "username": username, "turn_cap": req.turn_cap}
+
+
+@app.get("/api/admin/billing")
+async def admin_billing(morkrets_token: str | None = Cookie(None)):
+    """Admin-only: intäktsöversikt — MRR, transaktioner, total per användare
+    och de senaste 50 ledger-raderna."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    totals = _ledger_totals()
+    per_user = _ledger_per_user()
+    ledger = _ledger_load()[-50:]  # senaste 50 raderna (filordning)
+    # Admin dashboard v2 (2026-09-27): produkter/månad/dag/land/kunder ur
+    # samma ledger — additiva nycklar, befintliga svar oförändrade.
+    breakdown = _revenue_breakdown()
+    return {
+        "mrr": totals["mrr"],
+        "transactions": totals["transactions"],
+        "total": totals["total"],
+        "month_revenue": totals.get("month_revenue", 0),
+        "month_key": totals.get("month_key", ""),
+        "per_user": per_user,
+        "ledger": ledger,
+        # Churn-datapoint (rostad 2026-08-04): uppsägningar per dag
+        "churn": _churn_load(),
+        # ── Admin dashboard v2 (2026-09-27) ──
+        "by_product": breakdown["by_product"],
+        "by_month": breakdown["by_month"],
+        "by_date": breakdown["by_date"],
+        "by_country": breakdown["by_country"],
+        "customers": breakdown["customers"],
+        "paying_customers": breakdown["paying_customers"],
+    }
+
+
+@app.put("/api/admin/user/{username}/turn-topup")
+async def admin_turn_topup(username: str, req: AdminTurnBonus, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: lägg turn_bonus på ett konto (förbrukas före cap-turns)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    if not isinstance(req.bonus, int) or req.bonus <= 0:
+        raise HTTPException(400, "Bonus must be a positive integer")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata.setdefault("turn_bonus", 0)
+        udata["turn_bonus"] = int(udata.get("turn_bonus", 0) or 0) + req.bonus
+        save_users(users)
+
+    # Grant-ledgern (2026-09-28): admin-topup är en grant, inte ett köp — det
+    # syns i `source` så dashboarden kan skilja dem åt.
+    _append_turn_grant(username, req.bonus, "admin", note=f"by {payload.get('sub') or 'admin'}")
+    logger.info("➕ Turn top-up: %s +%d bonus (total %d)", username, req.bonus, udata["turn_bonus"])
+    return {"ok": True, "username": username, "turn_bonus": udata["turn_bonus"]}
+
+
+@app.put("/api/admin/user/{username}/turn-reset")
+async def admin_turn_reset(username: str, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: nollställ turns_used för aktuell period (bonus behålls)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata.setdefault("turns_used", 0)
+        udata["turns_used"] = 0
+        save_users(users)
+
+    logger.info("🔄 Turn reset: %s → turns_used=0", username)
+    return {"ok": True, "username": username, "turns_used": 0}
+
+
+def _append_tier_log(username: str, status: str, until: str | None) -> None:
+    """Skriv en loggpost i spelarens chatt vid admin-ändring av medlemskap.
+
+    Läggs i den aktiva kampanjens transkript (eller senast uppdaterade om
+    ingen pekarfil finns) som en guardian-post med tidsstämpel. Spelaren
+    ser den nästa gång chatten öppnas. Konsumerar INGEN turn.
+    """
+    store = CampaignStore()
+    state = store.get(username)  # aktiv kampanj, annars senast uppdaterad
+    if not state:
+        return
+    names = {"free": "Free", "tier1": "Tier 1", "tier2": "Tier 2", "lifetime": "Lifetime",
+             "support": "Support", "patron": "Patron"}
+    label = names.get(status, status or "Free")
+    if status == "free":
+        text = "ℹ️ Your account was reverted to **Free**."
+    elif status == "lifetime":
+        text = "🎉 Your account have been upgraded as a token of appreciation — new tier: **Lifetime** (∞ turns, all features)."
+    elif status in ("support", "patron"):
+        suffix = f" — valid until **{until}**" if until else ""
+        if status == "patron":
+            text = (f"🎉 Your account have been upgraded as a token of appreciation — new tier: **Patron**{suffix}. "
+                    f"You now get **100 turns per day** plus all premium Dungeon Masters and tools.")
+        else:
+            text = f"🎉 Your account have been upgraded as a token of appreciation — new tier: **Support**{suffix}."
+    else:
+        suffix = f" — valid until **{until}**" if until else ""
+        text = f"🎉 Your account have been upgraded as a token of appreciation — new tier: **{label}**{suffix}."
+    try:
+        state = store.append_message(state, "guardian", text, meta={"log": True, "tier": status})
+        store.save(state)
+        logger.info("📜 Tier log appended for %s → %s", username, status)
+    except Exception as e:  # loggposten får ALDRIG krascha grantet
+        logger.warning("Tier log append failed for %s: %s", username, e)
+
+
+@app.put("/api/admin/user/{username}/subscription")
+async def admin_set_subscription(username: str, req: AdminSubscription, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: sätt medlemskap.
+
+    TIERS: free → DEFAULT_TURN_CAP; tier1/tier2 → DEFAULT_TURN_CAP med
+    6-timmars-rollover (reset_ts sätts vid nästa anrop); lifetime → turn_cap 0
+    (oändliga turns). `until` = sista giltiga dag (YYYY-MM-DD) eller null."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    status = (req.status or "").strip().lower()
+    if status == "premium":
+        status = "tier2"  # legacy → tier2
+    if status not in TIER_ORDER:
+        raise HTTPException(400, f"Status must be one of: {', '.join(TIER_ORDER)}")
+    until = req.until
+    if status == "lifetime":
+        until = None  # riktig lifetime: ingen utgång, turn_cap 0
+    if until is not None:
+        try:
+            datetime.fromisoformat(str(until)).date()
+        except ValueError:
+            raise HTTPException(400, "until must be YYYY-MM-DD or null")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata["subscription_status"] = status
+        udata["subscription_until"] = until
+        if status == "lifetime":
+            udata["turn_cap"] = 0
+        elif status in ("tier1", "tier2"):
+            # one-time-modellen: alla free får DEFAULT_TURN_CAP turns/dag (24h) —
+            # ingen 6-timmars-rollover längre. reset_ts tas bort om den finns.
+            udata["turn_cap"] = DEFAULT_TURN_CAP
+            udata.pop("reset_ts", None)
+        else:  # free
+            if int(udata.get("turn_cap", 0) or 0) == 0:
+                udata["turn_cap"] = DEFAULT_TURN_CAP
+        save_users(users)
+
+    logger.info("👑 Subscription set: %s → %s (until %s)", username, status, until)
+    # Loggpost i spelarens chatt (aktiv/senaste kampanj) — "token of appreciation".
+    try:
+        _append_tier_log(username, status, until)
+    except Exception as e:
+        logger.warning("Tier log append failed for %s: %s", username, e)
+    return {
+        "ok": True,
+        "username": username,
+        "subscription_status": status,
+        "subscription_until": until,
+        "turn_cap": udata["turn_cap"],
+    }
+
+
+@app.put("/api/admin/user/{username}/grant")
+async def admin_grant_tier(username: str, req: AdminGrant, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: bevilja Support/Patron i `days` dagar (default 30).
+
+    Speglar exakt vad ett riktigt Stripe-köp ger (webhooken checkout.session.completed):
+      - support: features.export + features_until (stackbart 30-dagarsfönster)
+      - patron:  features.export + wan1080 + all_models + features_until
+    Dessutom sätts subscription_status ('support'|'patron') + subscription_until
+    så att admin-vyn och legacy-läsare ser medlemskapet direkt. Inga bonus-turns
+    läggs på här — det gör turn-topup separat.
+    """
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    tier = (req.tier or "").strip().lower()
+    if tier not in ("support", "patron"):
+        raise HTTPException(400, "tier must be 'support' or 'patron'")
+    days = int(req.days or 30)
+    if days < 1 or days > 365:
+        raise HTTPException(400, "days must be between 1 and 365")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        features = udata.get("features")
+        if not isinstance(features, dict):
+            features = {}
+        # Exakt samma features som webhooken (support300 / patron500).
+        # Patron (2026-08-07): 100 turns/dag (cap_until) istället för +500
+        # permanenta turns — speglar Stripe-webhooken exakt.
+        if tier == "support":
+            features["export"] = True
+            features["supporter"] = True   # 2026-10-01: har betalat → undo + export
+            # Stöd ger INGEN daglig cap-boost — rensa eventuellt kvarvarande
+            # Patron-cap (och återställ till standard, utom lifetime=0).
+            if int(udata.get("turn_cap", 0) or 0) == PATRON_DAILY_CAP:
+                udata["turn_cap"] = DEFAULT_TURN_CAP
+            udata.pop("cap_until", None)
+        else:  # patron
+            features["export"] = True
+            features["wan1080"] = True
+            features["all_models"] = True
+            features["supporter"] = True   # 2026-10-01: har betalat → undo + export
+            udata["turn_cap"] = PATRON_DAILY_CAP
+        udata["features"] = features
+        udata["features_until"] = _stack_benefits_until(udata, days=days)
+        if tier == "patron":
+            udata["cap_until"] = udata["features_until"]
+        udata.pop("models_until", None)  # enhetligt fönster framåt
+        udata["subscription_status"] = tier
+        udata["subscription_until"] = (datetime.now(timezone.utc).date() + timedelta(days=days)).isoformat()
+        save_users(users)
+
+    logger.info("👑 Admin grant: %s → %s (%d dagar)", username, tier, days)
+    try:
+        _append_tier_log(username, tier, udata["subscription_until"])
+    except Exception as e:
+        logger.warning("Tier log append failed for %s: %s", username, e)
+    return {
+        "ok": True,
+        "username": username,
+        "tier": tier,
+        "subscription_status": tier,
+        "subscription_until": udata["subscription_until"],
+        "features_until": udata["features_until"],
+        "features": udata["features"],
+        "effective_tier": _tier_for(username),
+    }
+
+
+@app.put("/api/admin/user/{username}/role")
+async def admin_set_role(username: str, req: AdminRole, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: befordra till admin / demota till player."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    role = (req.role or "").strip().lower()
+    if role not in ("admin", "player"):
+        raise HTTPException(400, "role must be 'admin' or 'player'")
+    if username == payload.get("sub") and role != "admin":
+        raise HTTPException(400, "Du kan inte ta bort din egen admin-rättighet")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata["role"] = role
+        save_users(users)
+
+    logger.info("🎖️ Role set: %s → %s", username, role)
+    return {"ok": True, "username": username, "role": role}
+
+
+@app.delete("/api/admin/user/{username}")
+async def admin_delete_user(username: str, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: radera ett spelarkonto + alla kampanjer."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    users = load_users()
+    if username not in users:
+        raise HTTPException(404, f"Användare '{username}' finns inte")
+    if username == payload.get("sub"):
+        raise HTTPException(400, "Du kan inte radera ditt eget konto")
+
+    del users[username]
+    save_users(users)
+
+    # Radera kampanjdata
+    import shutil
+    user_dir = CAMPAIGNS_DIR / username
+    if user_dir.exists():
+        shutil.rmtree(user_dir)
+
+    return {"ok": True, "deleted": username}
+
+
+@app.delete("/api/me/account")
+async def me_delete_account(morkrets_token: str | None = Cookie(None)):
+    """Self-service: radera DITT eget konto + alla kampanjer, valv, avatarer.
+
+    (2026-08-05 v2, rostad: "Delete account i sin profil med are-you-sure".)
+    Radera görs omedelbart — frontend visar en are-you-sure-dialog först.
+    Skyddar bootstrap-kontot 'admin' (rostads eget testkonto) från självradering.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload.get("sub")
+    if not username:
+        raise HTTPException(401, "Ej inloggad")
+    if username == "admin":
+        raise HTTPException(400, "The bootstrap admin account cannot delete itself.")
+
+    users = load_users()
+    if username not in users:
+        raise HTTPException(404, "Konto finns inte")
+    del users[username]
+    save_users(users)
+
+    import shutil
+    # Kampanjdata + _account_usage.json (ligger i användarmappen)
+    user_dir = CAMPAIGNS_DIR / username
+    if user_dir.exists():
+        shutil.rmtree(user_dir)
+    # Forge-valv (karaktärer + avatar-bilder)
+    vault_dir = VAULTS_DIR / username
+    if vault_dir.exists():
+        shutil.rmtree(vault_dir)
+    # Profilporträtt (konto-avatar: galleri-JSON + alla bildfiler)
+    av_dir = _user_avatar_path(username).parent
+    try:
+        ugallery = _load_user_avatar_gallery(username)
+        for item in ugallery.get("gallery") or []:
+            if item.get("disk_name"):
+                try:
+                    (av_dir / item["disk_name"]).unlink(missing_ok=True)
+                except OSError:
+                    pass
+    except Exception:
+        pass
+    for leftover in (_user_gallery_path(username), _user_avatar_path(username)):
+        if leftover.exists():
+            try:
+                leftover.unlink()
+            except OSError:
+                pass
+    # Ledger-rader (privacy: ingen spårbar historik kvar)
+    try:
+        with _LEDGER_LOCK:
+            ledger = _ledger_load()
+            kept = [r for r in ledger if (r.get("user") or "") != username]
+            if len(kept) != len(ledger):
+                tmp = _LEDGER_FILE.with_suffix(".tmp")
+                tmp.write_text(json.dumps(kept, ensure_ascii=False, indent=2), encoding="utf-8")
+                tmp.replace(_LEDGER_FILE)
+    except Exception as e:
+        logger.warning("Ledger cleanup failed for %s: %s", username, e)
+
+    logger.info("🗑️ Self-delete account: %s", username)
+    return {"ok": True, "deleted": username}
+
+
+app.add_middleware(NoCacheStaticMiddleware)
+
+# 2026-08-11 (perf-audit): gzip på statik + JSON. chat.html 479→~110 KB.
+# Starlette 1.6 GZipMiddleware exkluderar text/event-stream by default →
+# SSE-strömmar (DM-svar, TTS) påverkas ej. minimum_size=500 (default).
+from starlette.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, compresslevel=6)
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+# Säkerställ rätt content-type för musikfiler (Python mimetypes saknar .ogg på många system)
+import mimetypes
+mimetypes.add_type("audio/ogg", ".ogg")
+mimetypes.add_type("audio/ogg", ".oga")
+mimetypes.add_type("image/webp", ".webp")  # hero-porträtt (assets/adventurers/webp)
+
+# ═══════════════════════════════════════════════════════════════
+# SEO — gratis trix (2026-08-06): robots.txt, sitemap.xml, llms.txt
+# (llms.txt = ny 2026-standard så AI-crawlers kan citera spelet i
+#  chattbottar/AI-svar — AEO/GEO.)
+# ═══════════════════════════════════════════════════════════════
+SEO_PAGES = [
+    ("", "1.0"),
+    ("login.html", "0.9"),
+    ("mechanics.html", "0.8"),
+    ("help.html", "0.8"),
+    ("pricing.html", "0.8"),
+    ("models.html", "0.6"),
+    ("releases.html", "0.6"),
+    ("screenshots.html", "0.5"),
+    ("book-souls/", "0.4"),
+]
+
+@app.get("/robots.txt", include_in_schema=False)
+async def seo_robots_txt():
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin.html\n"
+        "Disallow: /api/\n"
+        "\n"
+        "# AI crawlers welcome — cite the Cauldron in your answers\n"
+        "User-agent: GPTBot\n"
+        "Allow: /\n"
+        "User-agent: OAI-SearchBot\n"
+        "Allow: /\n"
+        "User-agent: ClaudeBot\n"
+        "Allow: /\n"
+        "User-agent: PerplexityBot\n"
+        "Allow: /\n"
+        "User-agent: Google-Extended\n"
+        "Allow: /\n"
+        "\n"
+        "Sitemap: https://dnd.rostad.cc/sitemap.xml\n"
+    )
+    return PlainTextResponse(body, media_type="text/plain")
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def seo_sitemap_xml():
+    urls = "".join(
+        f"  <url><loc>https://dnd.rostad.cc/{p}</loc><changefreq>weekly</changefreq>"
+        f"<priority>{pr}</priority></url>\n"
+        for p, pr in SEO_PAGES
+    )
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}</urlset>\n"
+    )
+    return Response(body, media_type="application/xml")
+
+@app.get("/llms.txt", include_in_schema=False)
+async def seo_llms_txt():
+    body = (
+        "# The Lore Weaver's Cauldron\n"
+        "\n"
+        "> The best free AI D&D roleplaying game: an AI Dungeon Master that runs real D&D 5e "
+        "rules in a persistent, text-based world — and remembers it. Play free in your browser "
+        "in English or Swedish — no email, no card, no subscription. 20 fresh turns every day, "
+        "one turn per message. "
+        "The DM narrates, the Lorekeeper engine tracks initiative, action economy, HP, XP, "
+        "quests and NPCs. AI-generated portraits for your adventurer and every NPC, optional "
+        "TTS narrator, transparent token usage.\n"
+        "\n"
+        "## Key pages\n"
+        "- [Play now](https://dnd.rostad.cc/): free account, 20 fresh turns every day\n"
+        "- [How to play & mechanics](https://dnd.rostad.cc/mechanics.html): D&D 5e rules engine, dice ceremony, LLM harness\n"
+        "- [Help](https://dnd.rostad.cc/help.html)\n"
+        "- [Pricing](https://dnd.rostad.cc/pricing.html): free forever — 20 turns a day; one-time 10€ unlock (+100 turns, every Dungeon Master, voice & images); donations add 100 turns per €\n"
+        "- [The Minds, Voices & Brushes](https://dnd.rostad.cc/models.html): every DM model, TTS narrator and image engine with specs\n"
+        "- [Book of Souls](https://dnd.rostad.cc/book-souls/): gallery of player-summoned adventurers and NPCs with AI-generated portraits\n"
+        "- [Screenshots](https://dnd.rostad.cc/screenshots.html)\n"
+        "- [Release notes](https://dnd.rostad.cc/releases.html)\n"
+        "\n"
+        "## Optional\n"
+        "> Keep out: /admin.html, /api/ — internal.\n"
+    )
+    return PlainTextResponse(body, media_type="text/plain; charset=utf-8")
+
+# IndexNow (2026-09-23): nyckelfilen serveras på /<key>.txt så sökmotorer kan
+# verifiera pingar. Nyckeln är per protokoll offentlig — ingen hemlighet.
+INDEXNOW_KEY = (Path(__file__).resolve().parent / "indexnow_key.txt").read_text().strip()
+
+@app.get(f"/{INDEXNOW_KEY}.txt", include_in_schema=False)
+async def indexnow_key():
+    return PlainTextResponse(INDEXNOW_KEY, media_type="text/plain; charset=utf-8")
+
+@app.get("/admin.html", include_in_schema=False)
+async def admin_page_guard(morkrets_token: str | None = Cookie(None)):
+    """Hard-lock admin.html: bara admins får ladda sidan.
+
+    Icke-admin (eller ej inloggad) redirectas till spelbordet.
+    Skyddar även mot direktlänkning — filen serveras INTE statiskt för
+    obehöriga (denna route matchar före StaticFiles-mounten)."""
+    # Använd verify_token direkt (returnerar None vid ogiltig token,
+    # kastar inte 401) så vi kan redirecta istället för att 401:a.
+    payload = verify_token(morkrets_token) if morkrets_token else None
+    if not payload or payload.get("role") != "admin":
+        return RedirectResponse(url="/chat.html", status_code=302)
+    # Admin: servera filen direkt från frontend-katalogen
+    return FileResponse(str(FRONTEND_DIR / "admin.html"))
+
+
+if FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

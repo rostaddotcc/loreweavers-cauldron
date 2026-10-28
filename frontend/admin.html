@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emberwatch · The Lore Weaver's Cauldron</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0a0709">
+<link rel="icon" href="favicon.ico">
+<!--
+  Emberwatch — the cauldron, observed (2026-10-22).
+
+  This is the game-ops console, not a reporting dashboard: turns at the table, the
+  ledger of calls each turn books, and the letters players send in. Traffic lives in
+  Umami (analytics.rostad.cc) and is deliberately absent here.
+
+  It still loads its own design sheet (admin.css) and never snes.css/rail.css: the
+  game's flat-radius reset would fight the console's own geometry. Rendering is
+  admin.js; every mutation goes through admin-actions.js.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css?v=20261028b">
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+<div id="app">
+  <aside id="nav">
+    <div class="brand">
+      <span class="sigil" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+          <path d="M12 2.6c2.5 3.1 4.9 4.5 4.9 8.1a4.9 4.9 0 0 1-9.8 0c0-1.4.5-2.4 1.2-3.3" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+          <path d="M6.4 15.4h11.2c-.7 3-2.9 4.9-5.6 4.9s-4.9-1.9-5.6-4.9Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <div><b>Emberwatch</b><span>Cauldron operations</span></div>
+    </div>
+
+    <div class="nav-sep">The table</div>
+    <button class="nav-item" data-view="overview"><span class="ico" aria-hidden="true">✦</span> Table <span class="badge" id="nav-live"></span></button>
+    <button class="nav-item" data-view="calls"><span class="ico" aria-hidden="true">⌁</span> Calls <span class="badge" id="nav-calls"></span></button>
+    <button class="nav-item" data-view="players"><span class="ico" aria-hidden="true">◉</span> Players <span class="badge" id="nav-players"></span></button>
+
+    <div class="nav-sep">Business</div>
+    <button class="nav-item" data-view="revenue"><span class="ico" aria-hidden="true">◍</span> Revenue <span class="badge" id="nav-rev"></span></button>
+    <button class="nav-item" data-view="feedback"><span class="ico" aria-hidden="true">✎</span> Feedback <span class="badge" id="nav-fb"></span></button>
+
+    <div class="nav-sep">System</div>
+    <button class="nav-item" data-view="usage"><span class="ico" aria-hidden="true">⌬</span> Models</button>
+    <button class="nav-item" data-view="system"><span class="ico" aria-hidden="true">⚙</span> System</button>
+
+    <div class="nav-foot">
+      <div>read-only console</div>
+      <div class="stamp" id="nav-stamp"></div>
+    </div>
+  </aside>
+
+  <div id="main">
+    <header id="topbar">
+      <div class="beat" id="beat" aria-live="off">
+        <span class="pulse" aria-hidden="true"></span>
+        <span id="beat-text">reading the ledger…</span>
+      </div>
+      <div class="scope">
+        <span class="lbl">Window</span>
+        <div class="seg" id="win-seg">
+          <button type="button" data-win="24h">24h</button>
+          <button type="button" data-win="7d">7d</button>
+          <button type="button" data-win="30d">30d</button>
+          <button type="button" data-win="all">All</button>
+        </div>
+        <span class="stamp" id="stamp"></span>
+        <button class="icon-btn" id="auto-btn" title="Reload the numbers every 60 seconds">⟲ Auto: off</button>
+        <button class="icon-btn" id="theme-btn" title="Switch light / dark">◐ Theme</button>
+        <button class="icon-btn" id="refresh-btn" title="Reload every number on this page">↻ Refresh</button>
+        <a class="icon-btn primary" href="chat.html" title="Back to the game table">↩ Open the game</a>
+      </div>
+    </header>
+    <div id="view" aria-live="polite">
+      <div class="loading">Lighting the lanterns…</div>
+    </div>
+  </div>
+</div>
+
+<div id="scrim"></div>
+<aside id="drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dtitle">
+  <header>
+    <div><div class="kind" id="dkind"></div><h2 id="dtitle"></h2></div>
+    <button class="x" id="dclose" title="Close (Esc)">Esc ✕</button>
+  </header>
+  <div class="dbody" id="dbody"></div>
+</aside>
+<div id="toasts"></div>
+
+<script src="admin-actions.js?v=20260927b"></script>
+<script src="admin.js?v=20261028b"></script>
+<script src="selfhost.js?v=20261028b"></script>
+</body>
+</html>

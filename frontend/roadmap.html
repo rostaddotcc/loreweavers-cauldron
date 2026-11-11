@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>Röstad's Cauldron — The 2027 Roadmap</title>
+<meta name="description" content="What Röstad's Cauldron ships today, what is committed and being built, and what is only being explored — labelled as three different things, with no dates attached that could not be defended in public.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://cauldron.rostad.cc/roadmap.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Röstad's Cauldron">
+<meta property="og:title" content="Röstad's Cauldron — The 2027 Roadmap">
+<meta property="og:description" content="What Röstad's Cauldron ships today, what is committed and being built, and what is only being explored — labelled as three different things, with no dates attached that could not be defended in public.">
+<meta property="og:url" content="https://cauldron.rostad.cc/roadmap.html">
+<meta property="og:image" content="https://cauldron.rostad.cc/assets/hero-loreweaver-og.webp?v=13">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Röstad's Cauldron — The 2027 Roadmap">
+<meta name="twitter:description" content="What Röstad's Cauldron ships today, what is committed and being built, and what is only being explored — labelled as three different things, with no dates attached that could not be defended in public.">
+<meta name="twitter:image" content="https://cauldron.rostad.cc/assets/hero-loreweaver-og.webp?v=13">
+<meta name="theme-color" content="#09070B">
+<link rel="icon" href="/assets/logo-cauldron.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════ tokens ═══════════════ */
+  :root{
+    /* Palette inherited from snes.css :root (Emberwatch) — no local colour copies */
+    --font-display:'Grenze',serif;
+    --font-body:'Spectral',Georgia,serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --font-accent:'Silkscreen',monospace;
+  --font-flavor:'EB Garamond',Georgia,serif;--rubric:#E4616F;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent;font-size:17px;line-height:1.65}
+
+  /* version chip-row — jump index (audit A2 §5 releases) */
+  .ver-chiprow{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:1.4rem 0 .4rem}
+  .ver-chiprow a{font-family:var(--font-display);font-size:.64rem;letter-spacing:.12em;
+    color:var(--bone-dim);border:1px solid var(--edge);background:var(--stone);padding:.42rem .8rem;text-decoration:none;transition:all .2s;min-height:var(--tap-min);display:inline-flex;align-items:center;justify-content:center}
+  .ver-chiprow a:hover{color:var(--gold-bright);border-color:var(--gold)}
+
+  /* ═══════════════ hero ═══════════════ */
+  .ledger{max-width:900px;margin:0 auto;padding:4rem 1.25rem 6rem}
+  .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.44em;
+    text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem;letter-spacing:.34em}
+  .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
+    text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
+    margin-bottom:1rem;text-shadow:2px 2px 0 #000;animation:gr-flicker 6s ease-in-out infinite}
+  .ledger-sub{max-width:620px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
+    font-size:var(--fs-base);line-height:1.65;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .ledger-sub b{color:var(--bone);font-weight:600}
+
+  /* current version chip */
+  .current-box{display:flex;align-items:center;justify-content:center;gap:.9rem;flex-wrap:wrap;
+    margin-bottom:3rem}
+  .ver-chip{display:inline-flex;align-items:center;gap:.55rem;
+    font-family:var(--font-display);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.55rem 1.1rem}
+  .ver-chip .ver-name{font-weight:900}
+  .ver-chip .ver-note{color:rgba(7,7,12,.72);letter-spacing:.1em;font-size:12px}
+  .ver-tag{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--bone-dim);border:1px solid var(--edge);padding:.4rem .8rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+
+  /* ═══════════════ sections ═══════════════ */
+  .sec{margin-bottom:3.4rem}
+  .sec-head{display:flex;align-items:baseline;gap:.9rem;margin-bottom:1.4rem;
+    border-bottom:1px solid var(--edge);padding-bottom:.7rem}
+  .sec-num{font-family:var(--font-display);font-weight:900;font-size:var(--fs-sm);color:var(--gold);opacity:.8}
+  .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:var(--fs-base);
+    letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
+  .sec-head .rule{height:1px;flex:1;background:var(--edge);align-self:center;height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.7) 15%,rgba(var(--gold-rgb),.7) 85%,transparent) center/100% 1px no-repeat}
+  .sec-head .ruler{height:3px;width:44px;background:var(--gold);align-self:center;flex:none}
+
+  /* stone tablet */
+  .tablet{position:relative;background:var(--stone);
+    border:1px solid var(--edge);padding:1.9rem 1.8rem 1.5rem;margin-bottom:1.6rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .tablet::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3;border-color:rgba(var(--gold-rgb),.45);opacity:.45}
+  .tablet-h{display:flex;align-items:center;gap:.8rem;margin-bottom:.9rem;flex-wrap:wrap}
+  .chip{font-family:var(--font-display);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.26rem .6rem}
+  .tablet-title{font-family:var(--font-display);font-weight:700;font-size:var(--fs-sm);letter-spacing:.14em;
+    text-transform:uppercase;color:var(--bone-bright);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.85rem}
+  .tablet-lead{color:var(--bone-dim);font-size:var(--fs-sm);line-height:1.6;margin-bottom:1.1rem;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
+  .tablet-lead b{color:var(--bone);font-weight:600}
+
+  /* feature list */
+  .feat{list-style:none}
+  .feat li{padding:.55rem 0 .55rem 1.6rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.55}
+  .feat li::before{content:'◆';position:absolute;left:0;top:.62rem;color:var(--gold);font-size:.6rem}
+  .feat li b{color:var(--bone-bright);font-weight:600}
+  .feat li .dim{color:var(--bone-dim);font-family:var(--font-flavor);font-style:italic}
+  .feat li + li{border-top:1px dashed rgba(40,32,22,.5)}
+
+  /* inline tags */
+  .tag{display:inline-block;font-family:var(--font-display);font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase;padding:.14rem .5rem;margin-right:.35rem;vertical-align:middle}
+  .tag.feat{color:var(--poison);border:1px solid rgba(122,163,94,.5)}
+  .tag.fix{color:var(--rubric);border:1px solid rgba(212,58,77,.45)}
+  .tag.ux{color:var(--arcane);border:1px solid rgba(123,79,212,.5)}
+  .tag.ai{color:var(--gold);border:1px solid rgba(var(--gold-rgb),.5)}
+  .tag.snd{color:var(--gold);border:1px solid rgba(var(--ember-rgb),.5)}
+  .tag.pay{color:var(--teal);border:1px solid rgba(94,154,163,.5)}
+
+  /* two-column for tier grid */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+  @media(max-width:720px){.duo{grid-template-columns:1fr}}
+
+  /* tier mini-card */
+  .tier{background:var(--stone);
+    border:1px solid var(--edge);padding:1.6rem 1.5rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+  .tier.hot{border-color:var(--gold)}
+  .tier-name{font-family:var(--font-display);font-weight:700;font-size:var(--fs-tiny);letter-spacing:.24em;
+    text-transform:uppercase;color:var(--bone-bright);margin-bottom:.3rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .tier-flag{font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold-bright);margin-bottom:.5rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
+  .tier-price{font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:var(--gold-bright);margin-bottom:.5rem}
+  .tier-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
+  .tier ul{list-style:none}
+  .tier li{padding:.3rem 0 .3rem 1.3rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.5}
+  .tier li::before{content:'◆';position:absolute;left:0;top:.38rem;color:var(--gold);font-size:.55rem}
+  .tier li b{color:var(--bone-bright);font-weight:600}
+
+  /* historical versions */
+  .hist-toggle{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;
+    font-family:var(--font-display);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;
+    padding:.85rem 1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:var(--tap-min)}
+  .hist-toggle .caret{color:var(--gold);transition:transform .25s;display:inline-block}
+  .hist-toggle.open .caret{transform:rotate(90deg)}
+  .hist-body{max-height:0;overflow:hidden;transition:max-height .5s ease}
+  .hist-body.open{max-height:4000px}
+  .hist-inner{padding-top:1.6rem}
+  .hist-ver{display:flex;align-items:baseline;gap:.8rem;margin:1.6rem 0 .7rem;padding-top:1.2rem;
+    border-top:1px dashed rgba(40,32,22,.5);border-top:1px dashed rgba(var(--gold-rgb),.35)}
+  .hist-ver:first-child{margin-top:0;padding-top:0;border-top:none}
+  .hist-ver .vchip{font-family:var(--font-display);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);flex:none}
+  .hist-ver h3{font-family:var(--font-display);font-weight:700;font-size:var(--fs-tiny);letter-spacing:.12em;
+    text-transform:uppercase;color:var(--bone-bright)}
+  .hist-ver .muted{font-family:var(--font-body);font-size:var(--fs-tiny);color:var(--bone-dim);letter-spacing:0;text-transform:none}
+  .hist-ver ul{list-style:none;margin-top:.4rem}
+  .hist-ver li{padding:.32rem 0 .32rem 1.4rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.55}
+  .hist-ver li::before{content:'▸';position:absolute;left:0;color:var(--gold);font-size:.7rem}
+
+  .footer{margin-top:4rem;text-align:center;color:var(--bone-dim);font-size:var(--fs-tiny);line-height:1.7;
+    border-top:1px solid var(--edge);padding-top:2rem}
+  .footer b{color:var(--bone)}
+  .feat a{color:var(--gold-bright);text-decoration-color:var(--gold)}   /* audit #1: UA-blå 1.96:1 */
+  .footer a{color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;min-height:44px;margin-block:-12px}
+  .hist-ver li a,.tablet li a,.tablet-lead a{display:inline-block;padding-block:11px;margin-block:-11px}
+  .footer a:hover{color:var(--gold-bright)}
+
+  /* reveal */
+  .rv{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+  .rv.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){
+    .rv{opacity:1;transform:none;transition:none}
+  }
+  @media(max-width:900px){
+    .duo{grid-template-columns:1fr}
+    .tablet{padding:1.6rem 1.3rem 1.4rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+    .hist-ver{flex-wrap:wrap;border-top:1px dashed rgba(var(--gold-rgb),.35)}
+    .hist-toggle{min-height:var(--tap-min)}
+  }
+  @media(max-width:640px){
+    .ledger{padding-top:3rem}
+    .tablet{padding:1.5rem 1.2rem 1.3rem;position:relative;background:linear-gradient(180deg,rgba(var(--bone-rgb),.055),rgba(var(--bone-rgb),.012) 55%),linear-gradient(155deg,var(--stone-2),var(--stone) 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(var(--edge-rgb),.5),0 1px 0 rgba(0,0,0,.4)}
+    .sec-head h2{font-size:var(--fs-sm);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
+  }
+</style>
+<link rel="stylesheet" href="snes.css?v=58">
+<link rel="stylesheet" href="rail.css?v=20261028a">
+<link rel="stylesheet" href="ember.css?v=2">
+<noscript><style>.rv{opacity:1;transform:none}/* v5-fresh: mobile touch targets */
+@media(max-width:900px){.ver-chiprow a{min-height:var(--tap-min);display:inline-flex;align-items:center;min-height:var(--tap-min);display:inline-flex;align-items:center;justify-content:center}.hist-toggle{min-height:var(--tap-min);min-height:var(--tap-min)}}
+</style></noscript>
+<style id="grimoire-leaf">
+/* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
+.ledger h1::first-letter{font-family:var(--font-display,'Grenze',serif);font-style:normal;font-weight:700;font-size:1.06em;line-height:1;vertical-align:0;margin-right:0;color:var(--gold);text-shadow:0 0 12px rgba(var(--gold-rgb),.3)}
+.tablet::after,.tier::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/svg%3E") left top/24px 24px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg transform='rotate(180 16 16)'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23ECC468' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%23421E25' stroke='%23ECC468' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23ECC468' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23FFE0A0'/%3E%3C/g%3E%3C/svg%3E") right bottom/24px 24px no-repeat;opacity:.9}
+@keyframes gr-flicker{0%,100%{text-shadow:0 0 20px rgba(var(--gold-bright-rgb),.28),0 2px 0 #000}43%{text-shadow:0 0 26px rgba(var(--gold-bright-rgb),.42),0 2px 0 #000}47%{text-shadow:0 0 12px rgba(var(--gold-bright-rgb),.16),0 2px 0 #000}76%{text-shadow:0 0 22px rgba(var(--gold-bright-rgb),.3),0 2px 0 #000}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.ledger h1{animation:none!important;text-shadow:0 2px 0 #000}}
+</style>
+<script defer src="https://analytics.rostad.cc/script.js" data-website-id="deea5c52-08dc-4965-bab8-9ec71642e103" data-performance="true"></script>
+<script defer src="/umami-events.js"></script>
+</head>
+<body>
+
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">Röstad's Cauldron</span>
+    <span class="rr-tag">ROADMAP</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="roadmap.html">🗺 The Road to 2027</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="ledger">
+  <div class="page-eyebrow">THE SCRIBE · WHAT COMES NEXT</div>
+  <h1 class="rv">The Road to 2027</h1>
+  <div class="page-rule">✦</div>
+  <p class="eyebrow rv">The Ledger of the Realm, read forward</p>
+  <p class="ledger-sub rv">Three columns, labelled honestly: running today, being built, being considered.
+    Every year a game like this one owes its players an honest list, so here it is — and a roadmap that
+    flattens those three into one is just advertising with dates on it.<br><b>Published 2026-11-10</b> · revisited each release</p>
+
+  <div class="current-box rv fresh-frame">
+    <span class="ver-chip"><span class="ver-name">2027</span><span class="ver-note">The Road</span></span>
+    <span class="ver-tag">Shipping now</span>
+    <span class="ver-tag">Committed</span>
+    <span class="ver-tag">Exploring</span>
+    <span class="ver-tag">No invented deadlines</span>
+  </div>
+
+  <div class="ver-chiprow rv" aria-label="Jump to a section">
+    <a href="#table">The Table</a>
+    <a href="#rules">The Rules</a>
+    <a href="#voices">The Voices</a>
+    <a href="#realm">The Realm</a>
+    <a href="#purse">The Purse</a>
+    <a href="#not-promised">Not promised</a>
+  </div>
+
+  <div class="tablet rv">
+    <div class="tablet-h">
+      <span class="chip ai">HOW TO READ THIS</span>
+      <span class="tablet-title">Three words, three different meanings</span>
+    </div>
+    <ul class="feat">
+      <li><span class="tag feat">Live</span> <b>Shipping now</b> — running in your campaigns today. If it breaks, that is a bug, not a roadmap item.</li>
+      <li><span class="tag ai">Committed</span> <b>Decided and being built</b> — short list, and each entry already exists in the ledger as an open item rather than a slide.</li>
+      <li><span class="tag ux">Exploring</span> <b>Only being considered</b> — it may never ship. It is in this column so nobody can quote it back as a promise.</li>
+    </ul>
+  </div>
+
+  <div class="sec rv" id="table">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>The Table</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">THE TABLE</span>
+        <span class="tablet-title">Live, committed and considered</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">Live</span> <b>20 free turns every day</b> — no card and no email, plain-text narration on the free model. That is the floor of the product, not a promotion.</li>
+        <li><span class="tag feat">Live</span> <b>Server-rolled dice</b> — player attacks and enemy attacks are arithmetic in code, not prose the Dungeon Master invented. The roll you see is the roll that happened.</li>
+        <li><span class="tag feat">Live</span> <b>The Cooked Souls vault</b> — characters saved, inspected, given a portrait, loaded into any campaign.</li>
+        <li><span class="tag feat">Live</span> <b>Campaign export as a .zip</b> — for anyone who wants their world in their own hands.</li>
+        <li><span class="tag feat">Live</span> <b>Six campaign languages</b> — English, Swedish, German, French, Spanish, Italian. Interface chrome stays English, deliberately: one set of words for the buttons, your language for the story.</li>
+        <li><span class="tag ai">Committed</span> <b>One turn per message, once</b> — a second press of the die currently spends an extra turn. That is a bug wearing a feature's clothes, and it is on the list to close.</li>
+        <li><span class="tag ai">Committed</span> <b>A dead enemy stops reporting hit points</b> — a fallen enemy keeps its last HP in the combat state today; it should read as down, not as "3 HP".</li>
+        <li><span class="tag ai">Committed</span> <b>The mobile table keeps being measured</b> — not guessed at. The 360×780 pass in v2.0 closed the worst of it; the next round is the pages that still stack into cards.</li>
+        <li><span class="tag ux">Exploring</span> <b>Voice input beyond English</b> — speech-to-text is English-only today. Whether that widens is a question about engines and cost, not about intent, so it stays in this column.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec rv" id="rules">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>The Rules</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">THE RULES</span>
+        <span class="tablet-title">Live, committed and considered</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">Live</span> <b>The Guardian extracts, the server decides</b> — mechanics come out of the narration and are resolved in code, so the story never has to stop for bookkeeping.</li>
+        <li><span class="tag feat">Live</span> <b>Conditions that matter</b> — <b>blinded</b>, <b>restrained</b>, <b>stunned</b>, <b>paralysed</b>, <b>unconscious</b>. Prone deliberately gives no automatic advantage; that is a decision, written down, not an omission.</li>
+        <li><span class="tag feat">Live</span> <b>Concentration is tracked, spell slots are per class</b> — half-casters included. Ranger and paladin slots were wrong once; the fix is written in the ledger with the reason.</li>
+        <li><span class="tag feat">Live</span> <b>Character-sheet gates</b> — a mid-combat edit returns a 409 and the turn waits, instead of a sheet changing under a fight that already started.</li>
+        <li><span class="tag ai">Committed</span> <b>Hunter's Mark's extra die actually rolls</b> — it waits on concentration tracking carrying the effect and not only the flag. Until the die lands it stays on the open list, in the ledger, in public.</li>
+        <li><span class="tag ai">Committed</span> <b>The open list is fixed in the open</b> — each entry ships with the reason it was needed, in the same voice as the ones already there.</li>
+        <li><span class="tag ux">Exploring</span> <b>Wider combat surface</b> — cover, multi-target spells, more of the conditions the 5e rules already name. None of it is scheduled. All of it would be built the same way: server-side, with the roll shown.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec rv" id="voices">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>The Voices</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">THE VOICES</span>
+        <span class="tablet-title">Live, committed and considered</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">Live</span> <b>Six Dungeon Master models</b> — <b>step-3.7-flash</b> free and default, <b>step-3.5-flash-2603</b> beside it, and behind the one-time unlock <b>qwen3.8-flash</b>, <b>qwen3.6-flash</b>, <b>deepseek-v4.1-flash</b> and <b>step-5-preview</b>, plus OpenRouter's free models.</li>
+        <li><span class="tag feat">Live</span> <b>TTS narration and voice input</b> — narration on the unlocked tier; voice input in the browser, English only.</li>
+        <li><span class="tag feat">Live</span> <b>Bring your own breath</b> — a local Ollama can be the Dungeon Master, and it costs <b>0 turns</b>. Optional, uncensored, never probed without you switching it on.</li>
+        <li><span class="tag ai">Committed</span> <b>A new model is played before it is sold</b> — every model offered here gets run through our own campaigns first. Qwen 4 is the current example: announced, not callable, therefore not on the list — and it will be announced in the ledger the day it is.</li>
+        <li><span class="tag ai">Committed</span> <b>Model access follows its provider, and the ledger says so</b> — when it changes. No model is promised past the week its API survives.</li>
+        <li><span class="tag ux">Exploring</span> <b>Narration in the campaign language</b> — rather than English narration over a Swedish campaign. Attractive, unbuilt, and dependent on what the voice providers actually support.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec rv" id="realm">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>The Realm</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">THE REALM</span>
+        <span class="tablet-title">Live, committed and considered</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">Live</span> <b>Campaigns live on the server, not in a URL</b> — this is why the move to cauldron.rostad.cc did not touch a single campaign, and why dnd.rostad.cc still opens the same keep.</li>
+        <li><span class="tag feat">Live</span> <b>Persistent memory</b> — facts, NPCs, places and quests survive across sessions, retrieved into the Dungeon Master's context each turn.</li>
+        <li><span class="tag feat">Live</span> <b>A self-hosted build that is not a demo</b> — <b>SELFHOST=1</b>: no billing, no turn caps, local Ollama as the only Dungeon Master, public repo and SELFHOST.md to walk you through it.</li>
+        <li><span class="tag ai">Committed</span> <b>The self-host tree keeps shipping with every release</b> — it is exported from the same code, not maintained as a fork, so it cannot quietly rot.</li>
+        <li><span class="tag ai">Committed</span> <b>One brand, one address, everywhere</b> — every page, meta tag and share card now carries the new name. The rebrand is finished when a search result stops showing the old one.</li>
+        <li><span class="tag ux">Exploring</span> <b>A smaller footprint for a home server</b> — a documented path for people running it on a box with less RAM than a laptop. Not built; worth knowing whether anyone wants it.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec rv" id="purse">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2>The Purse</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip feat">THE PURSE</span>
+        <span class="tablet-title">Live, committed and considered</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">Live</span> <b>Free is free</b> — 20 turns a day, every day, no card, no trial clock. There is no way to buy a higher daily cap, and this page is not going to invent one.</li>
+        <li><span class="tag feat">Live</span> <b>10€, once</b> — a permanent <b>+100 turns</b> and every Dungeon Master model, TTS, image generation, voice input and full campaign export. Donations unlock the same features — <b>1€ is enough</b>.</li>
+        <li><span class="tag feat">Live</span> <b>Nothing renews itself</b> — and purchased or donated turns never expire.</li>
+        <li><span class="tag ai">Committed</span> <b>Prices are under review</b> — the paid side only, announced on the pricing page and in the ledger <i>before</i> they take effect, never mid-campaign. Nothing already bought gets retro-priced.</li>
+        <li><span class="tag ux">Exploring</span> <b>Whether donation and unlock should stay the same thing</b> — they are one thing today, which is generous and slightly confusing. Changing it would take away nothing anyone already has, and it is not decided.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec rv" id="not-promised">
+    <div class="sec-head">
+      <span class="sec-num">—</span>
+      <h2>What we will not promise</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">THE HONEST PART</span>
+        <span class="tablet-title">Three things this page refuses to do</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">No</span> <b>No dates for someone else's model</b> — a provider's announcement is not our schedule, and this page will not badge a model that cannot be called today.</li>
+        <li><span class="tag fix">No</span> <b>No numbers dressed as commitments</b> — an item marked <i>Exploring</i> may never ship, and it sits in that column precisely so nobody can quote it back as a promise.</li>
+        <li><span class="tag fix">No</span> <b>Nothing disappears from the open list by going quiet</b> — the dead enemy's hit points, the extra turn on a second press of the die and Hunter's Mark's missing die stay visible until the code changes.</li>
+      </ul>
+    </div>
+  </div>
+
+
+  <div class="footer rv">
+    <b>Röstad's Cauldron</b> — an AI dungeon master with a memory.<br>
+    <a href="releases.html">What shipped</a> &middot; <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a><br>
+    <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a><br>
+    <span>The 2027 roadmap · published 2026-11-10 · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
+  </div>
+</section>
+
+<script>
+  // reveal on scroll
+  (function(){
+    var els = document.querySelectorAll('.rv');
+    if(!('IntersectionObserver' in window)){ els.forEach(function(e){e.classList.add('in')}); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, {threshold:0.12});
+    els.forEach(function(e){ io.observe(e); });
+    setTimeout(function(){ els.forEach(function(e){ e.classList.add('in'); }); }, 2500);
+  })();
+</script>
+<script src="i18n.js?v=20261110a"></script>
+<script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20261006a"></script>
+<script src="selfhost.js?v=20261028b"></script>
+</body>
+</html>

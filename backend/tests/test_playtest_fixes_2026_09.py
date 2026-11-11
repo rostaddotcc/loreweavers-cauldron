@@ -1,0 +1,242 @@
+"""Playtest-fixar 2026-09 (loggbok tom ≠ fel + TTS-röster utan grind).
+
+Täcker:
+  1) GET /api/campaign/logbook: ny kampanj utan dag-entries/transkript → 200
+     med tomma days, ingen turn förbrukad (riktiga fel kvar: ingen kampanj → 404).
+     Garantin testades ursprungligen mot POST /api/campaign/logbook/refresh-today
+     (playtest-fix 466d4ea); den rutten togs bort 2026-09-30 — dess enda
+     frontend-anropare försvann i loggbok-omdesignen (d085cc6, 2026-08-01),
+     dag-entries genereras automatiskt i chat-pipelinen vid NY_DAG, och
+     GET-rutten (som frontenden använder) har alltid haft samma tom-hantering.
+  2) GET /api/tts/voices: samma tier-grind som POST /api/tts — free ser
+     endast stepfun, Patron (tier2/lifetime) och admin ser qwen.
+  3) Bonus: _extraction_call_RETRY med temp 0.1 på samma modell INNAN
+     fallback till EXTRACTION_MODEL, båda stegen loggade vid WARNING.
+
+Test-isolering (backend-test-isolation-pitfalls): INGEN /api/register —
+användare seedas direkt i users.json (tmp-monterad via auth.USERS_FILE).
+"""
+import logging
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+import pytest  # noqa: E402
+
+import auth  # noqa: E402
+import main  # noqa: E402
+import state_manager as sm  # noqa: E402
+from auth import create_token, hash_password  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def users_file(tmp_path, monkeypatch):
+    f = tmp_path / "users.json"
+    monkeypatch.setattr(auth, "USERS_FILE", f)
+    return f
+
+
+@pytest.fixture(autouse=True)
+def campaigns_dir(tmp_path, monkeypatch):
+    d = tmp_path / "campaigns"
+    monkeypatch.setattr(sm, "CAMPAIGNS_DIR", d)
+    monkeypatch.setattr(main, "CAMPAIGNS_DIR", d)
+    return d
+
+
+@pytest.fixture
+def client(users_file, campaigns_dir):
+    from fastapi.testclient import TestClient
+    with TestClient(main.app) as c:
+        yield c
+
+
+def _today() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _in_days(days: int) -> str:
+    return (datetime.now(timezone.utc).date() + timedelta(days=days)).isoformat()
+
+
+def _seed(username, role="player", *, features=None, features_until=None,
+          subscription_status="free"):
+    users = main.load_users()
+    users[username] = {
+        "password_hash": hash_password("secret123"),
+        "role": role,
+        "turn_cap": 50, "turns_used": 0, "turn_bonus": 0, "promo_bonus": 0,
+        "reset_date": _today(),
+        "subscription_status": subscription_status,
+        "features": features or {},
+        "features_until": features_until,
+        "start_bonus_granted": True,
+        "wan_used_today": 0, "wan_reset_date": _today(),
+    }
+    main.save_users(users)
+    return create_token(username, role)
+
+
+def _tok_player(username="alice"):
+    return _seed(username)
+
+
+def _tok_free():
+    return _seed("frile")
+
+
+def _tok_patron():
+    return _seed("patron", features={"export": True, "all_models": True},
+                 features_until=_in_days(30))
+
+
+def _tok_lifetime():
+    return _seed("livetime", subscription_status="lifetime")
+
+
+def _tok_admin():
+    return _seed("the_admin", role="admin")
+
+
+# ── 1) logbook GET: ny kampanj ≠ fel (f.d. refresh-today-fixen 466d4ea —
+#       routen borttagen 2026-09-30, garantin testas mot GET-rutten frontenden använder)
+
+def test_logbook_fresh_campaign_is_200_and_spends_no_turn(client):
+    tok = _tok_player()
+    main.store.create("alice", name="Fresh", language="en")
+    r = client.get("/api/campaign/logbook", cookies={"morkrets_token": tok})
+    assert r.status_code == 200, r.text
+    assert r.json().get("days") == []
+    # tom loggbok genereras inte via LLM → ingen turn förbrukad
+    assert main.load_users()["alice"]["turns_used"] == 0
+
+
+def test_logbook_no_campaign_still_404(client):
+    tok = _tok_player()  # ingen kampanj skapad
+    r = client.get("/api/campaign/logbook", cookies={"morkrets_token": tok})
+    assert r.status_code == 404
+
+
+# ── 2) /api/tts/voices: samma grind som /api/tts ─────────────────────────
+
+def _provider_ids(client, tok):
+    r = client.get("/api/tts/voices", cookies={"morkrets_token": tok})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "providers" in body and "default_provider" in body
+    for p in body["providers"]:
+        assert set(p) == {"id", "name", "voices"}  # oförändrad form
+    return [p["id"] for p in body["providers"]], body
+
+
+def test_voices_catalog_full_but_call_gated_for_free(client):
+    """2026-09-27 (ny prissättning): voices-katalogen visar hela menyn till
+    alla (frontend ritar 🔒 10€ unlock), men ANROPET gate:as — free får 403
+    feature_locked. Grinden är nu vid anropet, inte i katalogen."""
+    ids, body = _provider_ids(client, _tok_free())
+    assert set(ids) == {"stepfun", "qwen"}  # full katalog
+    assert body["default_provider"] == main.TTS_DEFAULT_PROVIDER
+    # ...men free kan inte syntetisera
+    r = client.post("/api/tts", json={"text": "hi", "provider": "stepfun"},
+                    cookies={"morkrets_token": _tok_free()})
+    assert r.status_code == 403
+    assert r.json()["detail"]["feature_locked"] == "tts"
+
+
+def test_voices_stepfun_voices_intact(client):
+    _, body = _provider_ids(client, _tok_free())
+    step = next(p for p in body["providers"] if p["id"] == "stepfun")
+    real_ids = {v["id"] for v in main.TTS_PROVIDERS["stepfun"]["voices"]}
+    assert {v["id"] for v in step["voices"]} == real_ids
+    assert step["voices"], "stepfun must never be emptied"
+
+
+def test_voices_patron_sees_qwen(client):
+    ids, _ = _provider_ids(client, _tok_patron())
+    assert "qwen" in ids and "stepfun" in ids
+
+
+def test_voices_lifetime_sees_qwen(client):
+    ids, _ = _provider_ids(client, _tok_lifetime())
+    assert "qwen" in ids
+
+
+def test_voices_admin_keeps_everything(client):
+    ids, _ = _provider_ids(client, _tok_admin())
+    assert set(ids) == set(main.TTS_PROVIDERS)
+
+
+def test_voices_call_gate_unlocked_vs_free(client):
+    """2026-09-27: katalogen är full för alla; grinden vid ANROPET skiljer.
+    free → 403 feature_locked; unlocked (tier2) passerar grinden (anropet
+    mockas ej — vi provar bara att det INTE 403:ar på feature_locked)."""
+    tok = _tok_free()
+    r = client.post("/api/tts", json={"text": "hello", "provider": "qwen"},
+                    cookies={"morkrets_token": tok})
+    assert r.status_code == 403
+    assert r.json()["detail"]["feature_locked"] == "tts"
+    # unlocked: ser qwen i katalogen OCH passerar feature-gate:n
+    ptok = _tok_patron()
+    pids, _ = _provider_ids(client, ptok)
+    assert "qwen" in pids
+
+
+def test_voices_unauthenticated_is_401(client):
+    r = client.get("/api/tts/voices")
+    assert r.status_code == 401
+
+
+# ── 3) extraction-retry fore fallback ────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_extraction_retry_before_fallback(monkeypatch):
+    calls = []
+    seq = ["Let me analyze this carefully…",        # prat (ingen JSON)
+           "Still rambling, here is my analysis.",  # retry temp 0.1 → prat
+           '{"day": 3, "title": "ok"}']             # fallback → JSON
+
+    async def fake_call(model, messages, temperature=0.8, max_tokens=300,
+                        usage_out=None, **kw):
+        calls.append((model, temperature))
+        return seq[len(calls) - 1]
+
+    warnings = []
+    monkeypatch.setattr(main, "_call_llm", fake_call)
+    monkeypatch.setattr(main, "_extraction_model_for", lambda s: "chatty-x")
+    monkeypatch.setattr(main.logger, "warning",
+                        lambda msg, *a, **k: warnings.append(msg % a))
+    assert main.EXTRACTION_MODEL != "chatty-x"
+
+    raw = await main._extraction_call({}, [{"role": "user", "content": "go"}],
+                                      {}, temperature=0.3)
+
+    # 1) samma modell, 2) retry temp 0.1 samma modell, 3) fallback
+    assert calls == [("chatty-x", 0.3), ("chatty-x", 0.1),
+                     (main.EXTRACTION_MODEL, 0.3)]
+    assert raw.strip().startswith("{")
+    retry_logs = [w for w in warnings if "temperature=0.1" in w]
+    fb_logs = [w for w in warnings if "fallback" in w]
+    assert len(retry_logs) == 1 and "chatty-x" in retry_logs[0]
+    assert len(fb_logs) == 1 and "chatty-x" in fb_logs[0] \
+        and main.EXTRACTION_MODEL in fb_logs[0]
+
+
+@pytest.mark.asyncio
+async def test_extraction_no_retry_when_json_on_first_call(monkeypatch):
+    calls = []
+
+    async def fake_call(model, messages, temperature=0.8, max_tokens=300,
+                        usage_out=None, **kw):
+        calls.append((model, temperature))
+        return '{"day": 1}'
+
+    monkeypatch.setattr(main, "_call_llm", fake_call)
+    monkeypatch.setattr(main, "_extraction_model_for", lambda s: "chatty-x")
+    raw = await main._extraction_call({}, [{"role": "user", "content": "go"}],
+                                      {}, temperature=0.3)
+    assert raw == '{"day": 1}'
+    assert calls == [("chatty-x", 0.3)]

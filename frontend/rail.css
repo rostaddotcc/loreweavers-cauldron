@@ -1,0 +1,205 @@
+/* ═══════════ RAIL v2 — unified site header (2026-09-23) ═══════════
+   ONE header for every page: brand | mid | actions + unified menu.
+   Load AFTER snes.css. Unika rr-*-klasser + !important där snes.css slåss.
+   chat.html bär sin egen inline-kopia av rail-CSS (source of truth) — länka
+   INTE detta ark där. Se docs/rail-v2-spec-2026-09-23.md. */
+.rite-rail{
+  display:grid !important; grid-template-columns:1fr auto 1fr !important; align-items:center;
+  height:48px !important;
+  background:linear-gradient(180deg,var(--stone-2),var(--stone)) !important;
+  border:1px solid var(--edge) !important; border-top:1px solid var(--edge-hi) !important;
+  box-shadow:none !important;
+  padding:0 .8rem !important; gap:1rem; position:relative; z-index:5;
+}
+.rite-rail::after{
+  content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px; pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.55) 30%,rgba(var(--gold-rgb),.55) 70%,transparent);
+}
+.rr-brand{ display:flex; align-items:center; gap:.55rem; min-width:0; justify-self:start; }
+.rr-sigil{
+  width:22px; height:22px; border:1px solid var(--gold); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--gold-bright); font-size:.8rem; cursor:pointer;
+  box-shadow:0 0 8px rgba(var(--gold-rgb),.35) inset;
+  transition:border-color .15s,color .15s,box-shadow .15s;
+}
+.rr-name{
+  font-family:var(--font-display); font-size:.82rem; letter-spacing:.14em;
+  color:var(--bone-bright); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.rr-tag{
+  font-family:var(--font-accent); font-size:.52rem; letter-spacing:.2em;
+  color:var(--gold); border:1px solid rgba(var(--gold-rgb),.4);
+  padding:.15rem .4rem; white-space:nowrap;
+}
+.rr-mid{ justify-self:center; display:flex; align-items:baseline; min-width:0; }
+.rr-tally{
+  justify-self:center; display:flex; align-items:baseline; gap:.7rem;
+  font-family:var(--font-mono); font-size:.72rem; color:var(--bone-dim);
+  white-space:nowrap; min-width:0;
+}
+.rr-tally .tv{ color:var(--gold-bright); font-weight:500; font-variant-numeric:tabular-nums; }
+.rr-tally .sep{ color:var(--edge-hi); }
+.rr-tally .warn{ color:var(--blood-bright); }
+.rr-actions{
+  display:flex; align-items:center; gap:.4rem; justify-self:end; justify-content:flex-end;
+  flex-wrap:nowrap !important;
+}
+.rite-rail .rr-btn{
+  width:50px; height:44px; padding:0 !important; flex-shrink:0; cursor:pointer;
+  border:1px solid var(--edge) !important;
+  background:var(--stone) !important;
+  color:var(--bone-dim) !important;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s !important;
+  font-size:1.05rem !important;
+  box-shadow:none !important; text-shadow:none !important; filter:none !important;
+}
+.rite-rail .rr-btn.on{ border-color:var(--gold) !important; color:var(--gold-bright) !important; }
+.rite-rail .rr-btn.text-btn{
+  width:auto; padding:0 .7rem !important;
+  font-family:var(--font-display); font-size:.62rem !important; letter-spacing:.12em; text-transform:uppercase;
+}
+/* Profil-/användar-chip (login) */
+.rite-rail .rr-btn#nav-user{ width:auto; padding:0 .7rem !important; gap:.35rem;
+  font-family:var(--font-display); font-size:.62rem !important; letter-spacing:.12em; }
+/* ── Unified menu ── */
+.rr-menu{ position:relative; }
+.rr-drop{
+  position:absolute; top:calc(100% + .5rem); right:0; min-width:250px;
+  background:linear-gradient(180deg,var(--stone-2),var(--stone));
+  border:1px solid var(--gold); box-shadow:0 8px 30px rgba(0,0,0,.6);
+  display:none; z-index:10000; flex-direction:column; padding:0 0 .4rem;
+  /* (2026-09-24) Desktop-skydd: 17 länkar + 4 grupp-huvuden ≈ 656px — utan
+     tak klipps Account-gruppen (Admin/Log out) på laptop-skärmar ≤~620px
+     synlig höjd. Samma recept som mobil-blocket + ⚙-menyn. */
+  max-height:calc(100dvh - 72px); overflow-y:auto; overscroll-behavior:contain;
+}
+.rr-drop.open{ display:flex; }
+/* Tunna guld-scrollbars i ☰-menyn (desktop-taket 2026-09-24) — matchar
+   ⚙-menyns scrollbar-color, grimoire-look på webkit/gecko. */
+.rr-drop::-webkit-scrollbar{ width:8px; }
+.rr-drop::-webkit-scrollbar-thumb{ background:rgba(var(--gold-rgb),.35); }
+.rr-drop::-webkit-scrollbar-track{ background:transparent; }
+.rr-drop{ scrollbar-width:thin; scrollbar-color:rgba(var(--gold-rgb),.35) transparent; }
+.rr-drop a{
+  display:flex; align-items:center; gap:.6rem; padding:.5rem .9rem; min-height:44px;
+  color:var(--bone); text-decoration:none;
+  font-family:var(--font-display); font-size:.78rem; letter-spacing:.1em;
+  border:none; background:none; transition:background .15s,transform .15s,color .15s;
+}
+.rr-drop a.cur{ color:var(--gold); box-shadow:inset 2px 0 0 var(--gold); }
+/* Tangentbordsfokus på länkarna (2026-09-24): ↑↓-navigeringen i rail.js
+   flyttar fokus — utan synlig ring är positionen osynlig. */
+.rr-drop a:focus-visible{ outline:1px solid var(--gold); outline-offset:-2px; background:rgba(var(--gold-rgb),.08); }
+.rr-ghead{
+  font-family:var(--font-accent); font-size:.55rem; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--gold); opacity:.85; padding:.34rem .9rem .1rem; user-select:none;
+  border-top:1px solid var(--edge); margin-top:.25rem;
+}
+.rr-drop .rr-ghead:first-child,
+.rr-drop .rr-dhead + .rr-ghead{ border-top:none; margin-top:0; padding-top:.18rem; }
+.rr-drop a[hidden]{ display:none; }
+
+/* ── Meny-huvud (2026-10-27): rubrik + stäng-knapp. Injiceras av rail.js
+   som första barn i #rr-drop; sticky så ✕ alltid nås — även när 16 poster
+   scrollar på korta skärmar. Rubriken är dekorativ (menyn annonseras av
+   knappens aria-haspopup), därför aria-hidden i rail.js. ── */
+.rr-dhead{
+  position:sticky; top:0; z-index:2;
+  display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+  min-height:44px; padding:.2rem .4rem .2rem .9rem;
+  background:linear-gradient(180deg,var(--stone-2),var(--stone));
+  border-bottom:1px solid var(--edge);
+  font-family:var(--font-accent); font-size:.58rem; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--gold); user-select:none;
+}
+.rr-dhead-t{ pointer-events:none; }
+.rr-dclose{
+  position:relative; width:44px; height:44px; flex-shrink:0; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--edge); border-radius:9px;
+  background:var(--stone); color:var(--bone-dim); cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;
+}
+.rr-dclose:focus-visible{ outline:1px solid var(--gold); outline-offset:-2px; color:var(--gold-bright); }
+/* ✕ = två streck i currentColor (inga tecken-/sprite-beroenden) */
+.rr-dclose::before, .rr-dclose::after{
+  content:''; position:absolute; left:50%; top:50%; width:15px; height:2px;
+  background:currentColor; border-radius:1px;
+  transform:translate(-50%,-50%) rotate(45deg);
+}
+.rr-dclose::after{ transform:translate(-50%,-50%) rotate(-45deg); }
+
+/* ── ☰ → ✕ när menyn är öppen: ren CSS på aria-expanded (som rail.js redan
+   synkar). Hamburger-svg:n från sprites.js göms och två streck ritas i
+   currentColor, så bytet fungerar även på sidor utan sprite-lagret. ── */
+.rite-rail .rr-menu-btn{ position:relative; }
+.rite-rail .rr-menu-btn[aria-expanded="true"]{
+  border-color:var(--gold) !important; color:var(--gold-bright) !important;
+}
+.rite-rail .rr-menu-btn[aria-expanded="true"] > svg,
+.rite-rail .rr-menu-btn[aria-expanded="true"] > .pxs{ display:none !important; }
+.rite-rail .rr-menu-btn[aria-expanded="true"]{ font-size:0 !important; }
+.rite-rail .rr-menu-btn[aria-expanded="true"]::before,
+.rite-rail .rr-menu-btn[aria-expanded="true"]::after{
+  content:''; position:absolute; left:50%; top:50%; width:16px; height:2px;
+  background:currentColor; border-radius:1px;
+  transform:translate(-50%,-50%) rotate(45deg);
+}
+.rite-rail .rr-menu-btn[aria-expanded="true"]::after{ transform:translate(-50%,-50%) rotate(-45deg); }
+
+/* ── Rail-länkarna (.rr-link, login-headern) ≥44×44 träffyta. Utseendet ägs
+   av login.html:s sidlokala .rr-link-regler; här bara ytan, så de sista
+   sub-44-tap-targetsen försvinner utan att länken ser större ut. ── */
+.rite-rail .rr-link{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:44px; min-width:44px;
+}
+
+@media (max-width:900px){
+  .rite-rail{ gap:.5rem !important; padding:0 .5rem !important; grid-template-columns:auto 1fr auto !important; }
+  .rr-name{ display:none; }
+  .rr-tally{ font-size:.62rem !important; gap:.45rem; }
+  .rr-drop{ position:fixed; top:52px; right:.5rem; left:.5rem; min-width:0;
+    max-height:calc(100dvh - 64px); overflow-y:auto; }
+}
+@media (max-width:640px){
+  .rr-tag{ display:none; }
+  .rr-tally{ font-size:.55rem; gap:.35rem; }
+  .rr-actions{ gap:.25rem !important; }
+  .rite-rail .rr-btn{ width:44px !important; height:44px !important; font-size:.95rem !important; }
+  /* 2026-10-27: text back-links (\"← Cauldron\" on newgame) were pinned to 44 px
+     and clipped their label (scrollWidth 54 > 42). Links size to their text. */
+  .rite-rail a.rr-btn{ width:auto !important; min-width:44px; padding:0 .55rem !important; white-space:nowrap; }
+  .rite-rail .rr-btn.text-btn{ width:auto !important; padding:0 .5rem !important; font-size:.56rem !important; }
+  .rite-rail .rr-btn#nav-user{ display:none !important; }
+}
+@media (prefers-reduced-motion:no-preference){
+  .rr-sigil{ animation:rail-candleflicker 4.2s ease-in-out infinite; }
+}
+/* ── Skip-link (a11y): osynlig tills den får fokus ── */
+.rr-skip{
+  position:absolute; left:.5rem; top:-100px; z-index:10001;
+  padding:.6rem 1rem; min-height:44px; display:inline-flex; align-items:center;
+  background:var(--gold); color:var(--ink);
+  font-family:var(--font-display,'Grenze',serif); font-size:.72rem; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; text-decoration:none;
+  border:1px solid var(--gold-bright); transition:top .15s;
+}
+.rr-skip:focus{ top:.5rem; }
+/* ── Hover bara på enheter som kan hover:a (2026-10-27) — touch slipper
+   fastnade hover-lägen; alla regler är oförändrade i sak. ── */
+@media (any-hover:hover),(hover:hover){
+  .rr-sigil:hover{ border-color:var(--gold-bright); color:var(--bone-bright);
+    box-shadow:0 0 8px rgba(var(--gold-rgb),.35) inset,0 0 10px rgba(var(--gold-rgb),.35); }
+  .rite-rail .rr-btn:hover{
+    border-color:var(--gold) !important; color:var(--gold-bright) !important;
+    background:var(--stone) !important;
+    box-shadow:0 0 10px rgba(var(--gold-rgb),.25) !important;
+  }
+  .rr-drop a:hover{ background:rgba(var(--gold-rgb),.08); color:var(--gold-bright); transform:translateX(3px); }
+  .rr-dclose:hover{ border-color:var(--gold); color:var(--gold-bright); background:var(--stone); }
+}
+@keyframes rail-candleflicker{ 0%,100%{opacity:1} 42%{opacity:.84} 58%{opacity:.95} 72%{opacity:.88} }
+@media (prefers-reduced-motion:reduce){ .rr-sigil{ animation:none !important; } }

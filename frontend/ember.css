@@ -1,0 +1,249 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   EMBER LAYER — frontend/ember.css   (2026-10-22)
+
+   The game's component skin, lifted from the Emberwatch admin sheet
+   (frontend/admin.css) and applied to the classes the game already uses.
+   Palette values live in snes.css :root — this file carries NO colour
+   literals except the ember wash stop (232,115,74), which has no token
+   notation of its own.
+
+   Load order matters: snes.css → rail.css → ember.css → page <style>.
+   Ties are decided by source order, and this file must lose to a page's own
+   late overrides. Everything here is layered on top of the flat gothic canon,
+   not replacing it:
+
+     1. geometry   the one place rounding is switched back on (see §1)
+     2. hover      the ember hover language — four behaviours, no fifth
+     3. focus      one visible ring, never outline:none
+     4. fields     recessed ink wells with a real boundary (--edge-ui, 3.30:1)
+     5. controls   buttons, chips, tabs — 44px tap floor kept, radius 9px/pill
+     6. surfaces   cards/panels/modals, one radius, one elevation for overlays
+     7. states     empty / busy / error — nothing silently blank
+     8. motion     two curves, three durations, all reduced-motion guarded
+
+   Measured, not eyeballed: see docs/plans/2026-10-22-ember-makeover.md §3
+   and docs/plans/ember-2026-10-22/A-token-map.md for the contrast table.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. GEOMETRY ──────────────────────────────────────────────────────────
+   snes.css zeroes `border-radius` on `*,*::before,*::after` AND on
+   `.btn-gold,.btn-ghost,.btn-blood` with !important. A zero-specificity rule
+   (`:where()`) therefore loses; a real class selector carrying !important at
+   equal specificity wins on source order. Measured in headless Chrome:
+     :where(.btn-blood){border-radius:9px!important}  → 0px   (loses)
+     .probe-class{border-radius:14px!important}       → 14px  (wins)
+   So: always a class selector + !important, never :where(), never a bare `*`.
+   ------------------------------------------------------------------------ */
+
+/* surfaces — cards, panels, modals, drawers, tiles */
+.card, .panel, .ep-card, .gate-card, .day-card, .deck-card, .campaign-card,
+.continue-card, .continue-panel, .codex-panel, .combat-enemy-card, .atk-card,
+.inv-card, .growth-item, .tablet, .fb-modal, .modal, .drawer, .cp-tier, .ptier,
+.arch-cats, .arch-acc, .aa-acc, .bl-status, .fresh-table, .tier, .price-card,
+.kpi, .stat, .qcard, .pcard, .quote, .sect-card, .feature-card, .log-summary,
+.bubble, .msg .bubble, .insp-modal, .w-reasoning, .scroll-box, .vcard, .pv-stat {
+  border-radius: var(--emb-r) !important;
+}
+
+/* controls — buttons, fields, composers, segmented cells */
+.btn, .btn-gold, .btn-ghost, .btn-blood, .gate-btn, .go-btn, .rr-btn, .av-btn,
+.jb-btn, .icon-btn, .mic-btn, .qs-btn, .tts-auto-btn, .tts-btn, .fb-btn,
+.lost-btn, .lr-house-btn, .lr-retry-btn, .danger-btn, .gen-btn, .blank-btn,
+.console-btn, .plan-cta, .cta, .drawer-btn, .act-input, .field input,
+.field select, .field textarea, .input-row textarea, #prompt, .world-prompt,
+.add-form input, .add-form select, .name-input, .donate-input, .fb-input,
+.fb-textarea, .composer, .cli-prompt, .scribe-prompt, .rr-prompt, .seg,
+.seg button, .tab-btn, .tab, .filter-input, .cu-btn, .lb-btn, .note-btn {
+  border-radius: var(--emb-r-sm) !important;
+}
+
+/* pills — chips, badges, dots' containers, pager, avatars */
+.chip, .badge, .tag, .day-tag, .cap-chip, .cchip, .dice-badge, .d-chips > *,
+.tier-flag, .pt-flag, .status-pill, .pill, .pager button, .av-pill, .dm-status,
+.cmd, .key, .rr-sigil, .rr-tag, .aa-chosen, .ver-chip, .cap-chip {
+  border-radius: var(--emb-r-pill) !important;
+}
+
+/* misc small — keep the sheet's tiny radius step available */
+.growth-field, .kbd, .f-kick, .sm-kick {
+  border-radius: var(--emb-r-xs) !important;
+}
+
+/* ── 2. HOVER — the ember language ────────────────────────────────────────
+   Four behaviours only (admin.css: .nav-item 306, .chip/hover 406,
+   .icon-btn 428, .card.clickable 531, .acts button 1263):
+     wash    a soft ember gradient on rows/links
+     border  an ember border on anything with a fill
+     lift    +1px on clickable cards, back to 0 on :active
+     danger  bad-dim fill + bad border, destructive only
+   All of it inside (any-hover:hover) so touch never gets a sticky state while
+   hybrid laptops (touch screen + trackpad) still get it.
+   ------------------------------------------------------------------------ */
+@media (any-hover: hover), (hover: hover) {
+  /* wash — nav rows, list rows, table rows */
+  .nav-item:hover, .tab-row:hover, .cl-row:hover, .fresh-table tbody tr:hover,
+  .growth-item:hover, .dm-model-row:hover, .fb-item:hover, .hd-row:hover {
+    background: linear-gradient(90deg, rgba(232,115,74,.075), rgba(232,115,74,0) 72%) !important;
+  }
+
+  /* border — controls that already have a fill */
+  .btn-ghost:hover, .btn-gold:hover, .btn-blood:hover, .icon-btn:hover,
+  .rr-btn:hover, .av-btn:hover, .jb-btn:hover, .mic-btn:hover, .qs-btn:hover,
+  .chip:hover, .tab:hover, .tab-btn:hover, .seg button:hover,
+  .pager button:hover:not(:disabled), .drawer-btn:hover, .note-btn:hover,
+  .lb-btn:hover, .cu-btn:hover, .field input:hover, .field select:hover,
+  .field textarea:hover, #prompt:hover, .world-prompt:hover,
+  .input-row textarea:hover, .composer:hover {
+    border-color: var(--accent) !important;
+  }
+
+  .icon-btn:hover, .rr-btn:hover, .av-btn:hover, .jb-btn:hover, .qs-btn:hover,
+  .drawer-btn:hover, .note-btn:hover, .lb-btn:hover, .tab:hover {
+    color: var(--bone) !important;
+    background: var(--stone-3) !important;
+  }
+
+  /* lift — clickable cards */
+  .card.clickable:hover, .day-card.clickable:hover, .campaign-card:hover,
+  .continue-card:hover, .deck-card:hover, .ep-card:hover, .inv-card:hover,
+  .arch-acc:hover, .aa-acc:hover, .atk-card:hover {
+    border-color: var(--accent) !important;
+    transform: translateY(-1px);
+  }
+
+  /* danger — destructive only */
+  .danger-btn:hover, .btn-blood:hover, .drawer-logout:hover, .lost-btn:hover {
+    background: var(--bad-dim) !important;
+    border-color: var(--bad) !important;
+    color: var(--bone-bright) !important;
+  }
+
+  /* links inside prose breathe toward the accent, never underline-shift */
+  .lede a:hover, .card p a:hover, .modal p a:hover { color: var(--accent-hi) }
+}
+
+.card.clickable:active, .day-card.clickable:active, .campaign-card:active,
+.continue-card:active, .deck-card:active, .arch-acc:active, .aa-acc:active,
+.btn-gold:active, .btn-ghost:active, .btn-blood:active, .chip:active,
+.tab:active, .tab-btn:active, .icon-btn:active, .rr-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* ── 3. FOCUS ─────────────────────────────────────────────────────────────
+   The old gold ring measured 1.24:1 on a gold fill and 1.81:1 on an ember
+   fill — the only failing pair in the whole migration. Bone-bright is >=15:1
+   on every surface and reads as light, not as another accent.
+   ------------------------------------------------------------------------ */
+:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible,
+.summary:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--focus) !important;
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+/* inside an overflow:hidden card the ring gets clipped — pull it inward */
+.card :focus-visible, .arch-acc :focus-visible, .aa-head:focus-visible,
+.day-card :focus-visible, .tablet :focus-visible {
+  outline-offset: -2px;
+}
+
+/* ── 4. FIELDS ────────────────────────────────────────────────────────────
+   A field's only affordance is its boundary: --edge-ui (#7C665C, 3.30:1) —
+   --edge is 1.31:1 and cannot carry a control (WCAG 1.4.11).
+   ------------------------------------------------------------------------ */
+/* bare fields that carry no page class — the site audit measured 8/8 of them at
+   1.00–1.31:1 (WCAG 1.4.11) because snes.css styles `.field input` and friends
+   only. This is the floor: an input the visitor can type into always has a
+   boundary, whatever it is nested in. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="hidden"]):not([type="color"]),
+select, textarea,
+#player-input, #fact-search, #npc-search, .r-expr, #forge-prompt, #char-model {
+  border: 1px solid var(--edge-ui) !important;
+  background: var(--ink) !important;
+  color: var(--bone-bright) !important;
+  border-radius: var(--emb-r-sm) !important;
+}
+
+.field input, .field select, .field textarea, .input-row textarea, #prompt,
+.world-prompt, .add-form input, .add-form select, .name-input, .donate-input,
+.fb-input, .fb-textarea, .rr-prompt, .scribe-prompt, .cli-prompt, .act-input {
+  border: 1px solid var(--edge-ui) !important;
+  background: var(--ink) !important;
+  color: var(--bone-bright) !important;
+  transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+.field input:focus, .field select:focus, .field textarea:focus,
+.input-row textarea:focus, #prompt:focus, .world-prompt:focus,
+.add-form input:focus, .add-form select:focus, .name-input:focus,
+.donate-input:focus, .fb-input:focus, .fb-textarea:focus, .rr-prompt:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px rgba(232,115,74,.35), 0 0 22px -6px rgba(232,115,74,.35);
+  outline: none !important;
+}
+.field input::placeholder, .field textarea::placeholder, #prompt::placeholder,
+.world-prompt::placeholder, .name-input::placeholder, .fb-input::placeholder {
+  color: var(--bone-dim) !important;   /* 6.8:1 — the old placeholder measured 2.24:1 */
+  opacity: 1;
+}
+
+/* ── 5. CONTROLS ──────────────────────────────────────────────────────────
+   Buttons keep the sheet's flat-ink look but acquire an ember edge state.
+   The tap floor (44px) is snes.css's; do not shrink it here.
+   ------------------------------------------------------------------------ */
+.btn-gold, .btn-ghost, .btn-blood, .btn, .rr-btn, .av-btn, .jb-btn,
+.icon-btn, .mic-btn, .qs-btn, .drawer-btn, .fb-btn, .blank-btn, .gen-btn,
+.gate-btn, .go-btn, .lb-btn, .note-btn, .plan-cta, .cta {
+  transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease),
+              color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+}
+
+/* chips get the admin's on-state vocabulary */
+.chip, .tab, .tab-btn {
+  transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease),
+              color var(--dur-1) var(--ease);
+}
+.chip.on, .chip.sel, .tab.on, .tab[aria-selected="true"] {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-ink) !important;
+  font-weight: 600;
+}
+
+/* ── 6. SURFACES ──────────────────────────────────────────────────────────
+   One elevation, for overlays only. Cards use hairlines, like the dashboard.
+   ------------------------------------------------------------------------ */
+.modal, .fb-modal, .drawer {
+  box-shadow: 0 28px 64px -18px rgba(0,0,0,.72), 0 2px 6px rgba(0,0,0,.4) !important;
+}
+.card, .ep-card, .day-card, .deck-card, .ptier, .tablet, .cp-tier {
+  transition: border-color var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
+}
+
+/* ── 7. STATES ────────────────────────────────────────────────────────────
+   Utilities an empty view can adopt instead of rendering nothing.
+   ------------------------------------------------------------------------ */
+.emb-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--sp-2); padding: var(--sp-6) var(--sp-4);
+  color: var(--bone-dim); font-size: var(--fs-tiny); text-align: center;
+}
+.emb-skel {
+  border-radius: var(--emb-r-sm);
+  background: linear-gradient(90deg, var(--stone-2) 0%, var(--stone-3) 40%, var(--stone-2) 80%);
+  background-size: 220% 100%;
+  animation: emb-sk 1.4s var(--ease) infinite;
+  min-height: 12px;
+}
+@keyframes emb-sk { from { background-position: 120% 0 } to { background-position: -80% 0 } }
+
+/* ── 8. MOTION ────────────────────────────────────────────────────────────
+   Nothing here may run when the visitor asked for calm.
+   ------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .emb-skel { animation: none; background-position: 0 0 }
+  .card.clickable:hover, .campaign-card:hover, .arch-acc:hover, .aa-acc:hover,
+  .deck-card:hover, .day-card:hover, .continue-card:hover {
+    transform: none !important;
+  }
+  .btn-gold, .btn-ghost, .btn-blood, .chip, .tab, .rr-btn { transition: none !important }
+}

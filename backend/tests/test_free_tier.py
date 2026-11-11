@@ -1,0 +1,435 @@
+"""FAS A: free account system — periodbaserad turn-räkning, tier, modellgating.
+
+Täcker:
+  - register skapar free-fält (turns_used/turn_bonus/reset_date/subscription_*)
+  - admin-create skapar samma fält
+  - turns_used ökar per godkänd chat-turn (och /api/me speglar det)
+  - 403 + cap_reached/reset_date när periodens turns är slut
+  - reset_date-rollover (turns_used nollställs, turn_bonus behålls, +30 dagar)
+  - turn_bonus förbrukas före cap-turns
+  - free-tier → modellen klampas alltid till step-3.7-flash
+  - premium → vald modell behålls + oändliga turns
+  - utgången premium demote:as till free
+  - legacy-konton utan FAS A-fält backfillas via setdefault
+
+Ingen riktig data rörs: users.json pekas om till tmp (auth.USERS_FILE) och
+kampanj-data till tmp (state_manager.CAMPAIGNS_DIR + main.CAMPAIGNS_DIR).
+LLM/RAG/bakgrundsanrop mockas bort.
+"""
+
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import pytest
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+import auth  # noqa: E402
+import main  # noqa: E402
+from auth import create_token, hash_password  # noqa: E402
+
+
+# ── Fixtures ─────────────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def users_file(tmp_path, monkeypatch):
+    """Peka users.json mot tmp-fil (load_users/save_users i auth.py).
+
+    autouse: ALLA tester i denna modul skyddas — även de som anropar
+    seed-helpers utan att be om fixturen. Utan autouse skrev testerna
+    över den RIKTIGA users.json (bugg 2026-08-04).
+    """
+    f = tmp_path / "users.json"
+    monkeypatch.setattr(auth, "USERS_FILE", f)
+    return f
+
+
+@pytest.fixture(autouse=True)
+def turn_ledgers_dir(tmp_path, monkeypatch):
+    """Peka turn-ledgern mot tmp (strikt per-anrops-modell 2026-08-08) —
+    annars skriver chat-testerna riktiga ledger-filer i backend/data."""
+    d = tmp_path / "turn_ledgers"
+    monkeypatch.setattr(main, "_TURN_LEDGERS_DIR", d)
+    return d
+
+
+@pytest.fixture
+def campaigns_dir(tmp_path, monkeypatch):
+    """Peka kampanj-data mot tmp-mapp (state_manager + main)."""
+    import state_manager as sm
+    d = tmp_path / "campaigns"
+    monkeypatch.setattr(sm, "CAMPAIGNS_DIR", d)
+    monkeypatch.setattr(main, "CAMPAIGNS_DIR", d)
+    return d
+
+
+@pytest.fixture
+def llm_mocks(monkeypatch):
+    """Inga riktiga LLM/RAG/bakgrundsanrop i chat-testerna."""
+    calls = {"models": []}
+
+    async def fake_dm(model_id, messages, **kw):
+        calls["models"].append(model_id)
+        return ("The wind howls through the pines.", "", {"total_tokens": 42})
+
+    async def noop(*a, **k):
+        return None
+
+    async def no_memory(*a, **k):
+        return {"text": "", "facts_sent": 0, "rag_sent": 0, "timing_s": 0.0}
+
+    monkeypatch.setattr(main, "_call_llm_with_reasoning", fake_dm)
+    monkeypatch.setattr(main, "guardian_check_roll", noop)
+    monkeypatch.setattr(main, "_retrieve_relevant_memory", no_memory)
+    monkeypatch.setattr(main, "_guardian_post_dm", noop)
+    monkeypatch.setattr(main, "_post_turn_tasks", noop)
+    return calls
+
+
+@pytest.fixture
+def client(users_file, campaigns_dir, llm_mocks):
+    from fastapi.testclient import TestClient
+    with TestClient(main.app) as c:
+        yield c
+
+
+# ── Hjälpare ─────────────────────────────────────────────────────────────
+
+def _today() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _in_days(days: int) -> str:
+    return (datetime.now(timezone.utc).date() + timedelta(days=days)).isoformat()
+
+
+def _register(client, username="alice", password="secret123"):
+    r = client.post("/api/register", json={"username": username, "password": password})
+    assert r.status_code == 200, r.text
+    return r
+
+
+def _user(username="alice") -> dict:
+    return main.load_users().get(username, {})
+
+
+def _patch_user(username, **fields):
+    users = main.load_users()
+    u = users.setdefault(username, {})
+    u.update(fields)
+    main.save_users(users)
+
+
+def _make_campaign(username):
+    main.store.create(username, name="Test Campaign", language="en")
+
+
+def _chat(client, message="Hej där!", model="step-3.7-flash"):
+    return client.post("/api/chat", json={"message": message, "model_id": model})
+
+
+# ── Register / admin-create skapar free-fält ─────────────────────────────
+
+def test_register_creates_free_fields(client):
+    _register(client)
+    u = _user()
+    assert u["turn_cap"] == main.DEFAULT_TURN_CAP
+    assert u["turns_used"] == 0
+    # Intro-promon borttagen 2026-09-06: nya konton får 0 promo + 0 köpta.
+    assert u["promo_bonus"] == 0
+    assert u["turn_bonus"] == 0
+    assert u["reset_date"] == _today()
+    assert u["subscription_status"] == "free"
+    assert u["subscription_until"] is None
+
+
+def test_admin_create_adds_free_fields(client):
+    main.save_users({
+        "the_admin": {"password_hash": hash_password("pw123456"), "role": "admin", "turn_cap": 0},
+    })
+    atok = create_token("the_admin", "admin")
+    r = client.post(
+        "/api/admin/user",
+        json={"username": "charlie", "password": "secret123"},
+        cookies={"morkrets_token": atok},
+    )
+    assert r.status_code == 200, r.text
+    u = _user("charlie")
+    assert u["turns_used"] == 0
+    assert u["promo_bonus"] == 0  # ingen startbonus längre
+    assert u["turn_bonus"] == 0
+    assert u["reset_date"] == _today()
+    assert u["subscription_status"] == "free"
+    assert u["subscription_until"] is None
+
+
+# ── Turn-räkning ─────────────────────────────────────────────────────────
+
+def test_turns_used_increments(client):
+    _register(client)
+    _make_campaign("alice")
+    r = _chat(client)
+    assert r.status_code == 200, r.text
+    # 2026-09-06: ingen startbonus — första turen äter cap-sloten direkt.
+    # 2026-08-08 (1 turn per prompt): ett meddelande kostar EXAKT en turn —
+    # Guardian pre/post, extraction och alla bakgrundsanrop ingår i den.
+    assert _user()["turns_used"] == 1
+    assert _user()["promo_bonus"] == 0
+    # /api/me speglar period-räkningen
+    me = client.get("/api/me")
+    assert me.status_code == 200
+    body = me.json()
+    assert body["promo_bonus"] == 0
+    assert body["turns_available"] == main.DEFAULT_TURN_CAP - 1
+
+
+def test_cap_reached_403(client):
+    _register(client)
+    _make_campaign("alice")
+    # 1 turn per prompt: turn_cap=1 → ett meddelande, sedan 403.
+    _patch_user("alice", turn_cap=1, turn_bonus=0, promo_bonus=0)
+    r1 = _chat(client)
+    assert r1.status_code == 200, r1.text
+    r2 = _chat(client)
+    assert r2.status_code == 403
+    detail = r2.json()["detail"]
+    assert detail["cap_reached"] is True
+    assert detail["reset_date"]  # ej tom — frontend visar modal med datum
+    assert "message" in detail
+
+
+def test_me_returns_free_fields(client):
+    _register(client)
+    until = _in_days(30)
+    _patch_user("alice", turn_bonus=3, promo_bonus=0,
+                features={"export": True, "wan1080": True, "all_models": True},
+                models_until=until, subscription_status="tier2", subscription_until=until)
+    me = client.get("/api/me")
+    assert me.status_code == 200
+    body = me.json()
+    for key in ("turns_used", "turn_bonus", "promo_bonus", "reset_date", "subscription_status",
+                "subscription_until", "turns_available", "period_hours"):
+        assert key in body, f"missing /api/me field: {key}"
+    assert body["turn_bonus"] == 3
+    assert body["subscription_status"] == "tier2"
+    assert body["subscription_until"] == until
+    assert body["period_hours"] == 24  # alla får 50/dag (one-time-modellen)
+    assert body["features"]["export"] is True
+    assert body["features"]["all_models"] is True
+    assert body["features"]["wan1080"] is True
+    assert body["turns_available"] == main.DEFAULT_TURN_CAP + 3
+
+
+# ── Reset-rollover ───────────────────────────────────────────────────────
+
+def test_reset_date_rollover(client):
+    _register(client)
+    _patch_user("alice", turns_used=5, turn_bonus=7, promo_bonus=0, turn_cap=50, reset_date=_in_days(-1))
+    avail = main._turns_available("alice")
+    assert avail == 57  # nollställd (50 cap) + köpta behållna (7)
+    u = _user()
+    assert u["turns_used"] == 0
+    assert u["turn_bonus"] == 7          # köpta turns behålls över rollover
+    assert u["reset_date"] == _in_days(1)  # flyttad till idag + 1 (daglig rollover)
+
+
+def test_cap_consumed_before_purchased_turns(client):
+    """2026-08-05 v3-ordning: daglig cap före KÖPTA turns (turn_bonus sist)."""
+    _register(client)
+    _patch_user("alice", turn_cap=1, turn_bonus=100, promo_bonus=0, turns_used=0)
+    # 0 förbrukade: hela cap-sloten + alla köpta
+    assert main._turns_available("alice") == 101
+    # 1 förbrukad: cap-sloten förbrukades — köpta orörda (100)
+    _patch_user("alice", turns_used=1)
+    assert main._turns_available("alice") == 100
+    # Allt tar slut: cap (1) + köpta (100) förbrukade → 0 → 403.
+    # (Köpta förbrukas via turn_bonus-saldo, inte turns_used — simulera båda.)
+    _patch_user("alice", turns_used=101, turn_bonus=0)
+    assert main._turns_available("alice") == 0
+    # _consume_turn äter cap först, köpta först när capen är slut
+    _patch_user("alice", turn_cap=1, turn_bonus=10, promo_bonus=0, turns_used=0)
+    main._consume_turn("alice")
+    assert _user()["turns_used"] == 1 and _user()["turn_bonus"] == 10  # cap först
+    main._consume_turn("alice")
+    assert _user()["turns_used"] == 1 and _user()["turn_bonus"] == 9  # köpta sist
+
+
+def test_promo_consumed_before_cap(client):
+    """Spenderingsordning promo → cap → köpta gäller LEGACY-promo (intro-promon
+    borttagen 2026-09-06 — konton med kvarvarande promo ska ändå spendera den
+    först)."""
+    _register(client)
+    assert _user()["promo_bonus"] == 0  # nya konton får ingen promo mer
+    # Simulera ett äldre konto med kvarvarande legacy-promo
+    _patch_user("alice", turn_cap=1, turns_used=0, promo_bonus=3)
+    # Första turen äter PROMO, inte cap-sloten
+    main._consume_turn("alice")
+    u = _user()
+    assert u["promo_bonus"] == 2
+    assert u["turns_used"] == 0  # cap orörd — promo först
+    assert main._turns_available("alice") == 2 + 1
+    # När promon är slut förbrukas cap-sloten
+    _patch_user("alice", promo_bonus=0)
+    main._consume_turn("alice")
+    u = _user()
+    assert u["promo_bonus"] == 0
+    assert u["turns_used"] == 1  # cap-sloten förbrukad nu
+
+
+# ── Modellgating ─────────────────────────────────────────────────────────
+
+def test_free_model_clamp(client, llm_mocks):
+    _register(client)
+    _make_campaign("alice")
+    r = _chat(client, model="qwen3.8-flash")
+    assert r.status_code == 200, r.text
+    # DM-anropet fick den klampade modellen
+    assert llm_mocks["models"] == ["step-3.7-flash"]
+    # och hjälpfunktionen direkt (2026-09-27: premium = allt utom stepfun-flash)
+    assert main._clamp_player_model("qwen3.8-flash", tier="free") == "step-3.7-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier=main._tier_for("alice")) == "step-3.7-flash"
+    # borttagna modeller klampas också till default
+    assert main._clamp_player_model("qwen3.8-max", tier="tier2") == "step-3.7-flash"
+
+
+def test_qwen38_flash_is_premium_10e_unlock(client, llm_mocks):
+    """2026-09-27 (ny prissättning): qwen3.8-flash ligger bakom 10€-unlåset —
+    free/tier1 klampas till step-3.7-flash, tier2 behåller valet."""
+    _register(client)
+    _make_campaign("alice")
+    assert "qwen3.8-flash" in main.PLAYER_MODELS
+    assert "qwen3.8-flash" not in main.FREE_PLAYER_MODELS
+    assert main._clamp_player_model("qwen3.8-flash", tier="free") == "step-3.7-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier="tier1") == "step-3.7-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier="tier2") == "qwen3.8-flash"
+    r = _chat(client, model="qwen3.8-flash")
+    assert r.status_code == 200, r.text
+    assert llm_mocks["models"] == ["step-3.7-flash"]  # free → klampad
+    # Registret måste ha provider/nyckel — annars faller anropet i prod
+    from models import get_model
+    cfg = get_model("qwen3.8-flash")
+    assert cfg.api_key_env == "DASHSCOPE_API_KEY" and cfg.api_model == "qwen3.8-flash"
+
+
+def test_step5_preview_is_premium_10e_unlock(client, llm_mocks):
+    """2026-09-27 (ny prissättning): step-5-preview ligger bakom 10€-unlåset —
+    free/tier1 klampas till step-3.7-flash, tier2 behåller valet.
+    (Modellen verifierades live mot /step_plan/v1 2026-09-20.)"""
+    _register(client)
+    _make_campaign("alice")
+    assert "step-5-preview" in main.PLAYER_MODELS
+    assert "step-5-preview" not in main.FREE_PLAYER_MODELS
+    assert main._clamp_player_model("step-5-preview", tier="free") == "step-3.7-flash"
+    assert main._clamp_player_model("step-5-preview", tier="tier1") == "step-3.7-flash"
+    assert main._clamp_player_model("step-5-preview", tier="tier2") == "step-5-preview"
+    r = _chat(client, model="step-5-preview")
+    assert r.status_code == 200, r.text
+    assert llm_mocks["models"] == ["step-3.7-flash"]  # free → klampad
+    # Registret måste ha provider/nyckel — annars faller anropet i prod
+    from models import get_model
+    cfg = get_model("step-5-preview")
+    assert cfg.api_key_env == "STEPFUN_API_KEY" and cfg.api_model == "step-5-preview"
+
+
+def test_premium_model_ok(client, llm_mocks):
+    _register(client)
+    _make_campaign("alice")
+    _patch_user("alice", features={"all_models": True, "export": True, "wan1080": True},
+                models_until=_in_days(30), subscription_status="tier2", subscription_until=_in_days(30))
+    r = _chat(client, model="qwen3.8-flash")
+    assert r.status_code == 200, r.text
+    assert llm_mocks["models"] == ["qwen3.8-flash"]  # tier2 behåller valet
+
+
+def test_tier1_model_clamped(client, llm_mocks):
+    """tier1 (Support 3€) ger export men INTE premium-modeller → klamp till step."""
+    _register(client)
+    _make_campaign("alice")
+    _patch_user("alice", features={"export": True}, subscription_status="free")
+    r = _chat(client, model="qwen3.8-flash")
+    assert r.status_code == 200, r.text
+    assert llm_mocks["models"] == ["step-3.7-flash"]
+    assert main._clamp_player_model("qwen3.8-flash", tier="tier1") == "step-3.7-flash"
+
+
+def test_turn_cap_zero_is_unlimited(client):
+    """0 = oändligt (samma semantik som före FAS A) — får aldrig ge 403."""
+    _register(client)
+    _make_campaign("alice")
+    _patch_user("alice", turn_cap=0, turn_bonus=0, turns_used=0)
+    assert main._turns_available("alice") == 999999
+    # även efter många förbrukade turns
+    _patch_user("alice", turns_used=999)
+    assert main._turns_available("alice") == 999999
+    r = _chat(client)
+    assert r.status_code == 200, r.text
+
+
+def test_lifetime_unlimited(client):
+    _register(client)
+    _patch_user("alice", subscription_status="lifetime", subscription_until=_in_days(3650),
+                turn_cap=1, turns_used=100, turn_bonus=0)
+    assert main._tier_for("alice") == "lifetime"
+    assert main._turns_available("alice") == 999999
+
+
+def test_tier2_not_unlimited(client):
+    """tier2 (Patron 10€) = 50 turns/dag + köpta bonus — INTE obegränsat (det är lifetime)."""
+    _register(client)
+    _patch_user("alice", features={"all_models": True, "export": True, "wan1080": True},
+                models_until=_in_days(30), subscription_status="tier2", subscription_until=_in_days(30),
+                turn_cap=50, turns_used=100, turn_bonus=0, promo_bonus=0, reset_date=_in_days(1))  # framtida reset → ingen daglig rollover
+    assert main._tier_for("alice") == "tier2"
+    assert main._turns_available("alice") == 0  # 100 använda > cap 50
+
+
+def test_patron_models_expire(client):
+    """Patron-förmånerna (all_models) gäller 30 dagar — sedan faller kontot
+    tillbaka till free (2026-08-05 v2: ÄVEN export går ut med fönstret;
+    köpta turns behålls men inga features-förmåner kvar)."""
+    _register(client)
+    _patch_user("alice", features={"all_models": True, "export": True, "wan1080": True},
+                models_until=_in_days(-1), subscription_status="tier2", subscription_until=_in_days(-1),
+                turn_cap=50, turns_used=0)
+    # modellerna gick ut → inte längre tier2
+    assert main._tier_for("alice") != "tier2"
+    # 2026-08-05 v2: export-förmånen går ut med 30-dagarsfönstret → free
+    assert main._tier_for("alice") == "free"
+    assert main._clamp_player_model("qwen3.8-flash", tier=main._tier_for("alice")) == "step-3.7-flash"
+    # Köpta turns behålls efter att förmånerna löpt ut
+    info = main._user_free_info("alice")
+    assert info["turn_bonus"] >= 0
+    assert info["subscription_status"] == "free"
+
+
+def test_expired_premium_demoted(client):
+    _register(client)
+    _patch_user("alice", subscription_status="tier2", subscription_until=_in_days(-1),
+                turn_cap=5, turns_used=0)
+    assert main._tier_for("alice") == "free"
+    # demote är sparat i users.json
+    assert _user()["subscription_status"] == "free"
+
+
+# ── Bakåtkompatibilitet ──────────────────────────────────────────────────
+
+def test_legacy_account_backfilled(client):
+    """Konto utan FAS A-fält → setdefault fyller i utan krasch.
+    (Intro-promon borttagen 2026-09-06 — migrering ger ingen bonus mer.)"""
+    main.save_users({
+        "old_timer": {"password_hash": hash_password("secret123"), "role": "player", "turn_cap": 50},
+    })
+    # Befintlig turn_cap=50 (pre-2026-09-27-konto) hedras som den är —
+    # backfill fyller bara SAKNADE FAS A-fält, skriver aldrig över capen.
+    assert main._turns_available("old_timer") == 50
+    u = _user("old_timer")
+    assert u["turns_used"] == 0
+    assert u["promo_bonus"] == 0  # ingen migrerad startbonus
+    # Backfill sätter reset_date=today; första kollen rullar direkt till +1
+    # (idag >= reset_date) — utan att förlora några turns.
+    assert u["reset_date"] == _in_days(1)
+    assert u["subscription_status"] == "free"
+    assert u["subscription_until"] is None

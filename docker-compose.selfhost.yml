@@ -1,0 +1,50 @@
+# ═══════════════════════════════════════
+# The Lore Weaver's Cauldron — self-host compose
+# ═══════════════════════════════════════
+# The stripped self-host build: the same image as production, started with
+# SELFHOST=1. In that mode the app registers no Stripe/billing routes, has no
+# turn quotas (unlimited turns, undo + campaign export unlocked for everyone)
+# and plays only against a local Ollama server — no DashScope / DeepSeek /
+# StepFun keys, no TTS, no image generation.
+#
+# Deliberately NOT mounted: ./backend/.env and ./backend/.env.stripe.
+# The only env file is ./backend/.env.selfhost (copy it from
+# backend/.env.selfhost.example).
+#
+# No Qdrant container and no external `ai-services` network. RAG memory is
+# optional and simply stays off while QDRANT_URL is unset.
+#
+# Start:  docker compose -f docker-compose.selfhost.yml up -d --build
+# Logs:   docker compose -f docker-compose.selfhost.yml logs -f
+# Stop:   docker compose -f docker-compose.selfhost.yml down
+
+services:
+  cauldron-selfhost:
+    build: .
+    container_name: cauldron-selfhost
+    restart: unless-stopped
+    ports:
+      # Host 8092 → container 8090. Plain HTTP on the LAN; put a reverse proxy
+      # with TLS in front before exposing this to the internet.
+      - "8092:8090"
+    volumes:
+      # Accounts, campaigns, vaults and attachments persist here
+      - ./backend/data:/app/backend/data
+    env_file:
+      - ./backend/.env.selfhost
+    environment:
+      # These win over anything set in backend/.env.selfhost
+      - HOST=0.0.0.0
+      - PORT=8090
+      - SELFHOST=1
+      # Native Ollama API on the Docker host — no /v1 suffix
+      - OLLAMA_URL=http://host.docker.internal:11434
+      # Plain HTTP on a LAN → no Secure-cookie flag. Set to 1 behind HTTPS.
+      - COOKIE_SECURE=0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8090/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
